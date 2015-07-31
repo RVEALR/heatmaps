@@ -205,9 +205,20 @@ def main(argv):
               else:
                 pt['d'] += 1
 
-    text_file = open(output_file_name, "w")
-    text_file.write(json.dumps(output_data))
-    zz = text_file.close()
+    # test if any data was generated
+    has_data = False
+    for generated in output_data:
+      try:
+        has_data = len(output_data[generated]) > 0
+      except KeyError:
+        pass
+
+    if has_data:
+      text_file = open(output_file_name, "w")
+      text_file.write(json.dumps(output_data))
+      zz = text_file.close()
+    else:
+      print 'The process yielded no results. Could you have misspelled the event name?'
   else:
     print 'heat_map_aggr.py requires that you specify an input file. It\'s not really that much to ask.'
     usage()
