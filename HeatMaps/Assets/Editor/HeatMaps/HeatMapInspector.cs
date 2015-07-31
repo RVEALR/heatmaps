@@ -17,7 +17,7 @@ public class HeatMapper : EditorWindow
 		EditorWindow.GetWindow (typeof(HeatMapper));
 	}
 
-	private HeatMapDataParser m_ParseView;
+	private HeatMapDataParserInspector m_ParseView;
 	private HeatMapRendererInspector m_RenderView;
 
 	private GameObject heatMapInstance;
@@ -32,7 +32,7 @@ public class HeatMapper : EditorWindow
 
 
 		if (m_ParseView == null) {
-			m_ParseView = HeatMapDataParser.Init (PointDataHandler);
+			m_ParseView = HeatMapDataParserInspector.Init (PointDataHandler);
 		}
 		m_ParseView.OnGUI ();
 
