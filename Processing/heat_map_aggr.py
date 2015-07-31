@@ -70,10 +70,10 @@ def divide(value, divisor):
   else:
     rounded += d/2
   return rounded
-  
+
 def version_info():
   print 'heat_map_aggr.py Heat Map Aggregator by Unity Analytics. (c)2015 Version: ' + version_num
-  
+
 def create_key(point_map, tupl, point):
   point_map[tupl] = point
 
@@ -95,7 +95,7 @@ def main(argv):
   events_list = []
   disaggregate_time = False
   single_session = False
-  
+
   try:
     opts, args = getopt.getopt(argv, short_args, long_args)
   except getopt.GetoptError:
@@ -156,11 +156,23 @@ def main(argv):
               # ensure we have a list for this event
               if not event in output_data:
                 output_data[event] = []
-              
+
               # Deal with spatial data
-              x = float(datum['x'])
-              y = float(datum['y'])
-              z = float(datum['z'])
+              # x/y are required
+              try:
+                x = float(datum['x'])
+                y = float(datum['y'])
+              except KeyError:
+                print 'An event in this data set can\'t be interpreted as heat map data. Perhaps you need to filter events using -e?'
+                print datum
+                sys.exit(2)
+
+              # z values are optional (Vector2's use only x/y)
+              try:
+                z = float(datum['z'])
+              except KeyError:
+                z = 0
+
               if space_smooth:
                 x = divide(x, space_divisor)
                 y = divide(y, space_divisor)
@@ -168,8 +180,8 @@ def main(argv):
               point['x'] = x
               point['y'] = y
               point['z'] = z
-              
-              # Deal with temporal data
+
+              # Deal with temporal data, which is also optional
               try:
                 t = float(datum['t']) if 't' in datum else 1.0
                 if time_smooth:
@@ -178,13 +190,13 @@ def main(argv):
               except AttributeError:
                 # We allow for the possibility of the dev not including 't' for time.
                 # This is faster than hasattr(datum, 't')
-                pass
-              
+                t = 0
+
               # Hash the point, so we can aggregate for density
               timeKey = point["t"] if disaggregate_time else None
               sessionKey = datum[1] if single_session else None
               tupl = (event, point["x"], point["y"], point["z"], timeKey, sessionKey)
-              
+
               pt = get_existing_point(point_map, tupl)
               if pt == None:
                 create_key(point_map, tupl, point)
