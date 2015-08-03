@@ -12,16 +12,12 @@
 #    OUTPUT TO A DIFFERENT DIRECTORY
 #    get_raw_events.py 'https://analytics.cloud.unity3d.com/api/v1/batches?appid=SOME_AP_ID&hash=SOME_HASH' -o ../my_data/
 
-import sys, datetime, dateutil.parser, getopt, json
+import sys, datetime, dateutil.parser, argparse, json
 from urllib import urlretrieve
 from urllib2 import Request, urlopen, URLError, HTTPError
 
 version_num = '0.0.1'
-short_args = "o:f:l:srctudvh"
-long_args = [ "output=,first=","last=",
-              "start","running","custom","transaction","user","device",
-              "version","help"
-            ]
+all_events = ['start','running','custom','transaction','user','device']
 
 def load_file(url):
   req = Request(url)
@@ -54,93 +50,50 @@ def parse_json(response):
     print 'Decoding JSON has failed'
     sys.exit()
 
-
-def usage():
-  msg = """usage: get_raw_events.py \'<link-to-data-export>\'
-  \t[-f|--first <date>] [-l|--last <date>]
-  \t[-s|--start] [-r|--running][-c|--custom][-t|--transaction][-u|--user][-d|--device]
-  \t[-v|--version] [-h|--help]\n
-  version\t\tRetrieve version info for this file.
-  help\t\tPrint this help message.
-  first\t\tUNIX timestamp for trimming input.
-  last\t\tUNIX timestamp for trimming input.
-  start\t\tFlag. Include appStart events.
-  running\t\tFlag. Include appRunning events.
-  custom\t\tFlag. Include custom events
-  transaction\tFlag. Include transaction events.
-  user\t\tFlag. Include userInfo events.
-  device\t\tFlag. Include deviceInfo events"""
-  print msg
-
 def version_info():
   print 'get_raw_events.py Raw data export by Unity Analytics. (c)2015 Version: ' + version_num
 
 def main(argv):
-  output_path = ''
-  start_date = ''
-  end_date = ''
-  include_all = True
-  include_start = False
-  include_running = False
-  include_custom = False
-  include_transaction = False
-  include_user = False
-  include_device = False
+  parser = argparse.ArgumentParser(description="Download raw events from the Unity Analytics server.")
+  parser.add_argument('url', nargs='?', default='')
+  parser.add_argument('-v', '--version', action='store_const', const=True, help='Retrieve version info for this file.')
+  parser.add_argument('-o', '--output', default='', help='Set an output path for results.')
+  parser.add_argument('-f', '--first', help='UNIX timestamp for trimming input.')
+  parser.add_argument('-l', '--last', help='UNIX timestamp for trimming input.')
+  parser.add_argument('-s', '--start', action='store_const', const=True, help='Include appStart events.')
+  parser.add_argument('-r', '--running', action='store_const', const=True, help='Include appRunning events.')
+  parser.add_argument('-c', '--custom', action='store_const', const=True, help='Include custom events.')
+  parser.add_argument('-t', '--transaction', action='store_const', const=True, help='Include transaction events.')
+  parser.add_argument('-u', '--user', action='store_const', const=True, help='Include user events.')
+  parser.add_argument('-d', '--device', action='store_const', const=True, help='Include deviceInfo events.')
+  args = vars(parser.parse_args())
+  
+  if 'help' in args:
+    parser.print_help()
+    sys.exit()
+  elif args['version'] == True:
+    version_info()
+    sys.exit()
 
-  try:
-    opts, args = getopt.getopt(argv[1:], short_args, long_args)
-    url = '' if len(sys.argv) < 2 else sys.argv[1]
-  except getopt.GetoptError:
-    usage()
+  # now by default
+  end_date = datetime.datetime.utcnow() if not args['last'] else dateutil.parser.parse(args['last'])
+  # subtract 5 days by default
+  start_date = end_date - datetime.timedelta(days=5) if not args['first'] else dateutil.parser.parse(args['first'])
+  url = args['url']
+  
+  # by default, we'll include all. If a flag(s) was selected, use it
+  flags = []
+  for e in all_events:
+    if args[e]: flags.append(e)
+  if len(flags) == 0:
+    flags = all_events
+
+  # if first arg isn't a url
+  if 'http' not in url:
+    parser.print_help()
     sys.exit(2)
-
-  for opt, arg in opts:
-    
-    if opt in ("-h", "--help"):
-      usage()
-      sys.exit()
-    if opt in ("-v", "--version"):
-      version_info()
-      sys.exit()
-    elif opt in ("-o", "--output"):
-      output_path = arg
-    elif opt in ("-f", "--first"):
-      start_date = dateutil.parser.parse(arg)
-    elif opt in ("-l", "--last"):
-      end_date = dateutil.parser.parse(arg)
-    elif opt in ("-s", "--start"):
-      include_all = False
-      include_start = True
-    elif opt in ("-r", "--running"):
-      include_all = False
-      include_running = True
-    elif opt in ("-c", "--custom"):
-      include_all = False
-      include_custom = True
-    elif opt in ("-t", "--transaction"):
-      include_all = False
-      include_transaction = True
-    elif opt in ("-u", "--user"):
-      include_all = False
-      include_user = True
-    elif opt in ("-d", "--device"):
-      include_all = False
-      include_device = True
-
-  # if first arg was help, instead of a url
-  if url == '-h' or url == '--help':
-    usage()
-    sys.exit(2)
-
-  if len(url) > 0:
-
+  elif len(url) > 0:
     print 'Loading batch manifest'
-
-    if end_date == '':
-      end_date = datetime.datetime.utcnow()
-    if start_date == '':
-      start_date = end_date - datetime.timedelta(days=5)  # subtract 5 days by default
-
     manifest_json = load_and_parse(url)
     
     found_items = 0
@@ -157,37 +110,38 @@ def main(argv):
       batch_id = batches_json["batchid"]
       for batch in batches_json["data"]:
         bUrl = batch["url"]
+
         batch_type = "" # FIXME
         
         # by default, we d/l everything, but if flags are set, we trim unmatched types
         batch_type = ''
         if bUrl.find('appStart') > -1:
           batch_type = 'appStart'
-          if include_all == False and include_start == False:
+          if not 'start' in flags:
             continue
         elif bUrl.find('custom') > -1:
           batch_type = 'custom'
-          if include_all == False and include_custom == False:
+          if not 'custom' in flags:
             continue
         elif bUrl.find('deviceInfo') > -1:
           batch_type = 'deviceInfo'
-          if include_all == False and include_device == False:
+          if not 'device' in flags:
             continue
         elif bUrl.find('appRunning') > -1:
           batch_type = 'appRunning'
-          if include_all == False and include_running == False:
+          if not 'running' in flags:
             continue
         elif bUrl.find('transaction') > -1:
           batch_type = 'transaction'
-          if include_all == False and include_transaction == False:
+          if not 'transaction' in flags:
             continue
         elif bUrl.find('userInfo') > -1:
           batch_type = 'userInfo'
-          if include_all == False and include_user == False:
+          if not 'user' in flags:
             continue
 
         # finally, load the actual file from S3
-        output_file_name = output_path + batch_id + "_" + batch_type + ".txt"
+        output_file_name = args['output'] + batch_id + "_" + batch_type + ".txt"
         try:
           print 'Downloading ' + output_file_name
           urlretrieve(bUrl, output_file_name)
@@ -206,7 +160,7 @@ def main(argv):
       print 'No data found within specified dates. By default, this script downloads the last five days of data. Use -f (--first) and -l (--last) to specify a date range.'
   else:
     print 'get_raw_events.py requires that you specify a URL as the first argument.\nThis URL may be obtained by going to your project settings on the Unity Analytics website.\n\n'
-    usage()
+    parser.print_help()
     sys.exit(2)
 
 if __name__ == "__main__":
