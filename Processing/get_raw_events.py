@@ -139,6 +139,7 @@ def main(argv):
 
     manifest_json = load_and_parse(url)
     
+    found_items = 0
     for manifest_item in manifest_json:
       # filter dates outside of range
       date = dateutil.parser.parse(manifest_item["generated_at"]).replace(tzinfo=None)
@@ -147,6 +148,7 @@ def main(argv):
       elif date > end_date:
         continue
 
+      found_items += 1
       batches_json = load_and_parse(manifest_item["url"])
       batch_id = batches_json["batchid"]
       for batch in batches_json["data"]:
@@ -195,6 +197,9 @@ def main(argv):
           sys.exit()
         else:
           print 'TSV file downloaded successfully'
+
+    if found_items == 0:
+      print 'No data found within specified dates. By default, this script downloads the last five days of data. Use -f (--first) and -l (--last) to specify a date range.'
   else:
     print 'get_raw_events.py requires that you specify a URL as the first argument.\nThis URL may be obtained by going to your project settings on the Unity Analytics website.\n\n'
     usage()
