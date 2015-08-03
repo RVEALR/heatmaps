@@ -41,24 +41,23 @@ long_args = [ "input=","output=",
             ]
 
 def usage():
-  msg = 'usage: heat_map_aggr.py -i|--input <input_files_or_array> [-o|--output <output_file_name>]\n'
-  msg += '\t[-s|--space <float>] [-t|--time <float>]\n'
-  msg += '\t[-f|--first <date>] [-l|--last <date>]\n'
-  msg += '\t[-e|--event-names <eventNameList>] [-n|--single-session]\n'
-  msg += '\t[-d|disaggregate-time] [-v|--version] [-h|--help]\n\n'
-  msg += 'version\t\t\tRetrieve version info for this file.\n'
-  msg += 'help\t\t\tPrint this help message.\n'
-  msg += 'input\t\t\tThe name of an input file, or an array of input files (required).\n'
-  msg += 'output\t\t\tThe name of the output file. If omitted, name is auto-generated from first input file.\n'
-  msg += 'space\t\t\tNumerical scale at which to smooth out spatial data.\n'
-  msg += 'time\t\t\tNumerical scale at which to smooth out temporal data.\n'
-  msg += 'first\t\t\tUNIX timestamp for trimming input.\n'
-  msg += 'last\t\t\tUNIX timestamp for trimming input.\n'
-  msg += 'event-names\t\tA string or array of strings, indicating event names to include in the output.\n'
-  msg += 'single-session\t\tFlag. Organize the data by individual play sessions.\n'
-  msg += 'disaggregate-time\tDisaggregates events that map to matching x/y/z coordinates, but different moments in time.\n'
+  msg = """usage: heat_map_aggr.py -i|--input <input_files_or_array> [-o|--output <output_file_name>]
+  \t[-s|--space <float>] [-t|--time <float>]
+  \t[-f|--first <date>] [-l|--last <date>]
+  \t[-e|--event-names <eventNameList>] [-n|--single-session]
+  \t[-d|disaggregate-time] [-v|--version] [-h|--help]\n
+  version\t\t\tRetrieve version info for this file.
+  help\t\t\tPrint this help message.
+  input\t\t\tThe name of an input file, or an array of input files (required).
+  output\t\t\tThe name of the output file. If omitted, name is auto-generated from first input file.
+  space\t\t\tNumerical scale at which to smooth out spatial data.
+  time\t\t\tNumerical scale at which to smooth out temporal data.
+  first\t\t\tUNIX timestamp for trimming input.
+  last\t\t\tUNIX timestamp for trimming input.
+  event-names\t\tA string or array of strings, indicating event names to include in the output.
+  single-session\t\tFlag. Organize the data by individual play sessions.
+  disaggregate-time\tDisaggregates events that map to matching x/y/z coordinates, but different moments in time."""
   print msg
-  #'\n\t\n\t'
 
 def divide(value, divisor):
   v = float(value)

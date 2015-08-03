@@ -56,23 +56,22 @@ def parse_json(response):
 
 
 def usage():
-  msg = 'usage: get_raw_events.py \'<link-to-data-export>\'\n'
-  msg += '\t[-f|--first <date>] [-l|--last <date>]\n'
-  msg += '\t[-s|--start] [-r|--running][-c|--custom][-t|--transaction][-u|--user][-d|--device]\n'
-  msg += '\t[-v|--version] [-h|--help]\n\n'
-  msg += 'version\t\tRetrieve version info for this file.\n'
-  msg += 'help\t\tPrint this help message.\n'
-  msg += 'first\t\tUNIX timestamp for trimming input.\n'
-  msg += 'last\t\tUNIX timestamp for trimming input.\n'
-  msg += 'start\t\tFlag. Include appStart events.\n'
-  msg += 'running\t\tFlag. Include appRunning events.\n'
-  msg += 'custom\t\tFlag. Include custom events\n'
-  msg += 'transaction\tFlag. Include transaction events.\n'
-  msg += 'user\t\tFlag. Include userInfo events.\n'
-  msg += 'device\t\tFlag. Include deviceInfo events\n'
+  msg = """usage: get_raw_events.py \'<link-to-data-export>\'
+  \t[-f|--first <date>] [-l|--last <date>]
+  \t[-s|--start] [-r|--running][-c|--custom][-t|--transaction][-u|--user][-d|--device]
+  \t[-v|--version] [-h|--help]\n
+  version\t\tRetrieve version info for this file.
+  help\t\tPrint this help message.
+  first\t\tUNIX timestamp for trimming input.
+  last\t\tUNIX timestamp for trimming input.
+  start\t\tFlag. Include appStart events.
+  running\t\tFlag. Include appRunning events.
+  custom\t\tFlag. Include custom events
+  transaction\tFlag. Include transaction events.
+  user\t\tFlag. Include userInfo events.
+  device\t\tFlag. Include deviceInfo events"""
   print msg
-  #'\n\t\n\t'
-  
+
 def version_info():
   print 'get_raw_events.py Raw data export by Unity Analytics. (c)2015 Version: ' + version_num
 
@@ -127,6 +126,11 @@ def main(argv):
     elif opt in ("-d", "--device"):
       include_all = False
       include_device = True
+
+  # if first arg was help, instead of a url
+  if url == '-h' or url == '--help':
+    usage()
+    sys.exit(2)
 
   if len(url) > 0:
 
