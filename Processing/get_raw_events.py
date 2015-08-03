@@ -17,7 +17,7 @@ from urllib import urlretrieve
 from urllib2 import Request, urlopen, URLError, HTTPError
 
 version_num = '0.0.1'
-all_events = ['start','running','custom','transaction','user','device']
+all_events = ['appStart','appRunning','custom','transaction','userInfo','deviceInfo']
 
 def load_file(url):
   req = Request(url)
@@ -60,12 +60,12 @@ def main(argv):
   parser.add_argument('-o', '--output', default='', help='Set an output path for results.')
   parser.add_argument('-f', '--first', help='UNIX timestamp for trimming input.')
   parser.add_argument('-l', '--last', help='UNIX timestamp for trimming input.')
-  parser.add_argument('-s', '--start', action='store_const', const=True, help='Include appStart events.')
-  parser.add_argument('-r', '--running', action='store_const', const=True, help='Include appRunning events.')
+  parser.add_argument('-s', '--appStart', action='store_const', const=True, help='Include appStart events.')
+  parser.add_argument('-r', '--appRunning', action='store_const', const=True, help='Include appRunning events.')
   parser.add_argument('-c', '--custom', action='store_const', const=True, help='Include custom events.')
   parser.add_argument('-t', '--transaction', action='store_const', const=True, help='Include transaction events.')
-  parser.add_argument('-u', '--user', action='store_const', const=True, help='Include user events.')
-  parser.add_argument('-d', '--device', action='store_const', const=True, help='Include deviceInfo events.')
+  parser.add_argument('-u', '--userInfo', action='store_const', const=True, help='Include userInfo events.')
+  parser.add_argument('-d', '--deviceInfo', action='store_const', const=True, help='Include deviceInfo events.')
   args = vars(parser.parse_args())
   
   if 'help' in args:
@@ -110,51 +110,23 @@ def main(argv):
       batch_id = batches_json["batchid"]
       for batch in batches_json["data"]:
         bUrl = batch["url"]
-
-        batch_type = "" # FIXME
-        
-        # by default, we d/l everything, but if flags are set, we trim unmatched types
-        batch_type = ''
-        if bUrl.find('appStart') > -1:
-          batch_type = 'appStart'
-          if not 'start' in flags:
-            continue
-        elif bUrl.find('custom') > -1:
-          batch_type = 'custom'
-          if not 'custom' in flags:
-            continue
-        elif bUrl.find('deviceInfo') > -1:
-          batch_type = 'deviceInfo'
-          if not 'device' in flags:
-            continue
-        elif bUrl.find('appRunning') > -1:
-          batch_type = 'appRunning'
-          if not 'running' in flags:
-            continue
-        elif bUrl.find('transaction') > -1:
-          batch_type = 'transaction'
-          if not 'transaction' in flags:
-            continue
-        elif bUrl.find('userInfo') > -1:
-          batch_type = 'userInfo'
-          if not 'user' in flags:
-            continue
-
-        # finally, load the actual file from S3
-        output_file_name = args['output'] + batch_id + "_" + batch_type + ".txt"
-        try:
-          print 'Downloading ' + output_file_name
-          urlretrieve(bUrl, output_file_name)
-        except HTTPError as e:
-          print 'The server couldn\'t download the file.'
-          print 'Error code: ', e.code
-          sys.exit()
-        except URLError as e:
-          print 'When downloading, we failed to reach a server.'
-          print 'Reason: ', e.reason
-          sys.exit()
-        else:
-          print 'TSV file downloaded successfully'
+        for event_type in flags:
+          if event_type in bUrl:
+            output_file_name = args['output'] + batch_id + "_" + event_type + ".txt"
+            try:
+              # finally, load the actual file from S3
+              print 'Downloading ' + output_file_name
+              urlretrieve(bUrl, output_file_name)
+            except HTTPError as e:
+              print 'The server couldn\'t download the file.'
+              print 'Error code: ', e.code
+              sys.exit()
+            except URLError as e:
+              print 'When downloading, we failed to reach a server.'
+              print 'Reason: ', e.reason
+              sys.exit()
+            else:
+              print 'TSV file downloaded successfully'
 
     if found_items == 0:
       print 'No data found within specified dates. By default, this script downloads the last five days of data. Use -f (--first) and -l (--last) to specify a date range.'
