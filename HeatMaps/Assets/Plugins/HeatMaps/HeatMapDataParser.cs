@@ -16,25 +16,38 @@ namespace UnityAnalytics
 		{
 		}
 
-		public void LoadData(string path, ParseHandler handler) {
+		public void LoadData(string path, ParseHandler handler, bool asResource=false) {
 			this.handler = handler;
 			if (!string.IsNullOrEmpty (path)) {
-				// Handle any problems that might arise when reading the text
-				try
-				{
-					StreamReader reader = new StreamReader(path);
-					using (reader)
-					{
-						ConsumeHeatmapData (reader.ReadToEnd());
-					}
-				}
-				// If anything broke in the try block, we throw an exception with information
-				// on what didn't work
-				catch (Exception e)
-				{
-					Debug.Log(e.Message);
+				if (asResource) {
+					LoadResource (path);
+				} else {
+					LoadStream (path);
 				}
 			}
+		}
+
+		protected void LoadStream(string path) {
+			// Handle any problems that might arise when reading the text
+			try
+			{
+				StreamReader reader = new StreamReader(path);
+				using (reader)
+				{
+					ConsumeHeatmapData (reader.ReadToEnd());
+				}
+			}
+			// If anything broke in the try block, we throw an exception with information
+			// on what didn't work
+			catch (Exception e)
+			{
+				Debug.Log(e.Message);
+			}
+		}
+
+		protected void LoadResource(string path) {
+			TextAsset ta = Resources.Load (path) as TextAsset;
+			ConsumeHeatmapData (ta.text);
 		}
 
 		protected void ConsumeHeatmapData(string text) 
