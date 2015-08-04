@@ -2,21 +2,21 @@
 
 #Examples: 
 #    BASIC
-#    heat_map_aggr.py -i my_data.tsv
+#    heat_map_aggr.py my_data.tsv
 #    CONCATENATE SEVERAL INPUT FILES INTO A SINGLE OUTPUT (USES FIRST FILE TO NAME OUTPUT)
-#    heat_map_aggr.py -i 'my_data.tsv,my_other_data.tsv'
+#    heat_map_aggr.py 'my_data.tsv,my_other_data.tsv'
 #    SPECIFY OUTPUT FILE NAME
-#    heat_map_aggr.py -i my_data.tsv -o zaphod.json
+#    heat_map_aggr.py my_data.tsv -o zaphod.json
 #    SMOOTH space (s) AND time (t)
-#    heat_map_aggr.py -i my_data.tsv -o my_output.json -s 100 -t 1
+#    heat_map_aggr.py my_data.tsv -o my_output.json -s 100 -t 1
 #    TRIM first AND last
-#    heat_map_aggr.py -i my_data.tsv --first "2015-11-01" --last "2016-02-15"
+#    heat_map_aggr.py my_data.tsv --first "2015-11-01" --last "2016-02-15"
 #    TRIM TO A SPECIFIC SET OF EVENT NAMES
-#    heat_map_aggr.py -i my_data.tsv --event-names ["PlayerDeath", "BotKill"]
+#    heat_map_aggr.py my_data.tsv --event-names ["PlayerDeath", "BotKill"]
 #    AGGREGATE INDIVIDUAL PLAY SESSIONS
-#    heat_map_aggr.py -i my_data.tsv -n
+#    heat_map_aggr.py my_data.tsv -n
 #    DISAGGREGATE EVENTS BY TIME
-#    heat_map_aggr.py -i my_data.tsv -d
+#    heat_map_aggr.py my_data.tsv -d
 
 
 # Input data is a TSV with entries like so:
@@ -65,14 +65,14 @@ def main(argv):
   parser.add_argument('-d', '--disaggregate-time', action='store_const', const=True, help='Disaggregates events that map to matching x/y/z coordinates, but different moments in time.')
   parser.add_argument('-u', '--userInfo', action='store_const', const=True, help='Include userInfo events.')
   args = vars(parser.parse_args())
-  
+
   if 'help' in args:
     parser.print_help()
     sys.exit()
   elif args['version'] == True:
     version_info()
     sys.exit()
-  
+
   try:
     # now by default
     end_date = datetime.datetime.utcnow() if not args['last'] else dateutil.parser.parse(args['last'])
@@ -92,7 +92,7 @@ def main(argv):
   input_files = args['input'].split(',')
   event_names = args['event_names'].split(',') if args['event_names'] else []
 
-  if len(input_files) == 0:
+  if args['input'] == '' or len(input_files) == 0:
     print 'heat_map_aggr.py requires that you specify an input file. It\'s not really that much to ask.'
     parser.print_help()
     sys.exit(2)
