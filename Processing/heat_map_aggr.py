@@ -27,37 +27,9 @@
 # [3] Coordinates (x/y/z/t)
 
 
-import sys, csv, getopt, json, os, dateutil.parser
+import sys, argparse, csv, dateutil.parser, datetime, json, os
 
 version_num = '0.0.1'
-short_args = "i:o:s:t:f:l:e:ndvh"
-long_args = [ "input=","output=",
-              "space=","time=",
-              "first=","last=",
-              "event-names=",
-              "single-session",
-              "disaggregate-time",
-              "version","help"
-            ]
-
-def usage():
-  msg = """usage: heat_map_aggr.py -i|--input <input_files_or_array> [-o|--output <output_file_name>]
-  \t[-s|--space <float>] [-t|--time <float>]
-  \t[-f|--first <date>] [-l|--last <date>]
-  \t[-e|--event-names <eventNameList>] [-n|--single-session]
-  \t[-d|disaggregate-time] [-v|--version] [-h|--help]\n
-  version\t\t\tRetrieve version info for this file.
-  help\t\t\tPrint this help message.
-  input\t\t\tThe name of an input file, or an array of input files (required).
-  output\t\t\tThe name of the output file. If omitted, name is auto-generated from first input file.
-  space\t\t\tNumerical scale at which to smooth out spatial data.
-  time\t\t\tNumerical scale at which to smooth out temporal data.
-  first\t\t\tUNIX timestamp for trimming input.
-  last\t\t\tUNIX timestamp for trimming input.
-  event-names\t\tA string or array of strings, indicating event names to include in the output.
-  single-session\t\tFlag. Organize the data by individual play sessions.
-  disaggregate-time\tDisaggregates events that map to matching x/y/z coordinates, but different moments in time."""
-  print msg
 
 def divide(value, divisor):
   v = float(value)
@@ -80,60 +52,54 @@ def get_existing_point(point_map, tupl):
   return point_map[tupl] if tupl in point_map else None
 
 def main(argv):
-  output_data = {}
-  point_map = {}
+  parser = argparse.ArgumentParser(description="Aggregate raw event data into JSON that can be read by the Unity Analytics heat map system.")
+  parser.add_argument('input', nargs='?', default='', help='The name of an input file, or an array of input files (required).')
+  parser.add_argument('-v', '--version', action='store_const', const=True, help='Retrieve version info for this file.')
+  parser.add_argument('-o', '--output', help='The name of the output file. If omitted, name is auto-generated from first input file.')
+  parser.add_argument('-s', '--space', default=0, help='Numerical scale at which to smooth out spatial data.')
+  parser.add_argument('-t', '--time', default=0, help='Numerical scale at which to smooth out temporal data.')
+  parser.add_argument('-f', '--first', help='UNIX timestamp for trimming input. 365 days before last by default.')
+  parser.add_argument('-l', '--last', help='UNIX timestamp for trimming input. Now by default.')
+  parser.add_argument('-e', '--event-names', default='', help='A string or array of strings, indicating event names to include in the output.')
+  parser.add_argument('-n', '--single-session', action='store_const', const=True, help='Organize the data by individual play sessions.')
+  parser.add_argument('-d', '--disaggregate-time', action='store_const', const=True, help='Disaggregates events that map to matching x/y/z coordinates, but different moments in time.')
+  parser.add_argument('-u', '--userInfo', action='store_const', const=True, help='Include userInfo events.')
+  args = vars(parser.parse_args())
   
-  input_files = []
-  output_file_name = ''
-  space_smooth = False
-  space_divisor = 1.0
-  time_smooth = False
-  time_divisor = 1.0
-  start_date = ''
-  end_date = ''
-  events_list = []
-  disaggregate_time = False
-  single_session = False
+  if 'help' in args:
+    parser.print_help()
+    sys.exit()
+  elif args['version'] == True:
+    version_info()
+    sys.exit()
+  
+  try:
+    # now by default
+    end_date = datetime.datetime.utcnow() if not args['last'] else dateutil.parser.parse(args['last'])
+  except:
+    print 'Provided end date could not be parsed. Format should be YYYY-MM-DD.'
+    sys.exit()
 
   try:
-    opts, args = getopt.getopt(argv, short_args, long_args)
-  except getopt.GetoptError:
-    usage()
+    # subtract 365 days by default
+    start_date = end_date - datetime.timedelta(days=365) if not args['first'] else dateutil.parser.parse(args['first'])
+  except:
+    print 'Provided start date could not be parsed. Format should be YYYY-MM-DD.'
+    sys.exit()
+
+  space_divisor = args['space']
+  time_divisor = args['time']
+  input_files = args['input'].split(',')
+  event_names = args['event_names'].split(',')
+
+  if len(input_files) == 0:
+    print 'heat_map_aggr.py requires that you specify an input file. It\'s not really that much to ask.'
+    parser.print_help()
     sys.exit(2)
-
-  for opt, arg in opts:
-    if opt in ("-h", "--help"):
-      usage()
-      sys.exit()
-    if opt in ("-v", "--version"):
-      version_info()
-      sys.exit()
-    elif opt in ("-i", "--input"):
-      input_files = arg.split(',')
-    elif opt in ("-o", "--output"):
-      output_file_name = arg
-    elif opt in ("-s", "--space"):
-      space_smooth = True
-      space_divisor = arg
-    elif opt in ("-t", "--time"):
-      time_smooth = True
-      time_divisor = arg
-    elif opt in ("-f", "--first"):
-      start_date = arg
-    elif opt in ("-l", "--last"):
-      end_date = arg
-    elif opt in ("-e", "--event-names"):
-      events_list = arg.split(',')
-    elif opt in ("-d", "--disaggregate-time"):
-      disaggregate_time = True
-    elif opt in ("-n", "--single-session"):
-      single_session = True
-
-  if input_files:
-    if output_file_name == '':
-      # Unless specified, output file gets name matching input
-      output_file_name = os.path.splitext(input_files[0])[0] + '.json'
-    
+  else:
+    output_data = {}
+    point_map = {}
+    output_file_name = args['output'] if args['output'] else os.path.splitext(input_files[0])[0] + '.json'
     #loop and smooth all file data
     for fname in input_files:
         with open(fname) as input_file:
@@ -142,15 +108,15 @@ def main(argv):
             # ignore blank rows
             if len(row) >= 3:
               #ignore rows outside any date trimming
-              if start_date != '' and row[0] < start_date:
+              if start_date != '' and dateutil.parser.parse(row[0]) < start_date:
                 continue
-              elif end_date != '' and row[0] > end_date:
+              elif end_date != '' and dateutil.parser.parse(row[0]) > end_date:
                 continue
               point = {}
               datum = json.loads(row[3])
               event = str(datum['unity.name'])
               # if we're filtering events, pass if not in list
-              if len(events_list) > 0 and event not in events_list:
+              if len(event_names) > 0 and event not in event_names:
                 continue
               # ensure we have a list for this event
               if not event in output_data:
@@ -172,7 +138,7 @@ def main(argv):
               except KeyError:
                 z = 0
 
-              if space_smooth:
+              if space_divisor > 0:
                 x = divide(x, space_divisor)
                 y = divide(y, space_divisor)
                 z = divide(z, space_divisor)
@@ -183,7 +149,7 @@ def main(argv):
               # Deal with temporal data, which is also optional
               try:
                 t = float(datum['t']) if 't' in datum else 1.0
-                if time_smooth:
+                if time_divisor > 0:
                   t = divide(t, time_divisor)
                 point['t'] = t
               except AttributeError:
@@ -192,36 +158,35 @@ def main(argv):
                 t = 0
 
               # Hash the point, so we can aggregate for density
-              timeKey = point["t"] if disaggregate_time else None
-              sessionKey = datum[1] if single_session else None
+              timeKey = point["t"] if args['disaggregate_time'] else None
+              sessionKey = datum[1] if args['single_session'] else None
               tupl = (event, point["x"], point["y"], point["z"], timeKey, sessionKey)
 
               pt = get_existing_point(point_map, tupl)
+
               if pt == None:
                 create_key(point_map, tupl, point)
                 point['d'] = 1
                 output_data[event].append(point)
               else:
                 pt['d'] += 1
-
     # test if any data was generated
     has_data = False
+    report = []
     for generated in output_data:
       try:
         has_data = len(output_data[generated]) > 0
+        report.append(len(output_data[generated]))
       except KeyError:
         pass
 
     if has_data:
+      print 'Processed ' + str(len(report)) + ' group(s) with the following numbers of data points: ' + str(report)
       text_file = open(output_file_name, "w")
       text_file.write(json.dumps(output_data))
       zz = text_file.close()
     else:
       print 'The process yielded no results. Could you have misspelled the event name?'
-  else:
-    print 'heat_map_aggr.py requires that you specify an input file. It\'s not really that much to ask.'
-    usage()
-    sys.exit(2)
 
 if __name__ == "__main__":
    main(sys.argv[1:])
