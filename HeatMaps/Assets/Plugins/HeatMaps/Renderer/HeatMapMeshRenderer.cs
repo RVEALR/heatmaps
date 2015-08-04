@@ -67,9 +67,10 @@ public class HeatMapMeshRenderer : MonoBehaviour, IHeatMapRenderer
 		Color newMediumColor = colors [1];
 		Color newHighColor = colors [2];
 
-		if (materials == null || materials[0].GetColor("_TintColor") != newLowColor || 
+		if (materials == null || materials.Length == 0 ||
+			materials[0].GetColor("_TintColor") != newLowColor || 
 			materials[1].GetColor("_TintColor") != newMediumColor || 
-				materials[2].GetColor("_TintColor") != newHighColor) {
+			materials[2].GetColor("_TintColor") != newHighColor) {
 
 			shader = Shader.Find("Heatmaps/Particles/AlphaBlend");
 			materials = new Material[3];
