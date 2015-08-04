@@ -61,7 +61,7 @@ def main(argv):
   parser.add_argument('-f', '--first', help='UNIX timestamp for trimming input. 365 days before last by default.')
   parser.add_argument('-l', '--last', help='UNIX timestamp for trimming input. Now by default.')
   parser.add_argument('-e', '--event-names', help='A string or array of strings, indicating event names to include in the output.')
-  parser.add_argument('-n', '--single-session', action='store_const', const=True, help='Organize the data by individual play sessions.')
+  parser.add_argument('-n', '--single-session', action='store_const', const=True, help='Organize the data by individual play sessions. (Unsupported)')
   parser.add_argument('-d', '--disaggregate-time', action='store_const', const=True, help='Disaggregates events that map to matching x/y/z coordinates, but different moments in time.')
   parser.add_argument('-u', '--userInfo', action='store_const', const=True, help='Include userInfo events.')
   args = vars(parser.parse_args())
@@ -107,23 +107,33 @@ def main(argv):
           for row in tsv:
             # ignore blank rows
             if len(row) >= 3:
+              # read the timestamp
+              try:
+                row_date = dateutil.parser.parse(row[0])
+              except:
+                print 'Process failed while attempting to read a timestamp. Might you have loaded the wrong file?'
+                print 'Couldn\'t parse: ' + str(row[0])
+                sys.exit()
+
               #ignore rows outside any date trimming
-              row_date = dateutil.parser.parse(row[0])
               if row_date <= start_date:
                 continue
               if row_date >= end_date:
                 continue
 
-              point = {}
-              datum = json.loads(row[3])
+              # read the data
+              try:
+                datum = json.loads(row[3])
+              except:
+                print 'Process failed while attempting to read a data row. Might you have loaded the wrong file?'
+                print 'Couldn\'t parse: ' + str(row[3])
+                sys.exit()
+
               event = str(datum['unity.name'])
 
               # if we're filtering events, pass if not in list
               if len(event_names) > 0 and event not in event_names:
                 continue
-              # ensure we have a list for this event
-              if not event in output_data:
-                output_data[event] = []
 
               # Deal with spatial data
               # x/y are required
@@ -131,9 +141,12 @@ def main(argv):
                 x = float(datum['x'])
                 y = float(datum['y'])
               except KeyError:
-                print 'An event in this data set can\'t be interpreted as heat map data. Perhaps you need to filter events using -e?'
-                print datum
-                sys.exit(2)
+                print 'Unable to find x/y in: ' + event + '. Skipping...'
+                continue
+
+              # ensure we have a list for this event
+              if not event in output_data:
+                output_data[event] = []
 
               # z values are optional (Vector2's use only x/y)
               try:
@@ -141,6 +154,8 @@ def main(argv):
               except KeyError:
                 z = 0
 
+              # construct the point
+              point = {}
               if space_divisor > 0:
                 x = divide(x, space_divisor)
                 y = divide(y, space_divisor)
@@ -185,6 +200,7 @@ def main(argv):
 
     if has_data:
       print 'Processed ' + str(len(report)) + ' group(s) with the following numbers of data points: ' + str(report)
+      print output_file_name
       text_file = open(output_file_name, "w")
       text_file.write(json.dumps(output_data))
       zz = text_file.close()
