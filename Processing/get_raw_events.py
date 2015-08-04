@@ -75,10 +75,20 @@ def main(argv):
     version_info()
     sys.exit()
 
-  # now by default
-  end_date = datetime.datetime.utcnow() if not args['last'] else dateutil.parser.parse(args['last'])
-  # subtract 5 days by default
-  start_date = end_date - datetime.timedelta(days=5) if not args['first'] else dateutil.parser.parse(args['first'])
+  try:
+    # now by default
+    end_date = datetime.datetime.utcnow() if not args['last'] else dateutil.parser.parse(args['last'])
+  except:
+    print 'Provided end date could not be parsed. Format should be YYYY-MM-DD.'
+    sys.exit()
+
+  try:
+    # subtract 5 days by default
+    start_date = end_date - datetime.timedelta(days=5) if not args['first'] else dateutil.parser.parse(args['first'])
+  except:
+    print 'Provided start date could not be parsed. Format should be YYYY-MM-DD.'
+    sys.exit()
+
   url = args['url']
   
   # by default, we'll include all. If a flag(s) was selected, use it
