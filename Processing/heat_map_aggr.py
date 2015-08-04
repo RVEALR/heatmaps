@@ -60,7 +60,7 @@ def main(argv):
   parser.add_argument('-t', '--time', default=0, help='Numerical scale at which to smooth out temporal data.')
   parser.add_argument('-f', '--first', help='UNIX timestamp for trimming input. 365 days before last by default.')
   parser.add_argument('-l', '--last', help='UNIX timestamp for trimming input. Now by default.')
-  parser.add_argument('-e', '--event-names', default='', help='A string or array of strings, indicating event names to include in the output.')
+  parser.add_argument('-e', '--event-names', help='A string or array of strings, indicating event names to include in the output.')
   parser.add_argument('-n', '--single-session', action='store_const', const=True, help='Organize the data by individual play sessions.')
   parser.add_argument('-d', '--disaggregate-time', action='store_const', const=True, help='Disaggregates events that map to matching x/y/z coordinates, but different moments in time.')
   parser.add_argument('-u', '--userInfo', action='store_const', const=True, help='Include userInfo events.')
@@ -81,8 +81,8 @@ def main(argv):
     sys.exit()
 
   try:
-    # subtract 365 days by default
-    start_date = end_date - datetime.timedelta(days=365) if not args['first'] else dateutil.parser.parse(args['first'])
+    # allow 'forever' in start_date unspecified
+    start_date = datetime.datetime(2000, 1, 1) if not args['first'] else dateutil.parser.parse(args['first'])
   except:
     print 'Provided start date could not be parsed. Format should be YYYY-MM-DD.'
     sys.exit()
@@ -90,7 +90,7 @@ def main(argv):
   space_divisor = args['space']
   time_divisor = args['time']
   input_files = args['input'].split(',')
-  event_names = args['event_names'].split(',')
+  event_names = args['event_names'].split(',') if args['event_names'] else []
 
   if len(input_files) == 0:
     print 'heat_map_aggr.py requires that you specify an input file. It\'s not really that much to ask.'
@@ -108,13 +108,16 @@ def main(argv):
             # ignore blank rows
             if len(row) >= 3:
               #ignore rows outside any date trimming
-              if start_date != '' and dateutil.parser.parse(row[0]) < start_date:
+              row_date = dateutil.parser.parse(row[0])
+              if row_date <= start_date:
                 continue
-              elif end_date != '' and dateutil.parser.parse(row[0]) > end_date:
+              if row_date >= end_date:
                 continue
+
               point = {}
               datum = json.loads(row[3])
               event = str(datum['unity.name'])
+
               # if we're filtering events, pass if not in list
               if len(event_names) > 0 and event not in event_names:
                 continue
