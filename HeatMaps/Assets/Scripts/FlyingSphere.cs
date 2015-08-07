@@ -68,7 +68,7 @@ public class FlyingSphere : MonoBehaviour
 
 	IEnumerator ChangeAgain() {
 		yield return new WaitForSeconds(changeFreq);
-		currentResponse  = HeatMapEvent.Send ("ChangeCourse", transform.position, Time.fixedTime).ToString();
+		currentResponse  = HeatmapEvent.Send ("ChangeCourse", transform.position, Time.fixedTime).ToString();
 		ChangeCourse ();
 		StartCoroutine (ChangeAgain());
 	}

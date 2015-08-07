@@ -3,7 +3,7 @@
 /// </summary>
 /// This file opens a JSON file and processes it into an array
 /// of point data.
-/// OnGUI functionality displays the state of the data in the HeatMapper inspector.
+/// OnGUI functionality displays the state of the data in the Heatmapper inspector.
 
 using System;
 using System.Collections;
@@ -13,9 +13,9 @@ using UnityEngine;
 
 namespace UnityAnalytics
 {
-	public class HeatMapDataParserInspector
+	public class HeatmapDataParserInspector
 	{
-		private const string DATA_PATH_KEY = "UnityAnalyticsHeatMapDataPath";
+		private const string DATA_PATH_KEY = "UnityAnalyticsHeatmapDataPath";
 		private string path;
 
 		private Dictionary<string, HeatPoint[]> heatData;
@@ -28,18 +28,18 @@ namespace UnityAnalytics
 
 		private PointHandler handler;
 
-		private HeatMapDataParser parser = new HeatMapDataParser ();
+		private HeatmapDataParser parser = new HeatmapDataParser ();
 
 
-		public HeatMapDataParserInspector (PointHandler handler)
+		public HeatmapDataParserInspector (PointHandler handler)
 		{
 			this.handler = handler;
 			path = EditorPrefs.GetString(DATA_PATH_KEY);
 		}
 
-		public static HeatMapDataParserInspector Init(PointHandler handler)
+		public static HeatmapDataParserInspector Init(PointHandler handler)
 		{
-			return new HeatMapDataParserInspector (handler);
+			return new HeatmapDataParserInspector (handler);
 		}
 
 		private void Dispatch()

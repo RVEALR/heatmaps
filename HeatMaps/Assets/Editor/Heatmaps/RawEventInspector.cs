@@ -8,7 +8,7 @@ namespace UnityAnalytics
 	
 	public class RawEventInspector
 	{
-		private const string URL_KEY = "UnityAnalyticsHeatMapDataExportUrlKey";
+		private const string URL_KEY = "UnityAnalyticsHeatmapDataExportUrlKey";
 
 		public delegate void DataHandler (string[] paths);
 

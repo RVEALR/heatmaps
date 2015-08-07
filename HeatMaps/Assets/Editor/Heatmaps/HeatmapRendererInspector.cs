@@ -11,20 +11,20 @@ using UnityEditor;
 
 namespace UnityAnalytics
 {
-	public class HeatMapRendererInspector
+	public class HeatmapRendererInspector
 	{
-		private const string HIGH_DENSITY_COLOR_KEY = "UnityAnalyticsHeatMapHighDensityColor";
-		private const string MEDIUM_DENSITY_COLOR_KEY = "UnityAnalyticsHeatMapMediumDensityColor";
-		private const string LOW_DENSITY_COLOR_KEY = "UnityAnalyticsHeatMapLowDensityColor";
+		private const string HIGH_DENSITY_COLOR_KEY = "UnityAnalyticsHeatmapHighDensityColor";
+		private const string MEDIUM_DENSITY_COLOR_KEY = "UnityAnalyticsHeatmapMediumDensityColor";
+		private const string LOW_DENSITY_COLOR_KEY = "UnityAnalyticsHeatmapLowDensityColor";
 
-		private const string HIGH_THRESHOLD_KEY = "UnityAnalyticsHeatMapHighThreshold";
-		private const string LOW_THRESHOLD_KEY = "UnityAnalyticsHeatMapLowThreshold";
+		private const string HIGH_THRESHOLD_KEY = "UnityAnalyticsHeatmapHighThreshold";
+		private const string LOW_THRESHOLD_KEY = "UnityAnalyticsHeatmapLowThreshold";
 
-		private const string START_TIME_KEY = "UnityAnalyticsHeatMapStartTime";
-		private const string END_TIME_KEY = "UnityAnalyticsHeatMapEndTime";
+		private const string START_TIME_KEY = "UnityAnalyticsHeatmapStartTime";
+		private const string END_TIME_KEY = "UnityAnalyticsHeatmapEndTime";
 
-		private const string PARTICLE_SIZE_KEY = "UnityAnalyticsHeatMapParticleSize";
-		private const string PARTICLE_SHAPE_KEY = "UnityAnalyticsHeatMapParticleShape";
+		private const string PARTICLE_SIZE_KEY = "UnityAnalyticsHeatmapParticleSize";
+		private const string PARTICLE_SHAPE_KEY = "UnityAnalyticsHeatmapParticleShape";
 
 		Color HighDensityColor = new Color(1f, 0, 0, .1f);
 		Color MediumDensityColor = new Color(1f, 1f, 0, .1f);
@@ -45,7 +45,7 @@ namespace UnityAnalytics
 		private GameObject gameObject;
 
 
-		public HeatMapRendererInspector ()
+		public HeatmapRendererInspector ()
 		{
 			HighDensityColor =  GetColorFromString(EditorPrefs.GetString(HIGH_DENSITY_COLOR_KEY));
 			MediumDensityColor =  GetColorFromString(EditorPrefs.GetString(MEDIUM_DENSITY_COLOR_KEY));
@@ -62,9 +62,9 @@ namespace UnityAnalytics
 			ParticleShapeIndex = EditorPrefs.GetInt (PARTICLE_SHAPE_KEY);
 		}
 
-		public static HeatMapRendererInspector Init()
+		public static HeatmapRendererInspector Init()
 		{
-			return new HeatMapRendererInspector ();
+			return new HeatmapRendererInspector ();
 		}
 
 		public void OnGUI()
@@ -132,7 +132,7 @@ namespace UnityAnalytics
 
 			//PASS VALUES TO RENDERER
 			if (gameObject != null) {
-				IHeatMapRenderer r = gameObject.GetComponent<IHeatMapRenderer> () as IHeatMapRenderer;
+				IHeatmapRenderer r = gameObject.GetComponent<IHeatmapRenderer> () as IHeatmapRenderer;
 				r.UpdateColors (new Color[]{LowDensityColor, MediumDensityColor, HighDensityColor});
 				r.UpdateThresholds (new float[]{LowThreshold, HighThreshold});
 				r.pointSize = ParticleSize;

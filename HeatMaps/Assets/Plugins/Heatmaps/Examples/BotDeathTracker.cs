@@ -1,7 +1,7 @@
 ﻿/// <summary>
 /// Bot death tracker.
 /// </summary>
-/// Example of a HeatMap event that tracks the death of a Bot in the AngryBots game
+/// Example of a Heatmap event that tracks the death of a Bot in the AngryBots game
 /// by firing OnDestroy. Note how we call analyticsEnabled = false when the app
 /// quits. This suppresses false positives when the user quits the game.
 
@@ -17,7 +17,7 @@ public class BotDeathTracker : MonoBehaviour, IAnalyticsDispatcher
     {
         if (analyticsEnabled)
         {
-			HeatMapEvent.Send("BotKill", transform.position, Time.timeSinceLevelLoad);
+			HeatmapEvent.Send("BotKill", transform.position, Time.timeSinceLevelLoad);
         }
     }
 

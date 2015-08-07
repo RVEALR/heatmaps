@@ -1,7 +1,7 @@
 ﻿/// <summary>
 /// Position tracker.
 /// </summary>
-/// Example of a HeatMap event that tracks the position of an object.
+/// Example of a Heatmap event that tracks the position of an object.
 /// Be careful of tracking position (or anything else) too frequently, 
 /// as this might result in ridiculous amounts of data.
 
@@ -24,7 +24,7 @@ public class PositionTracker : MonoBehaviour, IAnalyticsDispatcher {
 	IEnumerator TrackingTick () {
 		yield return new WaitForSeconds (trackIntervalInSeconds);
 		if (analyticsEnabled) {
-			UnityAnalytics.HeatMapEvent.Send ("PlayerPosition", transform.position, Time.timeSinceLevelLoad);
+			UnityAnalytics.HeatmapEvent.Send ("PlayerPosition", transform.position, Time.timeSinceLevelLoad);
 			StartCoroutine (TrackingTick ());
 		}
 	}

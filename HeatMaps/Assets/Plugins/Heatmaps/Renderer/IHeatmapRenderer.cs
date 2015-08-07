@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace UnityAnalytics
 {
-	public interface IHeatMapRenderer
+	public interface IHeatmapRenderer
 	{
 		/// <summary>
 		/// Sets the heatmap data
@@ -42,7 +42,7 @@ namespace UnityAnalytics
 		/// <summary>
 		/// Renders the heat map.
 		/// </summary>
-		void RenderHeatMap();
+		void RenderHeatmap();
 
 		/// <summary>
 		/// Change the rendering style of this renderer.

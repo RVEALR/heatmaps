@@ -1,5 +1,5 @@
 ﻿/// <summary>
-/// Adapter API for sending HeatMap analytics events
+/// Adapter API for sending Heatmap analytics events
 /// </summary>
 /// This is <i>simply</i> an adapter. As such, you could choose not to
 /// use it at all, but by passing your events through this API you gain type
@@ -23,7 +23,7 @@ using analyticsEventNamespace = UnityEngine.Analytics.Analytics;
 
 namespace UnityAnalytics
 {
-	public class HeatMapEvent
+	public class HeatmapEvent
 	{
 		private static Dictionary<string, object> dict = new Dictionary<string, object> ();
 
@@ -32,14 +32,14 @@ namespace UnityAnalytics
 			dict ["x"] = v.x;
 			dict ["y"] = v.y;
 			dict ["z"] = v.z;
-			return analyticsEventNamespace.CustomEvent ("HeatMap" + eventName, dict);
+			return analyticsEventNamespace.CustomEvent ("Heatmap" + eventName, dict);
 		}
 
 		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector2 v)
 		{
 			dict ["x"] = v.x;
 			dict ["y"] = v.y;
-			return analyticsEventNamespace.CustomEvent ("HeatMap" + eventName, dict);
+			return analyticsEventNamespace.CustomEvent ("Heatmap" + eventName, dict);
 		}
 
 		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector3 v, float time)
@@ -48,7 +48,7 @@ namespace UnityAnalytics
 			dict ["y"] = v.y;
 			dict ["z"] = v.z;
 			dict ["t"] = time;
-			return analyticsEventNamespace.CustomEvent ("HeatMap" + eventName, dict);
+			return analyticsEventNamespace.CustomEvent ("Heatmap" + eventName, dict);
 		}
 
 		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector2 v, float time)
@@ -56,7 +56,7 @@ namespace UnityAnalytics
 			dict ["x"] = v.x;
 			dict ["y"] = v.y;
 			dict ["t"] = time;
-			return analyticsEventNamespace.CustomEvent ("HeatMap" + eventName, dict);
+			return analyticsEventNamespace.CustomEvent ("Heatmap" + eventName, dict);
 		}
 	}
 }

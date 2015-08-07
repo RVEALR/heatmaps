@@ -2,15 +2,15 @@
 /// Heat map controller.
 /// </summary>
 /// This is an exceedingly simple example of a runtime controller
-/// for the HeatMapMeshRenderer. It's not exceptionally flexible,
+/// for the HeatmapMeshRenderer. It's not exceptionally flexible,
 /// but it teaches you everything you need to know if you want to
-/// use the HeatMapMeshRenderer as a runtime component. To use:
+/// use the HeatmapMeshRenderer as a runtime component. To use:
 /// 
 /// 1. If you don’t have a Resources folder, create one.
 /// 2. In the Resources folder, place an output of heat_map_aggr.py (i.e., a JSON file).
-/// 3. In your game, create an empty GameObject. Name it ‘MyRuntimeHeatMap’.
-/// 4. Add the HeatMapController MonoBehaviour to ‘MyRuntimeHeatMap’
-/// 5. Look at the Inspector for ‘MyRuntimeHeatMap’. Under Heat Map Controller, find the Data Path field.
+/// 3. In your game, create an empty GameObject. Name it ‘MyRuntimeHeatmap’.
+/// 4. Add the HeatmapController MonoBehaviour to ‘MyRuntimeHeatmap’
+/// 5. Look at the Inspector for ‘MyRuntimeHeatmap’. Under Heat Map Controller, find the Data Path field.
 /// 6. Type in the name of your JSON file.
 /// 7. Hit Play! 
 
@@ -21,11 +21,11 @@ using UnityAnalytics;
 using System.Collections.Generic;
 
 
-[RequireComponent (typeof (HeatMapMeshRenderer))]
-public class HeatMapController : MonoBehaviour
+[RequireComponent (typeof (HeatmapMeshRenderer))]
+public class HeatmapController : MonoBehaviour
 {
 
-	private HeatMapDataParser parser = new HeatMapDataParser();
+	private HeatmapDataParser parser = new HeatmapDataParser();
 	private Dictionary<string, HeatPoint[]> data; 
 
 	public string dataPath = "";
@@ -74,7 +74,7 @@ public class HeatMapController : MonoBehaviour
 	/// Renders the heatmap
 	/// </summary>
 	void Render() {
-		var r = gameObject.GetComponent<IHeatMapRenderer> ();
+		var r = gameObject.GetComponent<IHeatmapRenderer> ();
 		r.allowRender = true;
 		r.pointSize = pointSize;
 		r.UpdateColors (colors);
@@ -82,7 +82,7 @@ public class HeatMapController : MonoBehaviour
 		r.UpdateTimeLimits (0, maxTime);
 		r.UpdateRenderStyle (RenderShape.TRI);
 		r.UpdatePointData (data[options[optionIndex]], maxDensity);
-		r.RenderHeatMap ();
+		r.RenderHeatmap ();
 	}
 }
 

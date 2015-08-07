@@ -7,12 +7,12 @@ using MiniJSON;
 
 namespace UnityAnalytics
 {
-	public class HeatMapDataParser
+	public class HeatmapDataParser
 	{
 		public delegate void ParseHandler (Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, string[] options);
 		private ParseHandler handler;
 
-		public HeatMapDataParser ()
+		public HeatmapDataParser ()
 		{
 		}
 

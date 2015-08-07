@@ -4,7 +4,7 @@
 /// This is the default renderer that comes with the Heat Maps package.
 /// It procedurally constructs a mesh to display Heat Map data. You
 /// might consider writing your own renderer. If you do, we recommend
-/// following the defined IHeatMapRenderer interface.
+/// following the defined IHeatmapRenderer interface.
 
 using System;
 using UnityEngine;
@@ -14,7 +14,7 @@ using System.Collections;
 [RequireComponent (typeof (MeshCollider))]
 [RequireComponent (typeof (MeshFilter))]
 [RequireComponent (typeof (MeshRenderer))]
-public class HeatMapMeshRenderer : MonoBehaviour, IHeatMapRenderer
+public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 {
 
 	private const int NOT_RENDERING = 0;
@@ -138,7 +138,7 @@ public class HeatMapMeshRenderer : MonoBehaviour, IHeatMapRenderer
 		}
 	}
 
-	public void RenderHeatMap() {
+	public void RenderHeatmap() {
 		if (allowRender) {
 			if (renderState == BEGIN_RENDER) {
 				renderState = RENDER_IN_PROGRESS;
