@@ -69,9 +69,8 @@ namespace UnityAnalytics
 
 		public void OnGUI()
 		{
-			GUILayout.Label ("Renderer", EditorStyles.boldLabel);
-
 			//COLORS
+			EditorGUILayout.BeginVertical ("box");
 			HighDensityColor = SetAndSaveColor ("High Color", HIGH_DENSITY_COLOR_KEY, HighDensityColor);
 			MediumDensityColor = SetAndSaveColor ("Medium Color", MEDIUM_DENSITY_COLOR_KEY, MediumDensityColor);
 			LowDensityColor = SetAndSaveColor ("Low Color", LOW_DENSITY_COLOR_KEY, LowDensityColor);
@@ -83,6 +82,7 @@ namespace UnityAnalytics
 			EditorGUILayout.LabelField("Low Threshold:", LowThreshold.ToString());
 			EditorGUILayout.LabelField("High Threshold:", HighThreshold.ToString());
 			EditorGUILayout.EndHorizontal ();
+
 			EditorGUILayout.MinMaxSlider(ref LowThreshold, ref HighThreshold, 0f, 1f);
 			if (oldLowThreshold != LowThreshold) {
 				EditorPrefs.SetFloat (LOW_THRESHOLD_KEY, LowThreshold);
@@ -90,8 +90,11 @@ namespace UnityAnalytics
 			if (oldHighThreshold != HighThreshold) {
 				EditorPrefs.SetFloat (HIGH_THRESHOLD_KEY, HighThreshold);
 			}
+			EditorGUILayout.EndVertical ();
+
 
 			//TIME WINDOW
+			EditorGUILayout.BeginVertical ("box");
 			var oldStartTime = StartTime;
 			var oldEndTime = EndTime;
 			EditorGUILayout.BeginHorizontal ();
@@ -110,7 +113,10 @@ namespace UnityAnalytics
 				EditorPrefs.SetFloat (END_TIME_KEY, EndTime);
 			}
 
+			EditorGUILayout.EndVertical ();
+
 			//PARTICLE SIZE/SHAPE
+			EditorGUILayout.BeginVertical ("box");
 			var oldParticleSize = ParticleSize;
 			ParticleSize = EditorGUILayout.FloatField ("Particle Size", ParticleSize);
 			if (oldParticleSize != ParticleSize) {
@@ -122,6 +128,7 @@ namespace UnityAnalytics
 			if (oldParticleShapeIndex != ParticleShapeIndex) {
 				EditorPrefs.SetInt (PARTICLE_SHAPE_KEY, ParticleShapeIndex);
 			}
+			EditorGUILayout.EndVertical ();
 
 			//PASS VALUES TO RENDERER
 			if (gameObject != null) {

@@ -49,17 +49,14 @@ namespace UnityAnalytics
 
 		public void OnGUI()
 		{
-			GUILayout.Label ("Data", EditorStyles.boldLabel);
-			path = EditorGUILayout.TextField ("Source", path);
+			
 
 			GUILayout.BeginHorizontal ();
 			if (GUILayout.Button ("Find File")) {
 				path = EditorUtility.OpenFilePanel ("Locate a JSON file", "", "json");
 				EditorPrefs.SetString (DATA_PATH_KEY, path);
 			}
-			if (GUILayout.Button ("Load")) {
-				parser.LoadData (path, ParseHandler);
-			}
+			path = EditorGUILayout.TextField (path);
 			GUILayout.EndHorizontal ();
 
 			if (heatData != null && optionKeys != null && optionIndex > -1 && optionIndex < optionKeys.Length && heatData.ContainsKey(optionKeys[optionIndex])) {
@@ -68,6 +65,9 @@ namespace UnityAnalytics
 				if (optionIndex != oldIndex) {
 					Dispatch ();
 				}
+			}
+			if (GUILayout.Button ("Load")) {
+				parser.LoadData (path, ParseHandler);
 			}
 		}
 

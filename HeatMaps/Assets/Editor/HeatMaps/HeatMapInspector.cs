@@ -17,6 +17,8 @@ public class HeatMapper : EditorWindow
 		EditorWindow.GetWindow (typeof(HeatMapper));
 	}
 
+	private RawEventInspector m_FetchView;
+	private AggregationInspector m_AggregateView;
 	private HeatMapDataParserInspector m_ParseView;
 	private HeatMapRendererInspector m_RenderView;
 
@@ -24,27 +26,57 @@ public class HeatMapper : EditorWindow
 
 	bool normalizeData;
 
+	bool showFetch = false;
+	bool showAggregate = false;
+	bool showRender = false;
+
+
 	void OnGUI ()
 	{
+		GUILayout.BeginVertical ("box");
 		if (GUILayout.Button ("Reset")) {
 			SystemReset ();
 		}
+		GUILayout.EndVertical ();
 
+		GUILayout.BeginVertical ("box");
+		if (m_FetchView == null) {
+			m_FetchView = RawEventInspector.Init (RawDataHandler);
+		}
+		showFetch = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), showFetch, "Fetch Raw Custom Events", true);
+		if (showFetch) {
+			m_FetchView.OnGUI ();
+		}
+		GUILayout.EndVertical ();
 
+		GUILayout.BeginVertical ("box");
+		if (m_AggregateView == null) {
+			m_AggregateView = AggregationInspector.Init (OnAggregation);
+		}
+		showAggregate = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), showAggregate, "Aggregate Events", true);
+		if (showAggregate) {
+			m_AggregateView.OnGUI ();
+		}
+		GUILayout.EndVertical ();
+
+		GUILayout.BeginVertical ("box");
 		if (m_ParseView == null) {
 			m_ParseView = HeatMapDataParserInspector.Init (PointDataHandler);
 		}
-		m_ParseView.OnGUI ();
-
-
-
 		if (m_RenderView == null) {
 			m_RenderView = HeatMapRendererInspector.Init ();
 		}
-		m_RenderView.OnGUI ();
+
+		showRender = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), showRender, "Render", true);
+		if (showRender) {
+			m_ParseView.OnGUI ();
+			m_RenderView.OnGUI ();
+		}
+
 		if (heatMapInstance) {
 			m_RenderView.SetGameObject (heatMapInstance);
 		}
+		GUILayout.EndVertical ();
 	}
 
 
@@ -62,6 +94,14 @@ public class HeatMapper : EditorWindow
 			DestroyImmediate (heatMapInstance);
 			CreateHeatMapInstance ();
 		}
+	}
+
+	void RawDataHandler(string[] paths) {
+		// All the paths
+	}
+
+	void OnAggregation(string[] paths) {
+		//The aggregated data
 	}
 
 	void PointDataHandler(HeatPoint[] heatData, float maxDensity, float maxTime)
