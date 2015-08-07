@@ -63,7 +63,6 @@ def main(argv):
   parser.add_argument('-e', '--event-names', help='A string or array of strings, indicating event names to include in the output.')
   parser.add_argument('-n', '--single-session', action='store_const', const=True, help='Organize the data by individual play sessions. (Unsupported)')
   parser.add_argument('-d', '--disaggregate-time', action='store_const', const=True, help='Disaggregates events that map to matching x/y/z coordinates, but different moments in time.')
-  parser.add_argument('-u', '--userInfo', action='store_const', const=True, help='Include userInfo events.')
   args = vars(parser.parse_args())
 
   if 'help' in args:
