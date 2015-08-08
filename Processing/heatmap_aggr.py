@@ -2,25 +2,25 @@
 
 #Examples: 
 #    BASIC
-#    heat_map_aggr.py my_data.tsv
+#    heatmap_aggr.py my_data.tsv
 #    CONCATENATE SEVERAL INPUT FILES INTO A SINGLE OUTPUT (USES FIRST FILE TO NAME OUTPUT)
-#    heat_map_aggr.py 'my_data.tsv,my_other_data.tsv'
+#    heatmap_aggr.py 'my_data.tsv,my_other_data.tsv'
 #    SPECIFY OUTPUT FILE NAME
-#    heat_map_aggr.py my_data.tsv -o zaphod.json
+#    heatmap_aggr.py my_data.tsv -o zaphod.json
 #    SMOOTH space (s) AND time (t)
-#    heat_map_aggr.py my_data.tsv -o my_output.json -s 100 -t 1
+#    heatmap_aggr.py my_data.tsv -o my_output.json -s 100 -t 1
 #    TRIM first AND last
-#    heat_map_aggr.py my_data.tsv --first "2015-11-01" --last "2016-02-15"
+#    heatmap_aggr.py my_data.tsv --first "2015-11-01" --last "2016-02-15"
 #    TRIM TO A SPECIFIC SET OF EVENT NAMES
-#    heat_map_aggr.py my_data.tsv --event-names ["PlayerDeath", "BotKill"]
+#    heatmap_aggr.py my_data.tsv --event-names ["PlayerDeath", "BotKill"]
 #    AGGREGATE INDIVIDUAL PLAY SESSIONS
-#    heat_map_aggr.py my_data.tsv -n
+#    heatmap_aggr.py my_data.tsv -n
 #    DISAGGREGATE EVENTS BY TIME
-#    heat_map_aggr.py my_data.tsv -d
+#    heatmap_aggr.py my_data.tsv -d
 
 
 # Input data is a TSV with entries like so:
-# 2015-06-24 17:05:28	test_69	HeatMapPlayerDeath	{"x":"10.0000024","y":"-24.0034234232","z":"5.277900660936861","t":"97.06499906516409","unity.name":"HeatMapPlayerDeath"}
+# 2015-06-24 17:05:28	test_69	HeatmapPlayerDeath	{"x":"10.0000024","y":"-24.0034234232","z":"5.277900660936861","t":"97.06499906516409","unity.name":"HeatmapPlayerDeath"}
 # [0] Unix timestamp
 # [1] SessionID
 # [2] EventName
@@ -29,7 +29,7 @@
 
 import sys, argparse, csv, dateutil.parser, datetime, json, os
 
-version_num = '0.0.1'
+version_num = '0.0.2'
 
 def divide(value, divisor):
   v = float(value)
@@ -43,7 +43,7 @@ def divide(value, divisor):
   return rounded
 
 def version_info():
-  print 'heat_map_aggr.py Heat Map Aggregator by Unity Analytics. (c)2015 Version: ' + version_num
+  print 'heatmap_aggr.py Heatmap Aggregator by Unity Analytics. (c)2015 Version: ' + version_num
 
 def create_key(point_map, tupl, point):
   point_map[tupl] = point
@@ -52,7 +52,7 @@ def get_existing_point(point_map, tupl):
   return point_map[tupl] if tupl in point_map else None
 
 def main(argv):
-  parser = argparse.ArgumentParser(description="Aggregate raw event data into JSON that can be read by the Unity Analytics heat map system.")
+  parser = argparse.ArgumentParser(description="Aggregate raw event data into JSON that can be read by the Unity Analytics heatmap system.")
   parser.add_argument('input', nargs='?', default='', help='The name of an input file, or an array of input files (required).')
   parser.add_argument('-v', '--version', action='store_const', const=True, help='Retrieve version info for this file.')
   parser.add_argument('-o', '--output', help='The name of the output file. If omitted, name is auto-generated from first input file.')
@@ -92,7 +92,7 @@ def main(argv):
   event_names = args['event_names'].split(',') if args['event_names'] else []
 
   if args['input'] == '' or len(input_files) == 0:
-    print 'heat_map_aggr.py requires that you specify an input file. It\'s not really that much to ask.'
+    print 'heatmap_aggr.py requires that you specify an input file. It\'s not really that much to ask.'
     parser.print_help()
     sys.exit(2)
   else:
