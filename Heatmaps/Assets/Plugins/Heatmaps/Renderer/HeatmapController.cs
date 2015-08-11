@@ -80,7 +80,7 @@ public class HeatmapController : MonoBehaviour
 		r.UpdateColors (colors);
 		r.UpdateThresholds (thresholds);
 		r.UpdateTimeLimits (0, maxTime);
-		r.UpdateRenderStyle (RenderShape.TRI);
+		r.UpdateRenderStyle (RenderShape.TRI, RenderDirection.YZ);
 		r.UpdatePointData (data[options[optionIndex]], maxDensity);
 		r.RenderHeatmap ();
 	}

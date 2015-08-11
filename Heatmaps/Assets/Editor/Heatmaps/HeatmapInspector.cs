@@ -11,7 +11,7 @@ using UnityAnalytics;
 
 public class Heatmapper : EditorWindow
 {
-	[MenuItem("Window/Heat Mapper #%h")]
+	[MenuItem("Window/Heatmapper #%h")]
 	private static void HeatmapperMenuOption()
 	{
 		EditorWindow.GetWindow (typeof(Heatmapper));

@@ -90,7 +90,7 @@ namespace UnityAnalytics
 		public void OnGUI()
 		{
 			GUILayout.BeginVertical ("box");
-			if (GUILayout.Button ("Add File +")) {
+			if (GUILayout.Button ("Add File")) {
 				int insertPoint = inputFiles.Count;
 
 				if (inputFiles.Count == 1 && inputFiles [0] == NEW_PATH_TEXT) {
@@ -145,7 +145,7 @@ namespace UnityAnalytics
 
 			GUILayout.BeginVertical ("box");
 			string oldEventsString = string.Join ("|", events.ToArray());
-			if (GUILayout.Button ("Limit To Events +")) {
+			if (GUILayout.Button ("Limit To Events")) {
 				events.Add ("Event name");
 			}
 			for (var a = 0; a < events.Count; a++) {

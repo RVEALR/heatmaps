@@ -47,9 +47,11 @@ namespace UnityAnalytics
 		/// <summary>
 		/// Change the rendering style of this renderer.
 		/// </summary>
-		/// Currently, RenderShape includes the options CUBE, SQUARE, and TRI.
+		/// Currently, RenderShape includes the options CUBE, SQUARE, and TRI,
+		/// and RenderDirection includes YZ, XZ and XY
 		/// <param name="style">A RenderShape Enum.</param>
-		void UpdateRenderStyle(RenderShape style);
+		/// /// <param name="style">A RenderDirection Enum.</param>
+		void UpdateRenderStyle(RenderShape style, RenderDirection direction);
 
 		/// <summary>
 		/// Gets or sets the size of each point.

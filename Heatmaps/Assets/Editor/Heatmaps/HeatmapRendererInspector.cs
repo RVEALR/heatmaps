@@ -25,6 +25,7 @@ namespace UnityAnalytics
 
 		private const string PARTICLE_SIZE_KEY = "UnityAnalyticsHeatmapParticleSize";
 		private const string PARTICLE_SHAPE_KEY = "UnityAnalyticsHeatmapParticleShape";
+		private const string PARTICLE_DIRECTION_KEY = "UnityAnalyticsHeatmapParticleDirection";
 
 		Color HighDensityColor = new Color(1f, 0, 0, .1f);
 		Color MediumDensityColor = new Color(1f, 1f, 0, .1f);
@@ -41,6 +42,10 @@ namespace UnityAnalytics
 		int ParticleShapeIndex = 0;
 		string[] particleShapeOptions = new string[]{"Cube", "Square", "Triangle"};
 		RenderShape[] particleShapeIds = new RenderShape[]{RenderShape.CUBE, RenderShape.SQUARE, RenderShape.TRI};
+
+		int ParticleDirectionIndex = 0;
+		string[] particleDirectionOptions = new string[]{"YZ", "XZ", "XY"};
+		RenderDirection[] particleDirectionIds = new RenderDirection[]{RenderDirection.YZ, RenderDirection.XZ, RenderDirection.XY};
 
 		private GameObject gameObject;
 
@@ -60,6 +65,7 @@ namespace UnityAnalytics
 			ParticleSize = EditorPrefs.GetFloat (PARTICLE_SIZE_KEY);
 
 			ParticleShapeIndex = EditorPrefs.GetInt (PARTICLE_SHAPE_KEY);
+			ParticleDirectionIndex = EditorPrefs.GetInt (PARTICLE_DIRECTION_KEY);
 		}
 
 		public static HeatmapRendererInspector Init()
@@ -126,6 +132,13 @@ namespace UnityAnalytics
 			if (oldParticleShapeIndex != ParticleShapeIndex) {
 				EditorPrefs.SetInt (PARTICLE_SHAPE_KEY, ParticleShapeIndex);
 			}
+
+			var oldParticleDirectionIndex = ParticleDirectionIndex;
+			ParticleDirectionIndex = EditorGUILayout.Popup ("Billboard plane", ParticleDirectionIndex, particleDirectionOptions);
+			if (oldParticleDirectionIndex != ParticleDirectionIndex) {
+				EditorPrefs.SetInt (PARTICLE_DIRECTION_KEY, ParticleDirectionIndex);
+			}
+
 			EditorGUILayout.EndVertical ();
 
 			//PASS VALUES TO RENDERER
@@ -135,7 +148,7 @@ namespace UnityAnalytics
 				r.UpdateThresholds (new float[]{LowThreshold, HighThreshold});
 				r.pointSize = ParticleSize;
 				r.UpdateTimeLimits (StartTime, EndTime);
-				r.UpdateRenderStyle(particleShapeIds[ParticleShapeIndex]);
+				r.UpdateRenderStyle(particleShapeIds[ParticleShapeIndex], particleDirectionIds[ParticleDirectionIndex]);
 				SceneView.RepaintAll ();
 			}
 		}

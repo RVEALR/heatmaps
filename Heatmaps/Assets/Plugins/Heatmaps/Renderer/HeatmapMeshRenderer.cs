@@ -38,6 +38,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	private float maxDensity = 0f;
 
 	private RenderShape renderStyle = RenderShape.CUBE;
+	private RenderDirection renderDirection = RenderDirection.YZ;
 
 	private Shader shader;
 	public Material[] materials;
@@ -121,8 +122,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		}
 	}
 
-	public void UpdateRenderStyle(RenderShape style) {
-		if (style != renderStyle) {
+	public void UpdateRenderStyle(RenderShape style, RenderDirection direction) {
+		if (style != renderStyle || direction != renderDirection) {
+			renderDirection = direction;
 			switch (style) {
 			case RenderShape.CUBE:
 				renderStyle = style;
@@ -242,10 +244,30 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	private Mesh AddSquareToMesh(Mesh mesh, int index, float x, float y, float z) {
 		float halfP = particleSize / 2;
 
-		Vector3 p0 = new Vector3 (x-halfP, y, z-halfP);
-		Vector3 p1 = new Vector3 (x+halfP, y, z-halfP);
-		Vector3 p2 = new Vector3 (x+halfP, y, z+halfP);
-		Vector3 p3 = new Vector3 (x-halfP, y, z+halfP);
+		Vector3 p0, p1, p2, p3;
+
+		switch (renderDirection) {
+		case RenderDirection.YZ:
+			p0 = new Vector3 (x, y-halfP, z-halfP);
+			p1 = new Vector3 (x, y+halfP, z-halfP);
+			p2 = new Vector3 (x, y+halfP, z+halfP);
+			p3 = new Vector3 (x, y-halfP, z+halfP);
+			break;
+
+		case RenderDirection.XZ:
+			p0 = new Vector3 (x-halfP, y, z-halfP);
+			p1 = new Vector3 (x+halfP, y, z-halfP);
+			p2 = new Vector3 (x+halfP, y, z+halfP);
+			p3 = new Vector3 (x-halfP, y, z+halfP);
+			break;
+
+		default:
+			p0 = new Vector3 (x-halfP, y-halfP, z);
+			p1 = new Vector3 (x+halfP, y-halfP, z);
+			p2 = new Vector3 (x+halfP, y+halfP, z);
+			p3 = new Vector3 (x-halfP, y+halfP, z);
+			break;
+		}
 
 		var additionalVertices = new Vector3[] { p0, p1, p2, p3 };
 		var combinedVertices = new Vector3[mesh.vertexCount + additionalVertices.Length];
@@ -270,9 +292,30 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	private Mesh AddTriToMesh(Mesh mesh, int index, float x, float y, float z) {
 		float halfP = particleSize / 2;
 
-		Vector3 p0 = new Vector3 (x-halfP, y, z-halfP);
-		Vector3 p1 = new Vector3 (x, y, z+halfP);
-		Vector3 p2 = new Vector3 (x+halfP, y, z-halfP);
+		Vector3 p0, p1, p2;
+
+		switch (renderDirection) {
+		case RenderDirection.YZ:
+			p0 = new Vector3 (x, y-halfP, z-halfP);
+			p1 = new Vector3 (x, y, z+halfP);
+			p2 = new Vector3 (x, y+halfP, z-halfP);
+			break;
+
+		case RenderDirection.XZ:
+			p0 = new Vector3 (x-halfP, y, z-halfP);
+			p1 = new Vector3 (x, y, z+halfP);
+			p2 = new Vector3 (x+halfP, y, z-halfP);
+			break;
+
+		default:
+			p0 = new Vector3 (x-halfP, y-halfP, z);
+			p1 = new Vector3 (x, y+halfP, z);
+			p2 = new Vector3 (x+halfP, y-halfP, z);
+			break;
+		}
+
+
+
 
 		var additionalVertices = new Vector3[] { p0, p1, p2 };
 		var combinedVertices = new Vector3[mesh.vertexCount + additionalVertices.Length];
