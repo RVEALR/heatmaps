@@ -41,7 +41,7 @@ public class Heatmapper : EditorWindow
 
 		GUILayout.BeginVertical ("box");
 		if (m_FetchView == null) {
-			m_FetchView = RawEventInspector.Init (RawDataHandler);
+			m_FetchView = RawEventInspector.Init ();
 		}
 		showFetch = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), showFetch, "Fetch Raw Custom Events", true);
 		if (showFetch) {

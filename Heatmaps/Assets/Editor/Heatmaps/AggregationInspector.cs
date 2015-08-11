@@ -1,9 +1,4 @@
-﻿/// <summary>
-/// Heat map data parser.
-/// </summary>
-/// This file opens a JSON file and processes it into an array
-/// of point data.
-/// OnGUI functionality displays the state of the data in the Heatmapper inspector.
+﻿
 
 using System;
 using System.Collections;
@@ -16,24 +11,33 @@ namespace UnityAnalytics
 	public class AggregationInspector
 	{
 		private const string DATA_PATH_KEY = "UnityAnalyticsHeatmapAggregationDataPath";
-		private string path;
+		private const string SPACE_KEY = "UnityAnalyticsHeatmapAggregationSpace";
+		private const string KEY_TO_TIME = "UnityAnalyticsHeatmapAggregationTime";
+		private const string DISAGGREGATE_KEY = "UnityAnalyticsHeatmapAggregationDisaggregate";
+		private const string EVENTS_KEY = "UnityAnalyticsHeatmapAggregationEvents";
+		private const string TRIM_DATES_KEY = "UnityAnalyticsHeatmapAggregationTrimDates";
+
+
+		private const string NEW_PATH_TEXT = "New file path";
+
+		private const float DEFAULT_SPACE = 10f;
+		private const float DEFAULT_TIME = 10f;
 
 		private Dictionary<string, HeatPoint[]> heatData;
-
-		private int optionIndex = 0;
-		private string[] optionKeys;
 
 		public delegate void AggregationHandler (string[] strings);
 
 		private AggregationHandler handler;
 
-		private HeatmapDataParser parser = new HeatmapDataParser ();
+		private HeatmapAggregator processor = new HeatmapAggregator ();
 
+		private List<string> inputFiles = new List<string>{NEW_PATH_TEXT};
 		private string startDate = "";
 		private string endDate = "";
-		private float space = 10f;
-		private float time = 10f;
+		private float space = DEFAULT_SPACE;
+		private float time = DEFAULT_TIME;
 		private bool disaggregateTime = false;
+		private bool trimDates = false;
 
 		private List<string> events = new List<string>{};
 
@@ -41,10 +45,36 @@ namespace UnityAnalytics
 		public AggregationInspector (AggregationHandler handler)
 		{
 			this.handler = handler;
-			path = EditorPrefs.GetString(DATA_PATH_KEY);
 
+			// Restore cached paths
+			string loadedPath = EditorPrefs.GetString (DATA_PATH_KEY);
+			string[] paths;
+			if (string.IsNullOrEmpty(loadedPath)) {
+				paths = new string[]{};
+			} else {
+				paths = loadedPath.Split ('|');
+			}
+			inputFiles = new List<string>(paths);
+
+			// Set dates based on today (should this be cached?)
 			endDate = String.Format("{0:yyyy-MM-dd}", DateTime.Now);
 			startDate = String.Format("{0:yyyy-MM-dd}", DateTime.Now.Subtract(new TimeSpan(5, 0, 0, 0)));
+
+			// Restore other options
+			space = EditorPrefs.GetFloat (SPACE_KEY) == 0 ? DEFAULT_SPACE : EditorPrefs.GetFloat (SPACE_KEY);
+			time = EditorPrefs.GetFloat (KEY_TO_TIME) == 0 ?  DEFAULT_TIME : EditorPrefs.GetFloat (KEY_TO_TIME);
+			disaggregateTime = EditorPrefs.GetBool (DISAGGREGATE_KEY);
+			trimDates = EditorPrefs.GetBool (TRIM_DATES_KEY);
+
+			// Restore list of events
+			string loadedEvents = EditorPrefs.GetString (EVENTS_KEY);
+			string[] eventsList;
+			if (string.IsNullOrEmpty (loadedEvents)) {
+				eventsList = new string[]{};
+			} else {
+				eventsList = loadedEvents.Split ('|');
+			}
+			events = new List<string>(eventsList);
 		}
 
 		public static AggregationInspector Init(AggregationHandler handler)
@@ -59,24 +89,62 @@ namespace UnityAnalytics
 
 		public void OnGUI()
 		{
-			GUILayout.BeginHorizontal ();
-			if (GUILayout.Button ("Find File")) {
-				path = EditorUtility.OpenFilePanel ("Locate a JSON file", "", "json");
-				EditorPrefs.SetString (DATA_PATH_KEY, path);
+			GUILayout.BeginVertical ("box");
+			if (GUILayout.Button ("Add File +")) {
+				int insertPoint = inputFiles.Count;
+
+				if (inputFiles.Count == 1 && inputFiles [0] == NEW_PATH_TEXT) {
+					insertPoint = 0;
+				} else {
+					inputFiles.Add (NEW_PATH_TEXT);
+				}
+				inputFiles[insertPoint] = EditorUtility.OpenFilePanel ("Locate your downloaded file", "", "txt");
+
+
+				string pathsString = string.Join ("|", inputFiles.ToArray());
+				EditorPrefs.SetString (DATA_PATH_KEY, pathsString);
 			}
-			EditorGUILayout.TextField (path);
-			GUILayout.EndHorizontal ();
+			for (var a = 0; a < inputFiles.Count; a++) {
+				GUILayout.BeginHorizontal ();
+				if (GUILayout.Button ("-", GUILayout.MaxWidth(20f))) {
+					inputFiles.RemoveAt (a);
+					break;
+				}
+				inputFiles [a] = EditorGUILayout.TextField (inputFiles [a]);
+				GUILayout.EndHorizontal ();
+			}
+			GUILayout.EndVertical ();
 
+			bool oldTrimDates = trimDates;
+			trimDates = EditorGUILayout.Toggle ("Trim Dates", trimDates);
+			if (oldTrimDates != trimDates) {
+				EditorPrefs.SetBool (TRIM_DATES_KEY, trimDates);
+			}
+			if (trimDates) {
+				startDate = EditorGUILayout.TextField ("Start Date (YYYY-MM-DD)", startDate);
+				endDate = EditorGUILayout.TextField ("End Date (YYYY-MM-DD)", endDate);
+			}
 
-			startDate = EditorGUILayout.TextField ("Start Date (YYYY-MM-DD)", startDate);
-			endDate = EditorGUILayout.TextField ("End Date (YYYY-MM-DD)", endDate);
-
+			float oldSpace = space;
 			space = EditorGUILayout.FloatField ("Space Smooth", space);
-			time = EditorGUILayout.FloatField ("Time Smooth", time);
+			if (oldSpace != space) {
+				EditorPrefs.SetFloat (SPACE_KEY, space);
+			}
 
+			float oldTime = time;
+			time = EditorGUILayout.FloatField ("Time Smooth", time);
+			if (oldTime != time) {
+				EditorPrefs.SetFloat (KEY_TO_TIME, time);
+			}
+
+			bool oldDisaggregateTime = disaggregateTime;
 			disaggregateTime = EditorGUILayout.Toggle ("Disaggregate Time", disaggregateTime);
+			if (oldDisaggregateTime != disaggregateTime) {
+				EditorPrefs.SetBool (DISAGGREGATE_KEY, disaggregateTime);
+			}
 
 			GUILayout.BeginVertical ("box");
+			string oldEventsString = string.Join ("|", events.ToArray());
 			if (GUILayout.Button ("Limit To Events +")) {
 				events.Add ("Event name");
 			}
@@ -89,28 +157,37 @@ namespace UnityAnalytics
 				events [a] = EditorGUILayout.TextField (events [a]);
 				GUILayout.EndHorizontal ();
 			}
+			string currentEventsString = string.Join ("|", events.ToArray());
+
+			if (oldEventsString != currentEventsString) {
+				EditorPrefs.SetString (EVENTS_KEY, currentEventsString);
+			}
+
 			GUILayout.EndVertical ();
 
 			if (GUILayout.Button ("Process")) {
-				parser.LoadData (path, ParseHandler);
-			}
+				DateTime start, end;
 
-
-			if (heatData != null && optionKeys != null && optionIndex > -1 && optionIndex < optionKeys.Length && heatData.ContainsKey(optionKeys[optionIndex])) {
-				int oldIndex = optionIndex;
-				optionIndex = EditorGUILayout.Popup("Option", optionIndex, optionKeys);
-				if (optionIndex != oldIndex) {
-					Dispatch ();
+				if (trimDates) {
+					try {
+						start = DateTime.Parse (startDate);
+					} catch {
+						throw new Exception ("The start date is not properly formatted. Correct format is YYYY-MM-DD.");
+					}
+					try {
+						end = DateTime.Parse (endDate);
+					} catch {
+						throw new Exception ("The end date is not properly formatted. Correct format is YYYY-MM-DD.");
+					}
+				} else {
+					start = DateTime.Parse ("2000-01-01");
+					end = DateTime.Now;
 				}
-			}
-		}
 
-		private void ParseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, string[] options) {
-			this.heatData = heatData;
-			if (heatData != null) {
-				optionKeys = options;
-				optionIndex = 0;
-				Dispatch ();
+
+
+
+				processor.Process (inputFiles, start, end, space, time, disaggregateTime, events);
 			}
 		}
 	}

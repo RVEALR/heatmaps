@@ -78,10 +78,9 @@ namespace UnityAnalytics
 			//THRESHOLDS
 			var oldLowThreshold = LowThreshold;
 			var oldHighThreshold = HighThreshold;
-			EditorGUILayout.BeginHorizontal ();
-			EditorGUILayout.LabelField("Low Threshold:", LowThreshold.ToString());
-			EditorGUILayout.LabelField("High Threshold:", HighThreshold.ToString());
-			EditorGUILayout.EndHorizontal ();
+
+			LowThreshold = EditorGUILayout.FloatField ("Low Threshold", LowThreshold);
+			HighThreshold = EditorGUILayout.FloatField ("High Threshold", HighThreshold);
 
 			EditorGUILayout.MinMaxSlider(ref LowThreshold, ref HighThreshold, 0f, 1f);
 			if (oldLowThreshold != LowThreshold) {
@@ -97,22 +96,21 @@ namespace UnityAnalytics
 			EditorGUILayout.BeginVertical ("box");
 			var oldStartTime = StartTime;
 			var oldEndTime = EndTime;
-			EditorGUILayout.BeginHorizontal ();
-			EditorGUILayout.LabelField("Start Time:", StartTime.ToString());
-			EditorGUILayout.LabelField("End Time:", EndTime.ToString());
+
+			StartTime = EditorGUILayout.FloatField ("Start Time", StartTime);
+			EndTime = EditorGUILayout.FloatField ("End Time", EndTime);
+
+			EditorGUILayout.MinMaxSlider(ref StartTime, ref EndTime, 0f, MaxTime);
 			if (GUILayout.Button ("Max Time")) {
 				StartTime = 0;
 				EndTime = MaxTime;
 			}
-			EditorGUILayout.EndHorizontal ();
-			EditorGUILayout.MinMaxSlider(ref StartTime, ref EndTime, 0f, MaxTime);
 			if (oldStartTime != StartTime) {
 				EditorPrefs.SetFloat (START_TIME_KEY, StartTime);
 			}
 			if (oldEndTime != EndTime) {
 				EditorPrefs.SetFloat (END_TIME_KEY, EndTime);
 			}
-
 			EditorGUILayout.EndVertical ();
 
 			//PARTICLE SIZE/SHAPE

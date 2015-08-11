@@ -10,30 +10,21 @@ namespace UnityAnalytics
 	{
 		private const string URL_KEY = "UnityAnalyticsHeatmapDataExportUrlKey";
 
-		public delegate void DataHandler (string[] paths);
-
-
-		private DataHandler handler;
-
 		private string path = "";
 		private string startDate = "";
 		private string endDate = "";
 
-
-
 		private RawEventClient client = new RawEventClient ();
 
-
-		public RawEventInspector(DataHandler handler) {
+		public RawEventInspector() {
 			path = EditorPrefs.GetString (URL_KEY);
 			endDate = String.Format("{0:yyyy-MM-dd}", DateTime.Now);
 			startDate = String.Format("{0:yyyy-MM-dd}", DateTime.Now.Subtract(new TimeSpan(5, 0, 0, 0)));
-			this.handler = handler;
 		}
 
-		public static RawEventInspector Init(DataHandler handler)
+		public static RawEventInspector Init()
 		{
-			return new RawEventInspector (handler);
+			return new RawEventInspector ();
 		}
 
 		public void OnGUI()
