@@ -40,7 +40,12 @@ namespace UnityAnalytics
 
 				for (int a = 0; a < rows.Length; a++) {
 					string[] rowData = rows [a].Split ('\t');
-						
+
+					if (string.IsNullOrEmpty(rowData [0]) || string.IsNullOrEmpty(rowData [2]) || string.IsNullOrEmpty(rowData [3])) {
+						Debug.Log ("Empty Line...skipping");
+						continue;
+					}
+
 					DateTime rowDate = DateTime.Parse (rowData [0]);
 
 					// Pass on rows outside any date trimming
@@ -61,6 +66,7 @@ namespace UnityAnalytics
 						Debug.Log ("Unable to find x/y in: " + datum.ToString () + ". Skipping...");
 						continue;
 					}
+
 					float x = float.Parse ((string)datum ["x"]);
 					float y = float.Parse ((string)datum ["y"]);
 						

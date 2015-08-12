@@ -181,12 +181,8 @@ namespace UnityAnalytics
 					}
 				} else {
 					start = DateTime.Parse ("2000-01-01");
-					end = DateTime.Now;
+					end = DateTime.UtcNow;
 				}
-
-
-
-
 				processor.Process (inputFiles, start, end, space, time, disaggregateTime, events);
 			}
 		}
