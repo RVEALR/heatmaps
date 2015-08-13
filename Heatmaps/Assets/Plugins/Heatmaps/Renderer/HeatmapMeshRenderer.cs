@@ -112,6 +112,8 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		}
 	}
 
+	public int visiblePoints { get; private set; }
+
 	public bool allowRender{ get; set; }
 
 	public void UpdateTimeLimits(float startTime, float endTime) {
@@ -164,6 +166,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			renderMaterials = new Material[data.Length];
 
 			renderMeshIndex = 0;
+			visiblePoints = 0;
 			UpdateRenderCycle (0, data.Length, pointsPerCycle, renderMesh, renderMaterials);
 		}
 	}
@@ -175,6 +178,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			materials [renderMeshIndex] = PickMaterial (data [i].density / maxDensity);
 			//FILTER FOR TIME
 			if (data [i].time >= StartTime && data [i].time <= EndTime) {
+				visiblePoints++;
 				switch (renderStyle) {
 				case RenderShape.CUBE:
 					AddCubeToMesh (mesh, renderMeshIndex++, data [i].position.x, data [i].position.y, data [i].position.z);

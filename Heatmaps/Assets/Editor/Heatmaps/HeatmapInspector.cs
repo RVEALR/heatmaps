@@ -19,10 +19,7 @@ public class Heatmapper : EditorWindow
 
 	private RawEventInspector m_FetchView;
 	private AggregationInspector m_AggregateView;
-	private HeatmapDataParserInspector m_ParseView;
-	private HeatmapRendererInspector m_RenderView;
-
-	private GameObject heatMapInstance;
+	private HeatmapRendererInspectorCollection m_RenderView;
 
 	bool normalizeData;
 
@@ -30,9 +27,16 @@ public class Heatmapper : EditorWindow
 	bool showAggregate = false;
 	bool showRender = false;
 
+	GameObject heatmapInstance;
+
 
 	void OnGUI ()
 	{
+		if (heatmapInstance == null) {
+			heatmapInstance = new GameObject();
+			heatmapInstance.name = "UnityAnalytics__Heatmaps";
+		}
+
 		GUILayout.BeginVertical ("box");
 		if (GUILayout.Button ("Reset")) {
 			SystemReset ();
@@ -60,39 +64,31 @@ public class Heatmapper : EditorWindow
 		GUILayout.EndVertical ();
 
 		GUILayout.BeginVertical ("box");
-		if (m_ParseView == null) {
-			m_ParseView = HeatmapDataParserInspector.Init (PointDataHandler);
-		}
+
 		if (m_RenderView == null) {
-			m_RenderView = HeatmapRendererInspector.Init ();
+			m_RenderView = HeatmapRendererInspectorCollection.Init (heatmapInstance);
 		}
+		m_RenderView.SetParent (heatmapInstance);
 
 		showRender = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), showRender, "Render", true);
 		if (showRender) {
-			m_ParseView.OnGUI ();
 			m_RenderView.OnGUI ();
-		}
-
-		if (heatMapInstance) {
-			m_RenderView.SetGameObject (heatMapInstance);
 		}
 		GUILayout.EndVertical ();
 	}
 
 
 	void Update() {
-		if (heatMapInstance)
+		if (m_RenderView != null)
 		{
-			heatMapInstance.GetComponent<IHeatmapRenderer> ().RenderHeatmap ();
+			m_RenderView.Render ();
 		}
 	}
 
 	void SystemReset()
 	{
-		if (heatMapInstance) {
-			heatMapInstance.transform.parent = null;
-			DestroyImmediate (heatMapInstance);
-			CreateHeatmapInstance ();
+		if (m_RenderView != null) {
+			m_RenderView.Reset ();
 		}
 	}
 
@@ -102,32 +98,5 @@ public class Heatmapper : EditorWindow
 
 	void OnAggregation(string[] paths) {
 		//The aggregated data
-	}
-
-	void PointDataHandler(HeatPoint[] heatData, float maxDensity, float maxTime)
-	{
-		if (heatMapInstance == null) {
-			CreateHeatmapInstance ();
-		}
-		if (heatMapInstance.GetComponent<IHeatmapRenderer> () != null) {
-			heatMapInstance.GetComponent<IHeatmapRenderer> ().UpdatePointData (heatData, maxDensity);
-		}
-		if (m_RenderView != null) {
-			m_RenderView.SetMaxTime (maxTime);
-		}
-	}
-
-	/// <summary>
-	/// Creates the heat map instance.
-	/// </summary>
-	/// We've hard-coded the Component here. Everywhere else, we use the interface.
-	/// If you want to write a custom Renderer, this is the place to sub it in.
-	void CreateHeatmapInstance()
-	{
-		heatMapInstance = new GameObject ();
-		heatMapInstance.tag = "EditorOnly";
-		heatMapInstance.name = "UnityAnalytics__Heatmap";
-		heatMapInstance.AddComponent<HeatmapMeshRenderer> ();
-		heatMapInstance.GetComponent<IHeatmapRenderer> ().allowRender = true;
 	}
 }

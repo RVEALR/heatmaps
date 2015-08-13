@@ -27,9 +27,16 @@ namespace UnityAnalytics
 		private const string PARTICLE_SHAPE_KEY = "UnityAnalyticsHeatmapParticleShape";
 		private const string PARTICLE_DIRECTION_KEY = "UnityAnalyticsHeatmapParticleDirection";
 
-		Color HighDensityColor = new Color(1f, 0, 0, .1f);
-		Color MediumDensityColor = new Color(1f, 1f, 0, .1f);
-		Color LowDensityColor = new Color(0, 1f, 1f, .1f);
+
+		private static Color DEFAULT_COLOR = new Color (1f, 0, 1f, 1f);
+		private static Color DEFAULT_HIGH = new Color(1f, 0, 0, .1f);
+		private static Color DEFAULT_MEDIUM = new Color(1f, 1f, 0, .1f);
+		private static Color DEFAULT_LOW = new Color(0, 1f, 1f, .1f);
+
+		Color HighDensityColor = DEFAULT_HIGH;
+		Color MediumDensityColor = DEFAULT_MEDIUM;
+		Color LowDensityColor = DEFAULT_LOW;
+
 
 		float HighThreshold = .9f;
 		float LowThreshold = .1f;
@@ -47,30 +54,61 @@ namespace UnityAnalytics
 		string[] particleDirectionOptions = new string[]{"YZ", "XZ", "XY"};
 		RenderDirection[] particleDirectionIds = new RenderDirection[]{RenderDirection.YZ, RenderDirection.XZ, RenderDirection.XY};
 
+		private GameObject parentInstance;
 		private GameObject gameObject;
+		private HeatmapDataParserInspector m_ParseView;
+
+		private int currentTotalPointCount = 0;
+		private Guid guid = Guid.NewGuid();
 
 
-		public HeatmapRendererInspector ()
+		public HeatmapRendererInspector (GameObject parent)
 		{
-			HighDensityColor =  GetColorFromString(EditorPrefs.GetString(HIGH_DENSITY_COLOR_KEY));
-			MediumDensityColor =  GetColorFromString(EditorPrefs.GetString(MEDIUM_DENSITY_COLOR_KEY));
-			LowDensityColor =  GetColorFromString(EditorPrefs.GetString(LOW_DENSITY_COLOR_KEY));
+			parentInstance = parent;
 
-			HighThreshold = EditorPrefs.GetFloat (HIGH_THRESHOLD_KEY);
-			LowThreshold = EditorPrefs.GetFloat (LOW_THRESHOLD_KEY);
+			HighDensityColor = GetColorFromString(EditorPrefs.GetString(HIGH_DENSITY_COLOR_KEY + guid), DEFAULT_HIGH);
+			MediumDensityColor = GetColorFromString(EditorPrefs.GetString(MEDIUM_DENSITY_COLOR_KEY + guid), DEFAULT_MEDIUM);
+			LowDensityColor = GetColorFromString(EditorPrefs.GetString(LOW_DENSITY_COLOR_KEY + guid), DEFAULT_LOW);
 
-			StartTime = EditorPrefs.GetFloat (START_TIME_KEY);
-			EndTime = EditorPrefs.GetFloat (END_TIME_KEY);
+			HighThreshold = EditorPrefs.GetFloat (HIGH_THRESHOLD_KEY + guid);
+			LowThreshold = EditorPrefs.GetFloat (LOW_THRESHOLD_KEY + guid);
 
-			ParticleSize = EditorPrefs.GetFloat (PARTICLE_SIZE_KEY);
+			StartTime = EditorPrefs.GetFloat (START_TIME_KEY + guid);
+			EndTime = EditorPrefs.GetFloat (END_TIME_KEY + guid);
 
-			ParticleShapeIndex = EditorPrefs.GetInt (PARTICLE_SHAPE_KEY);
-			ParticleDirectionIndex = EditorPrefs.GetInt (PARTICLE_DIRECTION_KEY);
+			ParticleSize = EditorPrefs.GetFloat (PARTICLE_SIZE_KEY + guid);
+
+			ParticleShapeIndex = EditorPrefs.GetInt (PARTICLE_SHAPE_KEY + guid);
+			ParticleDirectionIndex = EditorPrefs.GetInt (PARTICLE_DIRECTION_KEY + guid);
+
+			m_ParseView = new HeatmapDataParserInspector (PointDataHandler);
 		}
 
-		public static HeatmapRendererInspector Init()
+		/// <summary>
+		/// Clean all external references for removal
+		/// </summary>
+		public void Clean() {
+			Reset ();
+			parentInstance = null;
+		}
+
+		public void Reset() {
+			if (gameObject) {
+				RemoveGameObject ();
+			}
+		}
+
+		void PointDataHandler(HeatPoint[] heatData, float maxDensity, float maxTime)
 		{
-			return new HeatmapRendererInspector ();
+			currentTotalPointCount = heatData.Length;
+			if (gameObject == null) {
+				CreateHeatmapInstance ();
+			}
+
+			if (gameObject.GetComponent<IHeatmapRenderer> () != null) {
+				gameObject.GetComponent<IHeatmapRenderer> ().UpdatePointData (heatData, maxDensity);
+			}
+			SetMaxTime (maxTime);
 		}
 
 		public void OnGUI()
@@ -96,7 +134,6 @@ namespace UnityAnalytics
 				EditorPrefs.SetFloat (HIGH_THRESHOLD_KEY, HighThreshold);
 			}
 			EditorGUILayout.EndVertical ();
-
 
 			//TIME WINDOW
 			EditorGUILayout.BeginVertical ("box");
@@ -151,22 +188,59 @@ namespace UnityAnalytics
 				r.UpdateRenderStyle(particleShapeIds[ParticleShapeIndex], particleDirectionIds[ParticleDirectionIndex]);
 				SceneView.RepaintAll ();
 			}
+
+			m_ParseView.OnGUI ();
+
+			GUILayout.Label("Points in current set: " + currentTotalPointCount);
+
+			if (gameObject != null && gameObject.GetComponent<IHeatmapRenderer> () != null) {
+				gameObject.GetComponent<IHeatmapRenderer> ().RenderHeatmap ();
+				GUILayout.Label("Points displayed: " + gameObject.GetComponent<IHeatmapRenderer> ().visiblePoints);
+			}
 		}
 
 		public void SetMaxTime(float maxTime) {
 			MaxTime = maxTime;
 		}
 
-		public void SetGameObject(GameObject go) {
-			gameObject = go;
+		public void SetParent(GameObject parent) {
+			if (parent != parentInstance) {
+				RemoveGameObject ();
+				CreateHeatmapInstance ();
+			}
+		}
+
+		void RemoveGameObject() {
+			if (gameObject != null) {
+				gameObject.transform.parent = null;
+				GameObject.DestroyImmediate (gameObject);
+			}
+		}
+
+		/// <summary>
+		/// Creates the heat map instance.
+		/// </summary>
+		/// We've hard-coded the HeatmapMeshRenderer Component here. Everywhere else, we use the interface.
+		/// If you want to write a custom Renderer, this is the place to sub it in.
+		void CreateHeatmapInstance()
+		{
+			if (parentInstance != null) {
+				gameObject = new GameObject ();
+				gameObject.tag = "EditorOnly";
+				gameObject.name = "Heatmap";
+				gameObject.AddComponent<HeatmapMeshRenderer> ();
+				gameObject.GetComponent<IHeatmapRenderer> ().allowRender = true;
+				gameObject.transform.parent = parentInstance.transform;
+			}
 		}
 
 		private string FormatColorToString(Color c) {
 			return c.r + "|" + c.g + "|" + c.b + "|" + c.a;
 		}
 
-		private Color GetColorFromString(string s) {
+		private Color GetColorFromString(string s, Color defaultColor) {
 			string[] cols = s.Split ('|');
+			Color color = DEFAULT_COLOR;
 
 			float r = 0, g = 0, b = 0, a = 1;
 			try {
@@ -174,14 +248,12 @@ namespace UnityAnalytics
 				g = float.Parse(cols [1]);
 				b = float.Parse(cols [2]);
 				a = float.Parse(cols [3]);
+				color = new Color (r, g, b, a);
 			}
 			catch {
-				r = 1f;
-				g = 1f;
-				b = 0f;
-				a = 1f;
+				color = defaultColor;
 			}
-			return new Color (r, g, b, a);;
+			return color;
 		}
 
 		private Color SetAndSaveColor(string label, string key, Color currentColor) {

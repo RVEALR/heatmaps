@@ -64,6 +64,12 @@ namespace UnityAnalytics
 		/// </summary>
 		/// <value><c>true</c> if allow render; otherwise, <c>false</c>.</value>
 		bool allowRender{ get; set; }
+
+		/// <summary>
+		/// Gets the count of points currently on display.
+		/// </summary>
+		/// <value>The visible points.</value>
+		int visiblePoints{ get; }
 	}
 }
 
