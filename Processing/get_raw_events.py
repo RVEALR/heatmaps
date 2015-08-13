@@ -19,35 +19,42 @@ from urllib2 import Request, urlopen, URLError, HTTPError
 version_num = '0.0.1'
 all_events = ['appStart','appRunning','custom','transaction','userInfo','deviceInfo']
 
-def load_file(url):
+def load_file(url, do_verbose):
   req = Request(url)
   try:
     response = urlopen(req)
   except HTTPError as e:
     print 'The server couldn\'t fulfill the request.'
     print 'Error code: ', e.code
+    if do_verbose:
+      print e
     sys.exit()
   except URLError as e:
     print 'We failed to reach a server.'
-    print 'Reason: ', e.reason
+    if do_verbose:
+      print e
+    else:
+      print 'Reason: ', e.reason
     sys.exit()
   else:
     displayUrl = url if len(url) < 150 else url[:150] + '...'
     print 'Load successful.\n' + url
     return response
 
-def load_and_parse(url):
-  response = load_file(url)
-  json = parse_json(response)
+def load_and_parse(url, do_verbose):
+  response = load_file(url, do_verbose)
+  json = parse_json(response, do_verbose)
   print 'JSON successfully parsed'
   return json
 
-def parse_json(response):
+def parse_json(response, do_verbose):
   try:
     j = response.read()
     return json.loads(j)
-  except ValueError:
+  except ValueError as e:
     print 'Decoding JSON has failed'
+    if do_verbose:
+      print e
     sys.exit()
 
 def version_info():
@@ -57,6 +64,7 @@ def main(argv):
   parser = argparse.ArgumentParser(description="Download raw events from the Unity Analytics server.")
   parser.add_argument('url', nargs='?', default='')
   parser.add_argument('-v', '--version', action='store_const', const=True, help='Retrieve version info for this file.')
+  parser.add_argument('-b', '--verbose', action='store_const', const=True, help='Output more informative errors.')
   parser.add_argument('-o', '--output', default='', help='Set an output path for results.')
   parser.add_argument('-f', '--first', help='UNIX timestamp for trimming input.')
   parser.add_argument('-l', '--last', help='UNIX timestamp for trimming input.')
@@ -77,16 +85,20 @@ def main(argv):
 
   try:
     # now by default
-    end_date = datetime.datetime.utcnow() if not args['last'] else dateutil.parser.parse(args['last'])
+    end_date = datetime.datetime.utcnow() if not args['last'] else dateutil.parser.parse(args['last'], fuzzy=False)
   except:
     print 'Provided end date could not be parsed. Format should be YYYY-MM-DD.'
+    if args['verbose'] == True:
+      print sys.exc_info()[0]
     sys.exit()
 
   try:
     # subtract 5 days by default
-    start_date = end_date - datetime.timedelta(days=5) if not args['first'] else dateutil.parser.parse(args['first'])
+    start_date = end_date - datetime.timedelta(days=5) if not args['first'] else dateutil.parser.parse(args['first'], fuzzy=False)
   except:
     print 'Provided start date could not be parsed. Format should be YYYY-MM-DD.'
+    if args['verbose'] == True:
+      print sys.exc_info()[0]
     sys.exit()
 
   url = args['url']
@@ -104,7 +116,7 @@ def main(argv):
     sys.exit(2)
   elif len(url) > 0:
     print 'Loading batch manifest'
-    manifest_json = load_and_parse(url)
+    manifest_json = load_and_parse(url, args['verbose'])
     
     found_items = 0
     for manifest_item in manifest_json:
@@ -116,7 +128,7 @@ def main(argv):
         continue
 
       found_items += 1
-      batches_json = load_and_parse(manifest_item["url"])
+      batches_json = load_and_parse(manifest_item["url"], args['verbose'])
       batch_id = batches_json["batchid"]
       for batch in batches_json["data"]:
         bUrl = batch["url"]
@@ -130,10 +142,14 @@ def main(argv):
             except HTTPError as e:
               print 'The server couldn\'t download the file.'
               print 'Error code: ', e.code
+              if (args['verbose']):
+                print e
               sys.exit()
             except URLError as e:
               print 'When downloading, we failed to reach a server.'
               print 'Reason: ', e.reason
+              if (args['verbose']):
+                print e
               sys.exit()
             else:
               print 'TSV file downloaded successfully'
