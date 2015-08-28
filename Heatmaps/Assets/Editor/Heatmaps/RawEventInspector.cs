@@ -29,14 +29,6 @@ namespace UnityAnalyticsHeatmap
 
 		public void OnGUI()
 		{
-			#if UNITY_EDITOR_WIN
-			GUIStyle s = new GUIStyle(GUI.skin.label);
-			s.wordWrap = true;
-			s.font = EditorStyles.boldFont;
-			EditorGUILayout.LabelField ("Warning: this subpanel may fail to work on Windows machines. Use the python script instead.", s);
-			GUILayout.Space(10f);
-			#endif
-
 			path = EditorGUILayout.TextField ("Data Export URL", path);
 
 			startDate = EditorGUILayout.TextField ("Start Date (YYYY-MM-DD)", startDate);
