@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace UnityAnalytics
+namespace UnityAnalyticsHeatmap
 {
 	public enum UnityAnalyticsEventType
 	{

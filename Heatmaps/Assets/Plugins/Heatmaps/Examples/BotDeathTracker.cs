@@ -6,7 +6,7 @@
 /// quits. This suppresses false positives when the user quits the game.
 
 using UnityEngine;
-using UnityAnalytics;
+using UnityAnalyticsHeatmap;
 
 public class BotDeathTracker : MonoBehaviour, IAnalyticsDispatcher
 {

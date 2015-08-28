@@ -3,7 +3,7 @@ using UnityEngine;
 using System.Collections;
 using UnityEditor;
 
-namespace UnityAnalytics
+namespace UnityAnalyticsHeatmap
 {
 	
 	public class RawEventInspector

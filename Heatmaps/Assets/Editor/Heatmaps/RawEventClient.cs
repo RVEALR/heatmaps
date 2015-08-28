@@ -12,7 +12,7 @@ using System.IO;
 using MiniJSON;
 using System.Collections.Generic;
 
-namespace UnityAnalytics
+namespace UnityAnalyticsHeatmap
 {
 	public class RawEventClient
 	{

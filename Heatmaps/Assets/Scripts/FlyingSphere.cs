@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 using System.Collections;
-using UnityAnalytics;
+using UnityAnalyticsHeatmap;
 
 
 public class FlyingSphere : MonoBehaviour

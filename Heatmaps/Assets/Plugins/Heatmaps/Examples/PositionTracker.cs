@@ -8,7 +8,7 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using UnityAnalytics;
+using UnityAnalyticsHeatmap;
 
 public class PositionTracker : MonoBehaviour, IAnalyticsDispatcher {
 
@@ -24,7 +24,7 @@ public class PositionTracker : MonoBehaviour, IAnalyticsDispatcher {
 	IEnumerator TrackingTick () {
 		yield return new WaitForSeconds (trackIntervalInSeconds);
 		if (analyticsEnabled) {
-			UnityAnalytics.HeatmapEvent.Send ("PlayerPosition", transform.position, Time.timeSinceLevelLoad);
+			HeatmapEvent.Send ("PlayerPosition", transform.position, Time.timeSinceLevelLoad);
 			StartCoroutine (TrackingTick ());
 		}
 	}

@@ -2,7 +2,7 @@
 /// A possible interface for any Analytics dispatcher
 /// </summary>
 
-namespace UnityAnalytics
+namespace UnityAnalyticsHeatmap
 {
 	public interface IAnalyticsDispatcher
 	{

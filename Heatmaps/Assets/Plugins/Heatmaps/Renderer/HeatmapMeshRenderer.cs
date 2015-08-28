@@ -8,7 +8,7 @@
 
 using System;
 using UnityEngine;
-using UnityAnalytics;
+using UnityAnalyticsHeatmap;
 using System.Collections;
 
 [RequireComponent (typeof (MeshCollider))]
