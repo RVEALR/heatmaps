@@ -11,8 +11,12 @@ using System.Net;
 using System.IO;
 using MiniJSON;
 using System.Collections.Generic;
+#if UNITY_EDITOR_WIN
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
+#endif
 
-namespace UnityAnalytics
+namespace UnityAnalyticsHeatmap
 {
 	public class RawEventClient
 	{
@@ -75,6 +79,15 @@ namespace UnityAnalytics
 			// Handle any problems that might arise when reading the text
 			try
 			{
+				#if UNITY_EDITOR_WIN
+				// Bypassing SSL security in Windows to work around a CURL bug.
+				// This is insecure and should be fixed when the Engine supports SSL.
+				ServicePointManager.ServerCertificateValidationCallback = delegate(System.Object obj, X509Certificate certificate, X509Chain chain, SslPolicyErrors errors) {
+					return true;
+				};
+				#endif
+
+
 				WebRequest www = WebRequest.Create(path);
 				Stream stream = www.GetResponse().GetResponseStream();
 				StreamReader reader = new StreamReader(stream);

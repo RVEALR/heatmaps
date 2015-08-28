@@ -8,7 +8,7 @@
 
 using System;
 using UnityEngine;
-using UnityAnalytics;
+using UnityAnalyticsHeatmap;
 using System.Collections;
 
 [RequireComponent (typeof (MeshCollider))]
@@ -161,7 +161,15 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			renderMesh.subMeshCount = data.Length;
 			gameObject.GetComponent<MeshFilter> ().mesh = renderMesh;
 
-			renderMaterials = new Material[data.Length];
+			int count = 1;
+			for (int i = 0; i < data.Length; i++) {
+				//FILTER FOR TIME
+				if (data [i].time >= StartTime && data [i].time <= EndTime) {
+					count++;
+				}
+			}
+
+			renderMaterials = new Material[count];
 
 			renderMeshIndex = 0;
 			UpdateRenderCycle (0, data.Length, pointsPerCycle, renderMesh, renderMaterials);
@@ -189,9 +197,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			}
 		}
 		gameObject.GetComponent<Renderer> ().materials = materials;
-		mesh.RecalculateBounds ();
-		mesh.Optimize ();
+
 		if (currentRenderIndex >= endPointsIndex) {
+			mesh.Optimize ();
 			renderState = NOT_RENDERING;
 		}
 	}
@@ -313,9 +321,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			p2 = new Vector3 (x+halfP, y-halfP, z);
 			break;
 		}
-
-
-
 
 		var additionalVertices = new Vector3[] { p0, p1, p2 };
 		var combinedVertices = new Vector3[mesh.vertexCount + additionalVertices.Length];

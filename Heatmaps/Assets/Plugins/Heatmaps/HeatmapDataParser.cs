@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Collections;
 using MiniJSON;
 
-namespace UnityAnalytics
+namespace UnityAnalyticsHeatmap
 {
 	public class HeatmapDataParser
 	{

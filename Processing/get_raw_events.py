@@ -128,6 +128,7 @@ def main(argv):
         continue
 
       found_items += 1
+      print 'Retrieving manifest item from: ' + manifest_item["url"]
       batches_json = load_and_parse(manifest_item["url"], args['verbose'])
       batch_id = batches_json["batchid"]
       for batch in batches_json["data"]:

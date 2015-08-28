@@ -12,7 +12,7 @@ using System;
 using UnityEngine;
 using System.Collections.Generic;
 
-#if UNITY_4_6 || UNITY_5_0
+#if UNITY_4_0 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 ||  UNITY_4_4 || UNITY_4_5 || UNITY_4_6 || UNITY_5_0
 using analyticsResultNamespace = UnityEngine.Cloud.Analytics;
 using analyticsEventNamespace = UnityEngine.Cloud.Analytics.UnityAnalytics;
 #else
@@ -21,7 +21,7 @@ using analyticsEventNamespace = UnityEngine.Analytics.Analytics;
 #endif
 
 
-namespace UnityAnalytics
+namespace UnityAnalyticsHeatmap
 {
 	public class HeatmapEvent
 	{
@@ -32,14 +32,14 @@ namespace UnityAnalytics
 			dict ["x"] = v.x;
 			dict ["y"] = v.y;
 			dict ["z"] = v.z;
-			return analyticsEventNamespace.CustomEvent ("Heatmap" + eventName, dict);
+			return analyticsEventNamespace.CustomEvent ("Heatmap." + eventName, dict);
 		}
 
 		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector2 v)
 		{
 			dict ["x"] = v.x;
 			dict ["y"] = v.y;
-			return analyticsEventNamespace.CustomEvent ("Heatmap" + eventName, dict);
+			return analyticsEventNamespace.CustomEvent ("Heatmap." + eventName, dict);
 		}
 
 		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector3 v, float time)
@@ -48,7 +48,7 @@ namespace UnityAnalytics
 			dict ["y"] = v.y;
 			dict ["z"] = v.z;
 			dict ["t"] = time;
-			return analyticsEventNamespace.CustomEvent ("Heatmap" + eventName, dict);
+			return analyticsEventNamespace.CustomEvent ("Heatmap." + eventName, dict);
 		}
 
 		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector2 v, float time)
@@ -56,7 +56,7 @@ namespace UnityAnalytics
 			dict ["x"] = v.x;
 			dict ["y"] = v.y;
 			dict ["t"] = time;
-			return analyticsEventNamespace.CustomEvent ("Heatmap" + eventName, dict);
+			return analyticsEventNamespace.CustomEvent ("Heatmap." + eventName, dict);
 		}
 	}
 }

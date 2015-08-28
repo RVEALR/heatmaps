@@ -17,7 +17,7 @@
 
 using System;
 using UnityEngine;
-using UnityAnalytics;
+using UnityAnalyticsHeatmap;
 using System.Collections.Generic;
 
 

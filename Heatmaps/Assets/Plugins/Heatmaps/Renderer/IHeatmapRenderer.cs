@@ -7,7 +7,7 @@
 using System;
 using UnityEngine;
 
-namespace UnityAnalytics
+namespace UnityAnalyticsHeatmap
 {
 	public interface IHeatmapRenderer
 	{

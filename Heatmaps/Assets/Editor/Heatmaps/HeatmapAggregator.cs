@@ -5,7 +5,7 @@ using UnityEngine;
 using System.Linq;
 using System.Globalization;
 
-namespace UnityAnalytics
+namespace UnityAnalyticsHeatmap
 {
 	public class HeatmapAggregator
 	{

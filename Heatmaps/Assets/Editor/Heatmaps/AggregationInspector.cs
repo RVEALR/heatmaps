@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace UnityAnalytics
+namespace UnityAnalyticsHeatmap
 {
 	public class AggregationInspector
 	{

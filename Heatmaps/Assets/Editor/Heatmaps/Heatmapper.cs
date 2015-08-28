@@ -7,7 +7,7 @@
 
 using UnityEngine;
 using UnityEditor;
-using UnityAnalytics;
+using UnityAnalyticsHeatmap;
 
 public class Heatmapper : EditorWindow
 {
