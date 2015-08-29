@@ -156,7 +156,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			case UPDATE_MATERIALS:
 				renderMeshIndex = 0;
 				for (int i = 0; i < data.Length; i++) {
-					if (data [i].time >= StartTime && data [i].time <= EndTime) {
+					if (data [i].time >= StartTime && data [i].time <= EndTime && renderMeshIndex < renderMaterials.Length) {
 						renderMaterials [renderMeshIndex] = PickMaterial (data [i].density / maxDensity);
 						renderMeshIndex ++;
 					}
@@ -176,7 +176,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			renderMesh.subMeshCount = data.Length;
 			gameObject.GetComponent<MeshFilter> ().mesh = renderMesh;
 
-			int count = 1;
+			int count = 0;
 			for (int i = 0; i < data.Length; i++) {
 				//FILTER FOR TIME
 				if (data [i].time >= StartTime && data [i].time <= EndTime) {
@@ -198,35 +198,41 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		Vector3[] vector3;
 
 		for (int i = startPointsIndex; i < endPointsIndex; i++) {
-			materials [renderMeshIndex] = PickMaterial (data [i].density / maxDensity);
 			//FILTER FOR TIME
 			if (data [i].time >= StartTime && data [i].time <= EndTime) {
+				materials [renderMeshIndex] = PickMaterial (data [i].density / maxDensity);
+
+
 				Vector3 position = data [i].position;
 				switch (renderStyle) {
 				case RenderShape.CUBE:
 					vector3 = AddCubeVectorsToMesh (position.x, position.y, position.z);
 					allVectors.Add (vector3);
-					allTris.Add(AddCubeTrisToMesh (renderMeshIndex++ * vector3.Length));
+					allTris.Add(AddCubeTrisToMesh (renderMeshIndex * vector3.Length));
 					break;
 				case RenderShape.SQUARE:
 					vector3 = AddSquareVectorsToMesh (position.x, position.y, position.z);
 					allVectors.Add (vector3);
-					allTris.Add(AddSquareTrisToMesh (renderMeshIndex++ * vector3.Length));
+					allTris.Add(AddSquareTrisToMesh (renderMeshIndex * vector3.Length));
 					break;
 				case RenderShape.TRI:
 					vector3 = AddTriVectorsToMesh (position.x, position.y, position.z);
 					allVectors.Add (vector3);
-					allTris.Add(AddTriTrisToMesh (renderMeshIndex++ * vector3.Length));
+					allTris.Add(AddTriTrisToMesh (renderMeshIndex * vector3.Length));
 					break;
 				}
+				renderMeshIndex++;
 			}
 		}
 
-		int[] tris = allTris.SelectMany (x => x).ToArray<int> ();
 		Vector3[] combinedVertices = allVectors.SelectMany (x => x).ToArray<Vector3> ();
 
 		mesh.vertices = combinedVertices;
-		mesh.SetTriangles (tris, 0);
+
+		for (int j = 0; j < allTris.Count; j++) {
+			int[] t = allTris [j];
+			mesh.SetTriangles (t, j);
+		}
 		gameObject.GetComponent<Renderer> ().materials = materials;
 
 		mesh.Optimize ();
@@ -353,14 +359,14 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	}
 
 	private Material PickMaterial(float value) {
+		int i = 1;
 		if (materials == null)
 			return null;
-		Material material = materials[1];
 		if (value > HighThreshold) {
-			material = materials[2];
+			i = 2;
 		} else if (value < LowThreshold) {
-			material = materials[0];
+			i = 0;
 		}
-		return material;
+		return materials[i];
 	}
 }
