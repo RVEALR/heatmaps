@@ -22,10 +22,13 @@ namespace UnityAnalyticsHeatmap
 
 		private const string START_TIME_KEY = "UnityAnalyticsHeatmapStartTime";
 		private const string END_TIME_KEY = "UnityAnalyticsHeatmapEndTime";
+		private const string PLAY_SPEED_KEY = "UnityAnalyticsHeatmapPlaySpeed";
 
 		private const string PARTICLE_SIZE_KEY = "UnityAnalyticsHeatmapParticleSize";
 		private const string PARTICLE_SHAPE_KEY = "UnityAnalyticsHeatmapParticleShape";
 		private const string PARTICLE_DIRECTION_KEY = "UnityAnalyticsHeatmapParticleDirection";
+
+		Heatmapper heatmapper;
 
 		Color HighDensityColor = new Color(1f, 0, 0, .1f);
 		Color MediumDensityColor = new Color(1f, 1f, 0, .1f);
@@ -47,30 +50,36 @@ namespace UnityAnalyticsHeatmap
 		string[] particleDirectionOptions = new string[]{"YZ", "XZ", "XY"};
 		RenderDirection[] particleDirectionIds = new RenderDirection[]{RenderDirection.YZ, RenderDirection.XZ, RenderDirection.XY};
 
+		bool isPlaying = false;
+		float PlaySpeed = 1f;
+
 		private GameObject gameObject;
 
 
 		public HeatmapRendererInspector ()
 		{
-			HighDensityColor =  GetColorFromString(EditorPrefs.GetString(HIGH_DENSITY_COLOR_KEY));
-			MediumDensityColor =  GetColorFromString(EditorPrefs.GetString(MEDIUM_DENSITY_COLOR_KEY));
-			LowDensityColor =  GetColorFromString(EditorPrefs.GetString(LOW_DENSITY_COLOR_KEY));
+			HighDensityColor =  GetColorFromString(EditorPrefs.GetString(HIGH_DENSITY_COLOR_KEY), HighDensityColor);
+			MediumDensityColor =  GetColorFromString(EditorPrefs.GetString(MEDIUM_DENSITY_COLOR_KEY), MediumDensityColor);
+			LowDensityColor =  GetColorFromString(EditorPrefs.GetString(LOW_DENSITY_COLOR_KEY), LowDensityColor);
 
-			HighThreshold = EditorPrefs.GetFloat (HIGH_THRESHOLD_KEY);
-			LowThreshold = EditorPrefs.GetFloat (LOW_THRESHOLD_KEY);
+			HighThreshold = EditorPrefs.GetFloat (HIGH_THRESHOLD_KEY, HighThreshold);
+			LowThreshold = EditorPrefs.GetFloat (LOW_THRESHOLD_KEY, LowThreshold);
 
-			StartTime = EditorPrefs.GetFloat (START_TIME_KEY);
-			EndTime = EditorPrefs.GetFloat (END_TIME_KEY);
+			StartTime = EditorPrefs.GetFloat (START_TIME_KEY, StartTime);
+			EndTime = EditorPrefs.GetFloat (END_TIME_KEY, EndTime);
+			PlaySpeed = EditorPrefs.GetFloat (PLAY_SPEED_KEY, PlaySpeed);
 
-			ParticleSize = EditorPrefs.GetFloat (PARTICLE_SIZE_KEY);
+			ParticleSize = EditorPrefs.GetFloat (PARTICLE_SIZE_KEY, ParticleSize);
 
-			ParticleShapeIndex = EditorPrefs.GetInt (PARTICLE_SHAPE_KEY);
-			ParticleDirectionIndex = EditorPrefs.GetInt (PARTICLE_DIRECTION_KEY);
+			ParticleShapeIndex = EditorPrefs.GetInt (PARTICLE_SHAPE_KEY, ParticleShapeIndex);
+			ParticleDirectionIndex = EditorPrefs.GetInt (PARTICLE_DIRECTION_KEY, ParticleDirectionIndex);
 		}
 
-		public static HeatmapRendererInspector Init()
+		public static HeatmapRendererInspector Init(Heatmapper heatmapper)
 		{
-			return new HeatmapRendererInspector ();
+			var inspector = new HeatmapRendererInspector ();
+			inspector.heatmapper = heatmapper;
+			return inspector;
 		}
 
 		public void OnGUI()
@@ -107,16 +116,48 @@ namespace UnityAnalyticsHeatmap
 			EndTime = EditorGUILayout.FloatField ("End Time", EndTime);
 
 			EditorGUILayout.MinMaxSlider(ref StartTime, ref EndTime, 0f, MaxTime);
-			if (GUILayout.Button ("Max Time")) {
+
+			var oldPlaySpeed = PlaySpeed;
+			PlaySpeed = EditorGUILayout.FloatField (new GUIContent ("Play Speed", "Speed at which playback occurs"), PlaySpeed);
+
+			if (oldPlaySpeed != PlaySpeed) {
+				EditorPrefs.SetFloat (PLAY_SPEED_KEY, PlaySpeed);
+			}
+
+			EditorGUILayout.BeginHorizontal ();
+			GUIContent restartContent = new GUIContent ("<<", "Back to Start");
+			if (GUILayout.Button (restartContent)) {
+				float diff = EndTime - StartTime;
+				StartTime = 0;
+				EndTime = StartTime + diff;
+				isPlaying = false;
+			}
+
+			string playTip = isPlaying ? "Pause" : "Play";
+			string playText = isPlaying ? "||" : ">";
+			GUIContent playContent = new GUIContent (playText, playTip);
+			if (GUILayout.Button (playContent)) {
+				isPlaying = !isPlaying;
+			}
+			EditorGUILayout.EndHorizontal ();
+
+			if (GUILayout.Button (new GUIContent ("Max Time", "Set time to maximum extents"))) {
 				StartTime = 0;
 				EndTime = MaxTime;
 			}
+
+			bool forceTime = false;
 			if (oldStartTime != StartTime) {
+				forceTime = true;
 				EditorPrefs.SetFloat (START_TIME_KEY, StartTime);
 			}
 			if (oldEndTime != EndTime) {
+				forceTime = true;
 				EditorPrefs.SetFloat (END_TIME_KEY, EndTime);
 			}
+
+			Update (forceTime);
+
 			EditorGUILayout.EndVertical ();
 
 			//PARTICLE SIZE/SHAPE
@@ -147,9 +188,35 @@ namespace UnityAnalyticsHeatmap
 				r.UpdateColors (new Color[]{LowDensityColor, MediumDensityColor, HighDensityColor});
 				r.UpdateThresholds (new float[]{LowThreshold, HighThreshold});
 				r.pointSize = ParticleSize;
-				r.UpdateTimeLimits (StartTime, EndTime);
 				r.UpdateRenderStyle(particleShapeIds[ParticleShapeIndex], particleDirectionIds[ParticleDirectionIndex]);
-				SceneView.RepaintAll ();
+			}
+		}
+
+		public void Update(bool forceUpdate = false) {
+			if (gameObject != null) {
+				float oldStartTime = StartTime;
+				float oldEndTime = EndTime;
+				UpdateTime ();
+				if (forceUpdate || oldStartTime != StartTime || oldEndTime != EndTime) {
+					IHeatmapRenderer r = gameObject.GetComponent<IHeatmapRenderer> () as IHeatmapRenderer;
+					if (r != null) {
+						r.UpdateTimeLimits (StartTime, EndTime);
+						heatmapper.Repaint ();
+					}
+				}
+			}
+		}
+
+		private void UpdateTime() {
+			if (isPlaying) {
+				StartTime += PlaySpeed;
+				EndTime += PlaySpeed;
+			}
+			if (EndTime >= MaxTime) {
+				float diff = EndTime - StartTime;
+				EndTime = MaxTime;
+				StartTime = Mathf.Max (EndTime - diff, 0);
+				isPlaying = false;
 			}
 		}
 
@@ -165,7 +232,11 @@ namespace UnityAnalyticsHeatmap
 			return c.r + "|" + c.g + "|" + c.b + "|" + c.a;
 		}
 
-		private Color GetColorFromString(string s) {
+		private Color GetColorFromString(string s, Color defaultColor) {
+			if (string.IsNullOrEmpty (s)) {
+				return defaultColor;
+			}
+
 			string[] cols = s.Split ('|');
 
 			float r = 0, g = 0, b = 0, a = 1;
