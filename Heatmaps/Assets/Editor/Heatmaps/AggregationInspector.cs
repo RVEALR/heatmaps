@@ -96,18 +96,19 @@ namespace UnityAnalyticsHeatmap
 				if (inputFiles.Count == 1 && inputFiles [0] == NEW_PATH_TEXT) {
 					insertPoint = 0;
 				} else {
-					inputFiles.Add (NEW_PATH_TEXT);
+					string newFilePath = EditorUtility.OpenFilePanel ("Locate your downloaded file", "", "txt");
+					if (!string.IsNullOrEmpty (newFilePath)) {
+						inputFiles.Add (NEW_PATH_TEXT);
+						inputFiles [insertPoint] = newFilePath;
+					}
 				}
-				inputFiles[insertPoint] = EditorUtility.OpenFilePanel ("Locate your downloaded file", "", "txt");
-
-
-				string pathsString = string.Join ("|", inputFiles.ToArray());
-				EditorPrefs.SetString (DATA_PATH_KEY, pathsString);
+				SavePaths ();
 			}
 			for (var a = 0; a < inputFiles.Count; a++) {
 				GUILayout.BeginHorizontal ();
 				if (GUILayout.Button ("-", GUILayout.MaxWidth(20f))) {
 					inputFiles.RemoveAt (a);
+					SavePaths ();
 					break;
 				}
 				inputFiles [a] = EditorGUILayout.TextField (inputFiles [a]);
@@ -116,36 +117,36 @@ namespace UnityAnalyticsHeatmap
 			GUILayout.EndVertical ();
 
 			bool oldTrimDates = trimDates;
-			trimDates = EditorGUILayout.Toggle ("Trim Dates", trimDates);
+			trimDates = EditorGUILayout.Toggle (new GUIContent("Trim Dates", "Exclude certain date ranges"), trimDates);
 			if (oldTrimDates != trimDates) {
 				EditorPrefs.SetBool (TRIM_DATES_KEY, trimDates);
 			}
 			if (trimDates) {
-				startDate = EditorGUILayout.TextField ("Start Date (YYYY-MM-DD)", startDate);
-				endDate = EditorGUILayout.TextField ("End Date (YYYY-MM-DD)", endDate);
+				startDate = EditorGUILayout.TextField (new GUIContent("Start Date (YYYY-MM-DD)", "Start date as ISO-8601 datetime"), startDate);
+				endDate = EditorGUILayout.TextField (new GUIContent("End Date (YYYY-MM-DD)", "End date as ISO-8601 datetime"), endDate);
 			}
 
 			float oldSpace = space;
-			space = EditorGUILayout.FloatField ("Space Smooth", space);
+			space = EditorGUILayout.FloatField (new GUIContent("Space Smooth", "Divider to smooth out x/y/z data"), space);
 			if (oldSpace != space) {
 				EditorPrefs.SetFloat (SPACE_KEY, space);
 			}
 
 			float oldTime = time;
-			time = EditorGUILayout.FloatField ("Time Smooth", time);
+			time = EditorGUILayout.FloatField (new GUIContent("Time Smooth", "Divider to smooth out time data"), time);
 			if (oldTime != time) {
 				EditorPrefs.SetFloat (KEY_TO_TIME, time);
 			}
 
 			bool oldDisaggregateTime = disaggregateTime;
-			disaggregateTime = EditorGUILayout.Toggle ("Disaggregate Time", disaggregateTime);
+			disaggregateTime = EditorGUILayout.Toggle (new GUIContent("Disaggregate Time", "Units of space will aggregate, but units of time won't"), disaggregateTime);
 			if (oldDisaggregateTime != disaggregateTime) {
 				EditorPrefs.SetBool (DISAGGREGATE_KEY, disaggregateTime);
 			}
 
 			GUILayout.BeginVertical ("box");
 			string oldEventsString = string.Join ("|", events.ToArray());
-			if (GUILayout.Button ("Limit To Events")) {
+			if (GUILayout.Button (new GUIContent("Limit To Events", "Specify events to include in the aggregation. If specified, all other events will be excluded."))) {
 				events.Add ("Event name");
 			}
 			for (var a = 0; a < events.Count; a++) {
@@ -165,7 +166,7 @@ namespace UnityAnalyticsHeatmap
 
 			GUILayout.EndVertical ();
 
-			if (GUILayout.Button ("Process")) {
+			if (GUILayout.Button (new GUIContent("Process", "Aggregate as specified above"))) {
 				DateTime start, end;
 
 				if (trimDates) {
@@ -185,6 +186,11 @@ namespace UnityAnalyticsHeatmap
 				}
 				processor.Process (inputFiles, start, end, space, time, disaggregateTime, events);
 			}
+		}
+
+		void SavePaths() {
+			string pathsString = string.Join ("|", inputFiles.ToArray());
+			EditorPrefs.SetString (DATA_PATH_KEY, pathsString);
 		}
 	}
 }
