@@ -20,6 +20,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	private const int NOT_RENDERING = 0;
 	private const int BEGIN_RENDER = 1;
 	private const int RENDER_IN_PROGRESS = 2;
+	private const int UPDATE_MATERIALS = 4;
 
 	//Density Thresholds
 	private float HighThreshold;
@@ -84,7 +85,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			materials [2] = new Material (shader);
 			materials[2].SetColor("_TintColor", newHighColor);
 
-			renderState = BEGIN_RENDER;
+			renderState = UPDATE_MATERIALS;
 		}
 	}
 
@@ -95,7 +96,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		if (HighThreshold != newHighThreshold || LowThreshold != newLowThreshold) {
 			HighThreshold = newHighThreshold;
 			LowThreshold = newLowThreshold;
-			renderState = BEGIN_RENDER;
+			renderState = UPDATE_MATERIALS;
 		}
 	}
 
@@ -142,13 +143,27 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
 	public void RenderHeatmap() {
 		if (allowRender) {
-			if (renderState == BEGIN_RENDER) {
+			switch (renderState) {
+			case BEGIN_RENDER:
 				renderState = RENDER_IN_PROGRESS;
 				CreatePoints ();
-			} else if (renderState == RENDER_IN_PROGRESS) {
+				break;
+			case RENDER_IN_PROGRESS:
 				if (hasData ()) {
 					UpdateRenderCycle (currentRenderIndex, data.Length, pointsPerCycle, renderMesh, renderMaterials);
 				}
+				break;
+			case UPDATE_MATERIALS:
+				renderMeshIndex = 0;
+				for (int i = 0; i < data.Length; i++) {
+					if (data [i].time >= StartTime && data [i].time <= EndTime) {
+						renderMaterials [renderMeshIndex] = PickMaterial (data [i].density / maxDensity);
+						renderMeshIndex ++;
+					}
+				}
+				gameObject.GetComponent<Renderer> ().materials = renderMaterials;
+				renderState = NOT_RENDERING;
+				break;
 			}
 		}
 	}
