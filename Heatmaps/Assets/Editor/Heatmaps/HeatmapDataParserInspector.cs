@@ -63,11 +63,23 @@ namespace UnityAnalyticsHeatmap
 				int oldIndex = optionIndex;
 				optionIndex = EditorGUILayout.Popup("Option", optionIndex, optionKeys);
 				if (optionIndex != oldIndex) {
+					RecalculateMax ();
 					Dispatch ();
 				}
 			}
 			if (GUILayout.Button ("Load")) {
 				parser.LoadData (path, ParseHandler);
+			}
+		}
+
+		private void RecalculateMax() {
+			HeatPoint[] points = heatData [optionKeys [optionIndex]];
+			maxDensity = 0;
+			maxTime = 0;
+
+			for (int i = 0; i < points.Length; i++) {
+				maxDensity = Mathf.Max (maxDensity, points [i].density);
+				maxTime = Mathf.Max (maxTime, points [i].time);
 			}
 		}
 
