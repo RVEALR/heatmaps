@@ -115,6 +115,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
 	public bool allowRender{ get; set; }
 
+	public int currentPoints { get; private set; }
+	public int totalPoints { get; private set; }
+
 	public void UpdateTimeLimits(float startTime, float endTime) {
 		if (StartTime != startTime || EndTime != endTime) {
 			StartTime = startTime;
@@ -171,16 +174,17 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	private void CreatePoints()
 	{
 		if (hasData ()) {
-			int count = 0;
+			totalPoints = data.Length;
+			currentPoints = 0;
 			for (int i = 0; i < data.Length; i++) {
 				//FILTER FOR TIME
 				if (data [i].time >= StartTime && data [i].time <= EndTime) {
-					count++;
+					currentPoints++;
 				}
 			}
 			renderMesh = new Mesh ();
 			renderMesh.Clear ();
-			renderMesh.subMeshCount = count;
+			renderMesh.subMeshCount = currentPoints;
 			gameObject.GetComponent<MeshFilter> ().mesh = renderMesh;
 			//Performance optimizations: no shadows or probes
 			gameObject.GetComponent<MeshRenderer> ().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -189,7 +193,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			gameObject.GetComponent<MeshRenderer> ().reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
 
 
-			renderMaterials = new Material[count];
+			renderMaterials = new Material[currentPoints];
 
 			renderMeshIndex = 0;
 			UpdateRenderCycle (0, data.Length, renderMesh, renderMaterials);

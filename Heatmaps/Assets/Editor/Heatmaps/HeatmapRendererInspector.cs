@@ -140,9 +140,7 @@ namespace UnityAnalyticsHeatmap
 			EditorGUILayout.BeginHorizontal ();
 			GUIContent restartContent = new GUIContent ("<<", "Back to Start");
 			if (GUILayout.Button (restartContent)) {
-				float diff = EndTime - StartTime;
-				StartTime = 0;
-				EndTime = StartTime + diff;
+				Restart ();
 				isPlaying = false;
 			}
 
@@ -150,6 +148,9 @@ namespace UnityAnalyticsHeatmap
 			string playText = isPlaying ? "||" : ">";
 			GUIContent playContent = new GUIContent (playText, playTip);
 			if (GUILayout.Button (playContent)) {
+				if (EndTime == MaxTime) {
+					Restart ();
+				}
 				isPlaying = !isPlaying;
 			}
 			EditorGUILayout.EndHorizontal ();
@@ -190,8 +191,14 @@ namespace UnityAnalyticsHeatmap
 					EditorPrefs.SetInt (PARTICLE_DIRECTION_KEY, ParticleDirectionIndex);
 				}
 			}
-
 			EditorGUILayout.EndVertical ();
+
+			if (gameObject != null && gameObject.GetComponent<IHeatmapRenderer> () != null) {
+				int total = gameObject.GetComponent<IHeatmapRenderer> ().totalPoints;
+				int current = gameObject.GetComponent<IHeatmapRenderer> ().currentPoints;
+				GUILayout.Label("Points in current set: " + total);
+				GUILayout.Label("Points currently displayed: " + current);
+			}
 
 			//PASS VALUES TO RENDERER
 			if (gameObject != null) {
@@ -233,6 +240,12 @@ namespace UnityAnalyticsHeatmap
 
 		public void SetMaxTime(float maxTime) {
 			MaxTime = maxTime;
+		}
+
+		private void Restart() {
+			float diff = EndTime - StartTime;
+			StartTime = 0;
+			EndTime = StartTime + diff;
 		}
 
 		public void SetGameObject(GameObject go) {
