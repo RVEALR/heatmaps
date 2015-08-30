@@ -16,7 +16,8 @@ namespace UnityAnalyticsHeatmap
 	public class HeatmapDataParserInspector
 	{
 		private const string DATA_PATH_KEY = "UnityAnalyticsHeatmapDataPath";
-		private string path;
+
+		private string path = "";
 
 		private Dictionary<string, HeatPoint[]> heatData;
 		private float maxDensity = 0;
@@ -53,8 +54,11 @@ namespace UnityAnalyticsHeatmap
 
 			GUILayout.BeginHorizontal ();
 			if (GUILayout.Button (new GUIContent("Find File", "Locate a JSON file to load. By default, these live in Assets/HeatmapData."))) {
-				path = EditorUtility.OpenFilePanel ("Locate a JSON file", "", "json");
-				EditorPrefs.SetString (DATA_PATH_KEY, path);
+				string newPath = EditorUtility.OpenFilePanel ("Locate a JSON file", path, "json");
+				if (!string.IsNullOrEmpty(newPath)) {
+					path = newPath;
+					EditorPrefs.SetString (DATA_PATH_KEY, path);
+				}
 			}
 			path = EditorGUILayout.TextField (path);
 			GUILayout.EndHorizontal ();

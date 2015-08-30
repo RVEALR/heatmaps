@@ -5,18 +5,19 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using System.IO;
 
 namespace UnityAnalyticsHeatmap
 {
 	public class AggregationInspector
 	{
 		private const string DATA_PATH_KEY = "UnityAnalyticsHeatmapAggregationDataPath";
+		private const string LAST_IMPORT_PATH_KEY = "UnityAnalyticsHeatmapAggregationLastImportPath";
 		private const string SPACE_KEY = "UnityAnalyticsHeatmapAggregationSpace";
 		private const string KEY_TO_TIME = "UnityAnalyticsHeatmapAggregationTime";
 		private const string DISAGGREGATE_KEY = "UnityAnalyticsHeatmapAggregationDisaggregate";
 		private const string EVENTS_KEY = "UnityAnalyticsHeatmapAggregationEvents";
 		private const string TRIM_DATES_KEY = "UnityAnalyticsHeatmapAggregationTrimDates";
-
 
 		private const string NEW_PATH_TEXT = "New file path";
 
@@ -32,6 +33,7 @@ namespace UnityAnalyticsHeatmap
 		private HeatmapAggregator processor = new HeatmapAggregator ();
 
 		private List<string> inputFiles = new List<string>{NEW_PATH_TEXT};
+		private string lastImportPath = "";
 		private string startDate = "";
 		private string endDate = "";
 		private float space = DEFAULT_SPACE;
@@ -96,10 +98,12 @@ namespace UnityAnalyticsHeatmap
 				if (inputFiles.Count == 1 && inputFiles [0] == NEW_PATH_TEXT) {
 					insertPoint = 0;
 				} else {
-					string newFilePath = EditorUtility.OpenFilePanel ("Locate your downloaded file", "", "txt");
+					string newFilePath = EditorUtility.OpenFilePanel ("Locate your downloaded file", lastImportPath, "txt");
 					if (!string.IsNullOrEmpty (newFilePath)) {
 						inputFiles.Add (NEW_PATH_TEXT);
 						inputFiles [insertPoint] = newFilePath;
+						lastImportPath = Path.GetDirectoryName(newFilePath);
+						EditorPrefs.SetString (LAST_IMPORT_PATH_KEY, newFilePath);
 					}
 				}
 				SavePaths ();
