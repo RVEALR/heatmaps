@@ -34,9 +34,14 @@ public class Heatmapper : EditorWindow
 	void OnGUI ()
 	{
 		GUILayout.BeginVertical ("box");
+		GUILayout.BeginHorizontal ();
 		if (GUILayout.Button ("Reset")) {
 			SystemReset ();
 		}
+		if (GUILayout.Button ("Documentation")) {
+			Application.OpenURL("https://docs.google.com/document/d/1ZTTS_GZE7VaQK_y8dgsACX1JTFiWHcQUT-ro3g2DGAk");
+		}
+		GUILayout.EndHorizontal ();
 		GUILayout.EndVertical ();
 
 		GUILayout.BeginVertical ("box");
