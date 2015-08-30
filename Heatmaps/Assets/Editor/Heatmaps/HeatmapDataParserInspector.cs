@@ -52,7 +52,7 @@ namespace UnityAnalyticsHeatmap
 			
 
 			GUILayout.BeginHorizontal ();
-			if (GUILayout.Button ("Find File")) {
+			if (GUILayout.Button (new GUIContent("Find File", "Locate a JSON file to load. By default, these live in Assets/HeatmapData."))) {
 				path = EditorUtility.OpenFilePanel ("Locate a JSON file", "", "json");
 				EditorPrefs.SetString (DATA_PATH_KEY, path);
 			}
@@ -67,7 +67,7 @@ namespace UnityAnalyticsHeatmap
 					Dispatch ();
 				}
 			}
-			if (GUILayout.Button ("Load")) {
+			if (GUILayout.Button (new GUIContent("Load", "Load the specified JSON file"))) {
 				parser.LoadData (path, ParseHandler);
 			}
 		}

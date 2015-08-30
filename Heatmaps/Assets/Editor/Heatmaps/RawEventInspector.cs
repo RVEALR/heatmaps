@@ -29,12 +29,12 @@ namespace UnityAnalyticsHeatmap
 
 		public void OnGUI()
 		{
-			path = EditorGUILayout.TextField ("Data Export URL", path);
+			path = EditorGUILayout.TextField (new GUIContent("Data Export URL", "Copy the URL from the 'Editing Project' page of your project dashboard"), path);
 
-			startDate = EditorGUILayout.TextField ("Start Date (YYYY-MM-DD)", startDate);
-			endDate = EditorGUILayout.TextField ("End Date (YYYY-MM-DD)", endDate);
+			startDate = EditorGUILayout.TextField (new GUIContent("Start Date (YYYY-MM-DD)",  "Start date as ISO-8601 datetime"), startDate);
+			endDate = EditorGUILayout.TextField (new GUIContent("End Date (YYYY-MM-DD)",  "End date as ISO-8601 datetime"), endDate);
 
-			if (GUILayout.Button ("Download")) {
+				if (GUILayout.Button (new GUIContent("Download", "Download raw data in the specified range"))) {
 				EditorPrefs.SetString (URL_KEY, path);
 				DateTime start, end;
 				try {
