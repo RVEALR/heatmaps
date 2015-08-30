@@ -172,6 +172,7 @@ namespace UnityAnalyticsHeatmap
 			EditorGUILayout.BeginVertical ("box");
 			var oldParticleSize = ParticleSize;
 			ParticleSize = EditorGUILayout.FloatField (new GUIContent("Particle Size", "The display size of an individual data point"), ParticleSize);
+			ParticleSize = Mathf.Max (0.05f, ParticleSize);
 			if (oldParticleSize != ParticleSize) {
 				EditorPrefs.SetFloat (PARTICLE_SIZE_KEY, ParticleSize);
 			}
