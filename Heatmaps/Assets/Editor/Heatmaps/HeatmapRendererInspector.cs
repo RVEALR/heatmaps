@@ -97,6 +97,9 @@ namespace UnityAnalyticsHeatmap
 			LowThreshold = EditorGUILayout.FloatField (new GUIContent("Low Threshold", "Normalized threshold between low-density and medium-density data"), LowThreshold);
 			HighThreshold = EditorGUILayout.FloatField (new GUIContent("High Threshold", "Normalized threshold between medium-density and high-density data"), HighThreshold);
 
+			LowThreshold = Mathf.Min (LowThreshold, HighThreshold);
+			HighThreshold = Mathf.Max (LowThreshold, HighThreshold);
+
 			EditorGUILayout.MinMaxSlider(ref LowThreshold, ref HighThreshold, 0f, 1f);
 			if (oldLowThreshold != LowThreshold) {
 				EditorPrefs.SetFloat (LOW_THRESHOLD_KEY, LowThreshold);
@@ -114,6 +117,9 @@ namespace UnityAnalyticsHeatmap
 
 			StartTime = EditorGUILayout.FloatField (new GUIContent("Start Time", "Show only data after this time"), StartTime);
 			EndTime = EditorGUILayout.FloatField (new GUIContent("End Time", "Show only data before this time"), EndTime);
+
+			StartTime = Mathf.Min (StartTime, EndTime);
+			EndTime = Mathf.Max (StartTime, EndTime);
 
 			EditorGUILayout.MinMaxSlider(ref StartTime, ref EndTime, 0f, MaxTime);
 			if (GUILayout.Button (new GUIContent ("Max Time", "Set time to maximum extents"))) {
