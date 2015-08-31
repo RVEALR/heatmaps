@@ -16,7 +16,8 @@ namespace UnityAnalyticsHeatmap
 	public class HeatmapDataParserInspector
 	{
 		private const string DATA_PATH_KEY = "UnityAnalyticsHeatmapDataPath";
-		private string path;
+
+		private string path = "";
 
 		private Dictionary<string, HeatPoint[]> heatData;
 		private float maxDensity = 0;
@@ -52,9 +53,12 @@ namespace UnityAnalyticsHeatmap
 			
 
 			GUILayout.BeginHorizontal ();
-			if (GUILayout.Button ("Find File")) {
-				path = EditorUtility.OpenFilePanel ("Locate a JSON file", "", "json");
-				EditorPrefs.SetString (DATA_PATH_KEY, path);
+			if (GUILayout.Button (new GUIContent("Find File", "Locate a JSON file to load. By default, these live in Assets/HeatmapData."))) {
+				string newPath = EditorUtility.OpenFilePanel ("Locate a JSON file", path, "json");
+				if (!string.IsNullOrEmpty(newPath)) {
+					path = newPath;
+					EditorPrefs.SetString (DATA_PATH_KEY, path);
+				}
 			}
 			path = EditorGUILayout.TextField (path);
 			GUILayout.EndHorizontal ();
@@ -63,11 +67,23 @@ namespace UnityAnalyticsHeatmap
 				int oldIndex = optionIndex;
 				optionIndex = EditorGUILayout.Popup("Option", optionIndex, optionKeys);
 				if (optionIndex != oldIndex) {
+					RecalculateMax ();
 					Dispatch ();
 				}
 			}
-			if (GUILayout.Button ("Load")) {
+			if (GUILayout.Button (new GUIContent("Load", "Load the specified JSON file"))) {
 				parser.LoadData (path, ParseHandler);
+			}
+		}
+
+		private void RecalculateMax() {
+			HeatPoint[] points = heatData [optionKeys [optionIndex]];
+			maxDensity = 0;
+			maxTime = 0;
+
+			for (int i = 0; i < points.Length; i++) {
+				maxDensity = Mathf.Max (maxDensity, points [i].density);
+				maxTime = Mathf.Max (maxTime, points [i].time);
 			}
 		}
 

@@ -10,6 +10,8 @@ using System;
 using UnityEngine;
 using UnityAnalyticsHeatmap;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 [RequireComponent (typeof (MeshCollider))]
 [RequireComponent (typeof (MeshFilter))]
@@ -47,8 +49,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	private int renderState = NOT_RENDERING;
 	private Mesh renderMesh;
 	private Material[] renderMaterials;
-	private int currentRenderIndex = 0;
-	private int pointsPerCycle = 3000;
 	private int renderMeshIndex = 0;
 
 	void Start()
@@ -115,6 +115,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
 	public bool allowRender{ get; set; }
 
+	public int currentPoints { get; private set; }
+	public int totalPoints { get; private set; }
+
 	public void UpdateTimeLimits(float startTime, float endTime) {
 		if (StartTime != startTime || EndTime != endTime) {
 			StartTime = startTime;
@@ -150,13 +153,13 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 				break;
 			case RENDER_IN_PROGRESS:
 				if (hasData ()) {
-					UpdateRenderCycle (currentRenderIndex, data.Length, pointsPerCycle, renderMesh, renderMaterials);
+					UpdateRenderCycle (0, data.Length, renderMesh, renderMaterials);
 				}
 				break;
 			case UPDATE_MATERIALS:
 				renderMeshIndex = 0;
 				for (int i = 0; i < data.Length; i++) {
-					if (data [i].time >= StartTime && data [i].time <= EndTime) {
+					if (data [i].time >= StartTime && data [i].time <= EndTime && renderMeshIndex < renderMaterials.Length) {
 						renderMaterials [renderMeshIndex] = PickMaterial (data [i].density / maxDensity);
 						renderMeshIndex ++;
 					}
@@ -171,56 +174,81 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	private void CreatePoints()
 	{
 		if (hasData ()) {
-			renderMesh = new Mesh ();
-			renderMesh.Clear ();
-			renderMesh.subMeshCount = data.Length;
-			gameObject.GetComponent<MeshFilter> ().mesh = renderMesh;
-
-			int count = 1;
+			totalPoints = data.Length;
+			currentPoints = 0;
 			for (int i = 0; i < data.Length; i++) {
 				//FILTER FOR TIME
 				if (data [i].time >= StartTime && data [i].time <= EndTime) {
-					count++;
+					currentPoints++;
 				}
 			}
+			renderMesh = new Mesh ();
+			renderMesh.Clear ();
+			renderMesh.subMeshCount = currentPoints;
+			gameObject.GetComponent<MeshFilter> ().mesh = renderMesh;
+			//Performance optimizations: no shadows or probes
+			gameObject.GetComponent<MeshRenderer> ().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+			gameObject.GetComponent<MeshRenderer> ().receiveShadows = false;
+			gameObject.GetComponent<MeshRenderer> ().useLightProbes = false;
+			gameObject.GetComponent<MeshRenderer> ().reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
 
-			renderMaterials = new Material[count];
+
+			renderMaterials = new Material[currentPoints];
 
 			renderMeshIndex = 0;
-			UpdateRenderCycle (0, data.Length, pointsPerCycle, renderMesh, renderMaterials);
+			UpdateRenderCycle (0, data.Length, renderMesh, renderMaterials);
 		}
 	}
 
-	private void UpdateRenderCycle(int startPointsIndex, int endPointsIndex, int pointsPerCycle, Mesh mesh, Material[] materials) 
+	private void UpdateRenderCycle(int startPointsIndex, int endPointsIndex, Mesh mesh, Material[] materials) 
 	{
-		currentRenderIndex = Math.Min (startPointsIndex + pointsPerCycle, endPointsIndex);
-		for (int i = startPointsIndex; i < currentRenderIndex; i++) {
-			materials [renderMeshIndex] = PickMaterial (data [i].density / maxDensity);
+		List<int[]> allTris = new List<int[]> ();
+		List<Vector3[]> allVectors = new List<Vector3[]> ();
+		Vector3[] vector3;
+
+		for (int i = startPointsIndex; i < endPointsIndex; i++) {
 			//FILTER FOR TIME
 			if (data [i].time >= StartTime && data [i].time <= EndTime) {
+				materials [renderMeshIndex] = PickMaterial (data [i].density / maxDensity);
+
+
+				Vector3 position = data [i].position;
 				switch (renderStyle) {
 				case RenderShape.CUBE:
-					AddCubeToMesh (mesh, renderMeshIndex++, data [i].position.x, data [i].position.y, data [i].position.z);
+					vector3 = AddCubeVectorsToMesh (position.x, position.y, position.z);
+					allVectors.Add (vector3);
+					allTris.Add(AddCubeTrisToMesh (renderMeshIndex * vector3.Length));
 					break;
 				case RenderShape.SQUARE:
-					AddSquareToMesh (mesh, renderMeshIndex++, data [i].position.x, data [i].position.y, data [i].position.z);
+					vector3 = AddSquareVectorsToMesh (position.x, position.y, position.z);
+					allVectors.Add (vector3);
+					allTris.Add(AddSquareTrisToMesh (renderMeshIndex * vector3.Length));
 					break;
 				case RenderShape.TRI:
-					AddTriToMesh (mesh, renderMeshIndex++, data [i].position.x, data [i].position.y, data [i].position.z);
+					vector3 = AddTriVectorsToMesh (position.x, position.y, position.z);
+					allVectors.Add (vector3);
+					allTris.Add(AddTriTrisToMesh (renderMeshIndex * vector3.Length));
 					break;
 				}
+				renderMeshIndex++;
 			}
+		}
+
+		Vector3[] combinedVertices = allVectors.SelectMany (x => x).ToArray<Vector3> ();
+
+		mesh.vertices = combinedVertices;
+
+		for (int j = 0; j < allTris.Count; j++) {
+			int[] t = allTris [j];
+			mesh.SetTriangles (t, j);
 		}
 		gameObject.GetComponent<Renderer> ().materials = materials;
 
-		if (currentRenderIndex >= endPointsIndex) {
-			mesh.Optimize ();
-			renderState = NOT_RENDERING;
-		}
+		mesh.Optimize ();
+		renderState = NOT_RENDERING;
 	}
 
-	//Generate a cube mesh procedurally
-	private Mesh AddCubeToMesh(Mesh mesh, int index, float x, float y, float z) {
+	private Vector3[] AddCubeVectorsToMesh(float x, float y, float z) {
 		float halfP = particleSize / 2;
 
 		Vector3 p0 = new Vector3 (x-halfP, y-halfP, z-halfP);
@@ -233,12 +261,11 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		Vector3 p6 = new Vector3 (x+halfP, y+halfP, z+halfP);
 		Vector3 p7 = new Vector3 (x-halfP, y+halfP, z+halfP);
 
-		var additionalVertices = new Vector3[] { p0, p1, p2, p3, p4, p5, p6, p7 };
-		var combinedVertices = new Vector3[mesh.vertexCount + additionalVertices.Length];
-		mesh.vertices.CopyTo (combinedVertices, 0);
-		additionalVertices.CopyTo (combinedVertices, mesh.vertexCount);
-		mesh.vertices = combinedVertices;
+		return new Vector3[] { p0, p1, p2, p3, p4, p5, p6, p7 };
+	}
 
+	//Generate a cube mesh procedurally
+	private int[] AddCubeTrisToMesh(int offset) {
 		var tris = new int[] {
 			0, 1, 2,	//bottom
 			0, 2, 3,
@@ -254,17 +281,13 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			0, 4, 5,	//front
 			0, 5, 1
 		};
-
-		int offset = index * additionalVertices.Length;
 		for (int a = 0; a < tris.Length; a++) {
 			tris[a] += offset;
 		}
-		mesh.SetTriangles (tris, index);
-		return mesh;
+		return tris;
 	}
 
-	//Generate a procedural square
-	private Mesh AddSquareToMesh(Mesh mesh, int index, float x, float y, float z) {
+	private Vector3[] AddSquareVectorsToMesh(float x, float y, float z) {
 		float halfP = particleSize / 2;
 
 		Vector3 p0, p1, p2, p3;
@@ -292,27 +315,19 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			break;
 		}
 
-		var additionalVertices = new Vector3[] { p0, p1, p2, p3 };
-		var combinedVertices = new Vector3[mesh.vertexCount + additionalVertices.Length];
-		mesh.vertices.CopyTo (combinedVertices, 0);
-		additionalVertices.CopyTo (combinedVertices, mesh.vertexCount);
-		mesh.vertices = combinedVertices;
-
-		var tris = new int[] {
-			0, 2, 1,	//top
-			0, 3, 2
-		};
-
-		int offset = index * additionalVertices.Length;
-		for (int a = 0; a < tris.Length; a++) {
-			tris[a] += offset;
-		}
-		mesh.SetTriangles (tris, index);
-		return mesh;
+		return new Vector3[] { p0, p1, p2, p3 };
 	}
 
-	//Generate a procedural tri
-	private Mesh AddTriToMesh(Mesh mesh, int index, float x, float y, float z) {
+	//Generate a procedural square
+	private int[] AddSquareTrisToMesh(int offset) {
+		var tris = new int[] {
+			offset, offset+2, offset+1,	//top
+			offset, offset+3, offset+2
+		};
+		return tris;
+	}
+
+	private Vector3[] AddTriVectorsToMesh(float x, float y, float z) {
 		float halfP = particleSize / 2;
 
 		Vector3 p0, p1, p2;
@@ -337,22 +352,15 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			break;
 		}
 
-		var additionalVertices = new Vector3[] { p0, p1, p2 };
-		var combinedVertices = new Vector3[mesh.vertexCount + additionalVertices.Length];
-		mesh.vertices.CopyTo (combinedVertices, 0);
-		additionalVertices.CopyTo (combinedVertices, mesh.vertexCount);
-		mesh.vertices = combinedVertices;
+		return new Vector3[] { p0, p1, p2 };
+	}
 
+	//Generate a procedural tri
+	private int[] AddTriTrisToMesh(int offset) {
 		var tris = new int[] {
-			0, 2, 1	//top
+			offset, offset+2, offset+1	//top
 		};
-
-		int offset = index * additionalVertices.Length;
-		for (int a = 0; a < tris.Length; a++) {
-			tris[a] += offset;
-		}
-		mesh.SetTriangles (tris, index);
-		return mesh;
+		return tris;
 	}
 
 	private bool hasData() {
@@ -360,14 +368,14 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	}
 
 	private Material PickMaterial(float value) {
+		int i = 1;
 		if (materials == null)
 			return null;
-		Material material = materials[1];
 		if (value > HighThreshold) {
-			material = materials[2];
+			i = 2;
 		} else if (value < LowThreshold) {
-			material = materials[0];
+			i = 0;
 		}
-		return material;
+		return materials[i];
 	}
 }

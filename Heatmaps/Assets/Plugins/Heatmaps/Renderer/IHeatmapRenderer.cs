@@ -64,6 +64,18 @@ namespace UnityAnalyticsHeatmap
 		/// </summary>
 		/// <value><c>true</c> if allow render; otherwise, <c>false</c>.</value>
 		bool allowRender{ get; set; }
+
+		/// <summary>
+		/// The number of points currently displayed.
+		/// </summary>
+		/// <value>Count of currently displayed points</value>
+		int currentPoints{ get; }
+
+		/// <summary>
+		/// The number of points in the current dataset.
+		/// </summary>
+		/// <value>Count of all points in the current set</value>
+		int totalPoints{ get; }
 	}
 }
 

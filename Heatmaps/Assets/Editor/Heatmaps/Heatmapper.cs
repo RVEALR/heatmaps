@@ -64,7 +64,7 @@ public class Heatmapper : EditorWindow
 			m_ParseView = HeatmapDataParserInspector.Init (PointDataHandler);
 		}
 		if (m_RenderView == null) {
-			m_RenderView = HeatmapRendererInspector.Init ();
+			m_RenderView = HeatmapRendererInspector.Init (this);
 		}
 
 		showRender = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), showRender, "Render", true);
@@ -81,9 +81,12 @@ public class Heatmapper : EditorWindow
 
 
 	void Update() {
-		if (heatMapInstance)
+		if (heatMapInstance != null)
 		{
 			heatMapInstance.GetComponent<IHeatmapRenderer> ().RenderHeatmap ();
+		}
+		if (m_RenderView != null) {
+			m_RenderView.Update ();
 		}
 	}
 

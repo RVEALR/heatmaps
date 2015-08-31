@@ -19,18 +19,39 @@ namespace UnityAnalyticsHeatmap
 							List<string> events)
 		{
 			string outputFileName = System.IO.Path.GetFileName (inputFiles [0]).Replace(".txt", ".json");
+
+			Dictionary<string, List<Dictionary<string, float>>> outputData = new Dictionary<string, List<Dictionary<string, float>>> ();
+
 			foreach (string file in inputFiles) {
-				LoadStream (file, startDate, endDate, space, time, disaggregateTime, events, outputFileName);
+				LoadStream (outputData, file, startDate, endDate, space, time, disaggregateTime, events, outputFileName);
+			}
+
+			// Test if any data was generated
+			bool hasData = false;
+			List<int> reportList = new List<int>{};
+			foreach (var generated in outputData) {
+				hasData = generated.Value.Count > 0;
+				reportList.Add (generated.Value.Count);
+				if (!hasData) {
+					break;
+				}
+			}
+			if (hasData) {
+				var report = reportList.Select(x => x.ToString()).ToArray();
+				Debug.Log ("The aggregation process yielded " + reportList.Count + " groups with the following point counts [" + string.Join(",", report) + "]");
+				SaveFile (outputFileName, outputData);
+			} else {
+				Debug.LogWarning ("The aggregation process yielded no results.");
 			}
 		}
 
-		protected void LoadStream(string path, 
+		protected void LoadStream(Dictionary<string, List<Dictionary<string, float>>> outputData,
+									string path, 
 									DateTime startDate, DateTime endDate, 
 									float space, float time, bool disaggregateTime, 
 									List<string> events, string outputFileName)
 		{
 			Dictionary<Tuplish, Dictionary<string, float>> pointDict = new Dictionary<Tuplish, Dictionary<string, float>>();
-			Dictionary<string, List<Dictionary<string, float>>> outputData = new Dictionary<string, List<Dictionary<string, float>>> ();
 
 			StreamReader reader = new StreamReader(path);
 			using (reader)
@@ -109,28 +130,7 @@ namespace UnityAnalyticsHeatmap
 					}
 				}
 			}
-
-
-			// Test if any data was generated
-			bool hasData = false;
-			List<int> reportList = new List<int>{};
-			foreach (var generated in outputData) {
-				hasData = generated.Value.Count > 0;
-				reportList.Add (generated.Value.Count);
-				if (!hasData) {
-					break;
-				}
-			}
-			if (hasData) {
-				var report = reportList.Select(x => x.ToString()).ToArray();
-				Debug.Log ("The aggregation process yielded " + reportList.Count + " groups with the following point counts [" + string.Join(",", report) + "]");
-				SaveFile (outputFileName, outputData);
-			} else {
-				Debug.LogWarning ("The aggregation process yielded no results.");
-			}
 		}
-
-
 
 		protected void SaveFile(string outputFileName, Dictionary<string, List<Dictionary<string, float>>> outputData) {
 			string savePath = System.IO.Path.Combine (Application.dataPath, "HeatmapData");
