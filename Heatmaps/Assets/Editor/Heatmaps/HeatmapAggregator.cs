@@ -10,6 +10,13 @@ namespace UnityAnalyticsHeatmap
 	public class HeatmapAggregator
 	{
 
+		private int reportFiles = 0;
+		private int reportRows = 0;
+		private int reportLegalPoints = 0;
+
+		private Dictionary<Tuplish, Dictionary<string, float>> pointDict;
+
+
 		public HeatmapAggregator ()
 		{
 		}
@@ -22,7 +29,13 @@ namespace UnityAnalyticsHeatmap
 
 			Dictionary<string, List<Dictionary<string, float>>> outputData = new Dictionary<string, List<Dictionary<string, float>>> ();
 
+			reportFiles = 0;
+			reportLegalPoints = 0;
+			reportRows = 0;
+			pointDict = new Dictionary<Tuplish, Dictionary<string, float>>();
+
 			foreach (string file in inputFiles) {
+				reportFiles++;
 				LoadStream (outputData, file, startDate, endDate, space, time, disaggregateTime, events, outputFileName);
 			}
 
@@ -37,8 +50,15 @@ namespace UnityAnalyticsHeatmap
 				}
 			}
 			if (hasData) {
-				var report = reportList.Select(x => x.ToString()).ToArray();
-				Debug.Log ("The aggregation process yielded " + reportList.Count + " groups with the following point counts [" + string.Join(",", report) + "]");
+				var reportArray = reportList.Select(x => x.ToString()).ToArray();
+
+				//Output what happened
+				string report = "Report of " + reportFiles + " files:\n";
+				report += "Total of " + reportList.Count + " groups numbering [" + string.Join(",", reportArray) + "]\n";
+				report += "Total rows: " + reportRows + "\n";
+				report += "Total points analyzed: " + reportLegalPoints;
+				Debug.Log (report);
+
 				SaveFile (outputFileName, outputData);
 			} else {
 				Debug.LogWarning ("The aggregation process yielded no results.");
@@ -51,13 +71,12 @@ namespace UnityAnalyticsHeatmap
 									float space, float time, bool disaggregateTime, 
 									List<string> events, string outputFileName)
 		{
-			Dictionary<Tuplish, Dictionary<string, float>> pointDict = new Dictionary<Tuplish, Dictionary<string, float>>();
-
 			StreamReader reader = new StreamReader(path);
 			using (reader)
 			{
 				string tsv = reader.ReadToEnd();
 				string[] rows = tsv.Split('\n');
+				reportRows += rows.Length;
 
 				for (int a = 0; a < rows.Length; a++) {
 					string[] rowData = rows [a].Split ('\t');
@@ -87,6 +106,9 @@ namespace UnityAnalyticsHeatmap
 						Debug.Log ("Unable to find x/y in: " + datum.ToString () + ". Skipping...");
 						continue;
 					}
+
+					//passed all checks. consider as legal point
+					reportLegalPoints ++;
 
 					float x = float.Parse ((string)datum ["x"]);
 					float y = float.Parse ((string)datum ["y"]);
@@ -145,17 +167,17 @@ namespace UnityAnalyticsHeatmap
 		protected float Divide(float value, float divisor) {
 			float mod = value % divisor;
 			float rounded = Mathf.Round(value/divisor) * divisor;
-			if (mod > divisor/2) {
-				rounded -= divisor / 2;
+			if (mod > divisor/2f) {
+				rounded -= divisor / 2f;
 			} else {
-				rounded += divisor / 2;
+				rounded += divisor / 2f;
 			}
 			return rounded;
 		}
 	}
 
 	// Unity doesn't support Tuple, so here's a Tuple-like standin
-	internal class Tuplish : IEquatable<Tuplish>
+	internal class Tuplish
 	{
 
 		private List<object> objects;
@@ -164,14 +186,10 @@ namespace UnityAnalyticsHeatmap
 			this.objects = new List<object> (args);
 		}
 
-		#region IEquatable implementation
-
-		public bool Equals (Tuplish other)
+		public override bool Equals (object other)
 		{
-			return objects.SequenceEqual (other.objects);
+			return objects.SequenceEqual ((other as Tuplish).objects);
 		}
-
-		#endregion
 
 		public override int GetHashCode()
 		{
@@ -180,6 +198,15 @@ namespace UnityAnalyticsHeatmap
 				hash = hash * 23 + (o == null ? 0 : o.GetHashCode ());
 			}
 			return hash;
+		}
+
+		public override string ToString ()
+		{
+			string s = "";
+			foreach (var o in objects) {
+				s += o.ToString() + "   |||   ";
+			}
+			return "Tuplish: " + s + " >>> " + GetHashCode();
 		}
 	}
 }
