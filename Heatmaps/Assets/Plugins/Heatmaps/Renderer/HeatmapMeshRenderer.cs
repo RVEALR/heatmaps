@@ -13,9 +13,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-[RequireComponent (typeof (MeshCollider))]
-[RequireComponent (typeof (MeshFilter))]
-[RequireComponent (typeof (MeshRenderer))]
 public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 {
 
@@ -23,6 +20,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	private const int BEGIN_RENDER = 1;
 	private const int RENDER_IN_PROGRESS = 2;
 	private const int UPDATE_MATERIALS = 4;
+
+	//Unity limit of vectors per mesh
+	int VERTICES_PER_MESH = 65000;
 
 	//Density Thresholds
 	private float HighThreshold;
@@ -47,9 +47,11 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	public Material[] materials;
 
 	private int renderState = NOT_RENDERING;
-	private Mesh renderMesh;
-	private Material[] renderMaterials;
-	private int renderMeshIndex = 0;
+
+	//private Material[] renderMaterials;
+	//private int renderMeshIndex = 0;
+
+	private GameObject[] gameObjects;
 
 	void Start()
 	{
@@ -153,18 +155,44 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 				break;
 			case RENDER_IN_PROGRESS:
 				if (hasData ()) {
-					UpdateRenderCycle (0, data.Length, renderMesh, renderMaterials);
+					//UpdateRenderCycle (0, data.Length, renderMaterials);
 				}
 				break;
 			case UPDATE_MATERIALS:
-				renderMeshIndex = 0;
-				for (int i = 0; i < data.Length; i++) {
-					if (data [i].time >= StartTime && data [i].time <= EndTime && renderMeshIndex < renderMaterials.Length) {
-						renderMaterials [renderMeshIndex] = PickMaterial (data [i].density / maxDensity);
-						renderMeshIndex ++;
+				int pt = 0;
+				int indexPt = 0;
+				int currentSubmap = 0;
+				int oldSubmap = -1;
+				int verticesPerShape = GetVecticesForShape ();
+				GameObject go = null;
+				Material[] materials = null;
+				for (int a = 0; a < data.Length; a++) {
+					if (data [a].time >= StartTime && data [a].time <= EndTime) {
+
+						currentSubmap = (pt * verticesPerShape) / VERTICES_PER_MESH;
+
+						if (currentSubmap != oldSubmap) {
+							if (go != null && materials != null) {
+								go.GetComponent<Renderer> ().materials = materials;
+							}
+
+							indexPt = 0;
+							go = gameObjects [currentSubmap];
+							materials = go.GetComponent<Renderer> ().sharedMaterials;
+						}
+
+
+						materials [indexPt] = PickMaterial (data [a].density / maxDensity);
+
+						oldSubmap = currentSubmap;
+						pt++;
+						indexPt++;
 					}
 				}
-				gameObject.GetComponent<Renderer> ().materials = renderMaterials;
+				if (go != null && materials != null) {
+					go.GetComponent<Renderer> ().materials = materials;
+				}
+
 				renderState = NOT_RENDERING;
 				break;
 			}
@@ -176,76 +204,108 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		if (hasData ()) {
 			totalPoints = data.Length;
 			currentPoints = 0;
-			for (int i = 0; i < data.Length; i++) {
+
+			List<List<HeatPoint>> submaps = new List<List<HeatPoint>> ();
+			int currentSubmap = 0;
+			int verticesPerShape = GetVecticesForShape ();
+
+
+			for (int a = 0; a < data.Length; a++) {
 				//FILTER FOR TIME
-				if (data [i].time >= StartTime && data [i].time <= EndTime) {
+				if (data [a].time >= StartTime && data [a].time <= EndTime) {
 					currentPoints++;
+					if (submaps.Count <= currentSubmap) {
+						submaps.Add(new List<HeatPoint>());
+					}
+					submaps [currentSubmap].Add (data [a]);
+					currentSubmap = (currentPoints * verticesPerShape) / VERTICES_PER_MESH;
 				}
 			}
-			renderMesh = new Mesh ();
-			renderMesh.Clear ();
-			renderMesh.subMeshCount = currentPoints;
-			gameObject.GetComponent<MeshFilter> ().mesh = renderMesh;
-			//Performance optimizations: no shadows or probes
-			gameObject.GetComponent<MeshRenderer> ().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-			gameObject.GetComponent<MeshRenderer> ().receiveShadows = false;
-			gameObject.GetComponent<MeshRenderer> ().useLightProbes = false;
-			gameObject.GetComponent<MeshRenderer> ().reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+
+			// Remove existing GOs
+			// FIXME: optimize since most of the time we won't need to destroy and create GOs
+
+			int c = 0;
+			int bailout = 99;
+			while (gameObject.transform.childCount > 0 && c < bailout) {
+				Transform trans = gameObject.transform.FindChild ("Submap" + c);
+				if (trans != null) {
+					trans.parent = null;
+					GameObject.DestroyImmediate (trans.gameObject);
+				}
+				c++;
+			}
+
+			if (currentPoints == 0) {
+				renderState = NOT_RENDERING;
+				return;
+			}
+
+			gameObjects = new GameObject[submaps.Count];
+
+			for (int b = 0; b < gameObjects.Length; b++) {
+				GameObject go = new GameObject ("Submap" + b);
+
+				go.AddComponent<MeshFilter> ();
+				go.AddComponent<MeshRenderer> ();
+
+				Mesh renderMesh = new Mesh ();
+				renderMesh.Clear ();
+				renderMesh.subMeshCount = submaps[b].Count;
+
+				go.GetComponent<MeshFilter> ().mesh = renderMesh;
+				go.GetComponent<MeshRenderer> ().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+				go.GetComponent<MeshRenderer> ().receiveShadows = false;
+				go.GetComponent<MeshRenderer> ().useLightProbes = false;
+				go.GetComponent<MeshRenderer> ().reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
 
 
-			renderMaterials = new Material[currentPoints];
-
-			renderMeshIndex = 0;
-			UpdateRenderCycle (0, data.Length, renderMesh, renderMaterials);
+				gameObjects [b] = go;
+				go.transform.parent = gameObject.transform;
+				RenderSubmap (go, submaps[b]);
+			}
+			renderState = NOT_RENDERING;
 		}
 	}
 
-	private void UpdateRenderCycle(int startPointsIndex, int endPointsIndex, Mesh mesh, Material[] materials) 
-	{
+	private void RenderSubmap(GameObject go, List<HeatPoint> submap) {
 		List<int[]> allTris = new List<int[]> ();
 		List<Vector3[]> allVectors = new List<Vector3[]> ();
 		Vector3[] vector3;
+		Material[] materials = new Material[submap.Count];
 
-		for (int i = startPointsIndex; i < endPointsIndex; i++) {
-			//FILTER FOR TIME
-			if (data [i].time >= StartTime && data [i].time <= EndTime) {
-				materials [renderMeshIndex] = PickMaterial (data [i].density / maxDensity);
-
-
-				Vector3 position = data [i].position;
-				switch (renderStyle) {
-				case RenderShape.CUBE:
-					vector3 = AddCubeVectorsToMesh (position.x, position.y, position.z);
-					allVectors.Add (vector3);
-					allTris.Add(AddCubeTrisToMesh (renderMeshIndex * vector3.Length));
-					break;
-				case RenderShape.SQUARE:
-					vector3 = AddSquareVectorsToMesh (position.x, position.y, position.z);
-					allVectors.Add (vector3);
-					allTris.Add(AddSquareTrisToMesh (renderMeshIndex * vector3.Length));
-					break;
-				case RenderShape.TRI:
-					vector3 = AddTriVectorsToMesh (position.x, position.y, position.z);
-					allVectors.Add (vector3);
-					allTris.Add(AddTriTrisToMesh (renderMeshIndex * vector3.Length));
-					break;
-				}
-				renderMeshIndex++;
+		for (int a = 0; a < submap.Count; a++) {
+			materials [a] = PickMaterial (submap [a].density / maxDensity);
+			Vector3 position = data [a].position;
+			switch (renderStyle) {
+			case RenderShape.CUBE:
+				vector3 = AddCubeVectorsToMesh (position.x, position.y, position.z);
+				allVectors.Add (vector3);
+				allTris.Add (AddCubeTrisToMesh (a * vector3.Length));
+				break;
+			case RenderShape.SQUARE:
+				vector3 = AddSquareVectorsToMesh (position.x, position.y, position.z);
+				allVectors.Add (vector3);
+				allTris.Add (AddSquareTrisToMesh (a * vector3.Length));
+				break;
+			case RenderShape.TRI:
+				vector3 = AddTriVectorsToMesh (position.x, position.y, position.z);
+				allVectors.Add (vector3);
+				allTris.Add (AddTriTrisToMesh (a * vector3.Length));
+				break;
 			}
 		}
 
 		Vector3[] combinedVertices = allVectors.SelectMany (x => x).ToArray<Vector3> ();
-
+		Mesh mesh = go.GetComponent<MeshFilter> ().sharedMesh;
 		mesh.vertices = combinedVertices;
-
 		for (int j = 0; j < allTris.Count; j++) {
 			int[] t = allTris [j];
 			mesh.SetTriangles (t, j);
 		}
-		gameObject.GetComponent<Renderer> ().materials = materials;
-
+		go.GetComponent<Renderer> ().materials = materials;
 		mesh.Optimize ();
-		renderState = NOT_RENDERING;
+
 	}
 
 	private Vector3[] AddCubeVectorsToMesh(float x, float y, float z) {
@@ -365,6 +425,41 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
 	private bool hasData() {
 		return data != null && data.Length > 0;
+	}
+
+	private int GetVecticesForShape() {
+		// Verts is the number of UNIQUE vertices in each shape
+		int verts = 0;
+		switch (renderStyle) {
+		case RenderShape.CUBE:
+			verts = 8;
+			break;
+		case RenderShape.SQUARE:
+			verts = 4;
+			break;
+		case RenderShape.TRI:
+			verts = 3;
+			break;
+		}
+		return verts;
+	}
+
+
+
+	private int GetTrisForShape() {
+		int tris = 0;
+		switch (renderStyle) {
+		case RenderShape.CUBE:
+			tris = 32;
+			break;
+		case RenderShape.SQUARE:
+			tris = 6;
+			break;
+		case RenderShape.TRI:
+			tris = 3;
+			break;
+		}
+		return tris;
 	}
 
 	private Material PickMaterial(float value) {
