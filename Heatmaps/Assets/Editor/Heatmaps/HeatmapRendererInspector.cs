@@ -43,8 +43,8 @@ namespace UnityAnalyticsHeatmap
 
 		float ParticleSize = 1f;
 		int ParticleShapeIndex = 0;
-		GUIContent[] particleShapeOptions = new GUIContent[]{new GUIContent("Cube"), new GUIContent("Square"), new GUIContent("Triangle")};
-		RenderShape[] particleShapeIds = new RenderShape[]{RenderShape.CUBE, RenderShape.SQUARE, RenderShape.TRI};
+		GUIContent[] particleShapeOptions = new GUIContent[]{new GUIContent("Cube"), new GUIContent("Pyramid"), new GUIContent("Square"), new GUIContent("Triangle")};
+		RenderShape[] particleShapeIds = new RenderShape[]{RenderShape.CUBE, RenderShape.PYRAMID, RenderShape.SQUARE, RenderShape.TRI};
 
 		int ParticleDirectionIndex = 0;
 		GUIContent[] particleDirectionOptions = new GUIContent[]{new GUIContent("YZ"), new GUIContent("XZ"), new GUIContent("XY")};

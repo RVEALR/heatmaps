@@ -131,17 +131,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	public void UpdateRenderStyle(RenderShape style, RenderDirection direction) {
 		if (style != renderStyle || direction != renderDirection) {
 			renderDirection = direction;
-			switch (style) {
-			case RenderShape.CUBE:
-				renderStyle = style;
-				break;
-			case RenderShape.SQUARE:
-				renderStyle = style;
-				break;
-			case RenderShape.TRI:
-				renderStyle = style;
-				break;
-			}
+			renderStyle = style;
 			renderState = BEGIN_RENDER;
 		}
 	}
@@ -283,6 +273,11 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 				allVectors.Add (vector3);
 				allTris.Add (AddCubeTrisToMesh (a * vector3.Length));
 				break;
+			case RenderShape.PYRAMID:
+				vector3 = AddPyramidVectorsToMesh (position.x, position.y, position.z);
+				allVectors.Add (vector3);
+				allTris.Add (AddPyramidTrisToMesh (a * vector3.Length));
+				break;
 			case RenderShape.SQUARE:
 				vector3 = AddSquareVectorsToMesh (position.x, position.y, position.z);
 				allVectors.Add (vector3);
@@ -340,6 +335,31 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			2, 6, 7,
 			0, 4, 5,	//front
 			0, 5, 1
+		};
+		for (int a = 0; a < tris.Length; a++) {
+			tris[a] += offset;
+		}
+		return tris;
+	}
+
+	private Vector3[] AddPyramidVectorsToMesh(float x, float y, float z) {
+		float halfP = particleSize / 2;
+
+		Vector3 p0 = new Vector3 (x-halfP, y-halfP, z-halfP);
+		Vector3 p1 = new Vector3 (x+halfP, y-halfP, z-halfP);
+		Vector3 p2 = new Vector3 (x, y-halfP, z+halfP);
+		Vector3 p3 = new Vector3 (x, y+halfP, z);
+
+		return new Vector3[] { p0, p1, p2, p3 };
+	}
+
+	//Generate a pyramid mesh procedurally
+	private int[] AddPyramidTrisToMesh(int offset) {
+		var tris = new int[] {
+			0, 1, 2,	//bottom
+			0, 3, 1,	//front
+			1, 3, 2,	//right-b
+			2, 3, 1,	//left-b
 		};
 		for (int a = 0; a < tris.Length; a++) {
 			tris[a] += offset;
@@ -434,6 +454,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		case RenderShape.CUBE:
 			verts = 8;
 			break;
+		case RenderShape.PYRAMID:
+			verts = 4;
+			break;
 		case RenderShape.SQUARE:
 			verts = 4;
 			break;
@@ -451,6 +474,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		switch (renderStyle) {
 		case RenderShape.CUBE:
 			tris = 32;
+			break;
+		case RenderShape.PYRAMID:
+			tris = 4;
 			break;
 		case RenderShape.SQUARE:
 			tris = 6;
