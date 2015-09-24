@@ -1,5 +1,5 @@
 ﻿/// <summary>
-/// Heat mapper inspector.
+/// Heatmapper inspector.
 /// </summary>
 /// This code drives the Heat Mapper inspector
 /// The HeatmapDataParser handles loading and parsing the data.
@@ -73,7 +73,7 @@ public class Heatmapper : EditorWindow
 		}
 
 		showRender = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), showRender, "Render", true);
-		if (showRender) {
+		if (showRender && m_ParseView != null) {
 			m_ParseView.OnGUI ();
 			m_RenderView.OnGUI ();
 		}
@@ -122,6 +122,8 @@ public class Heatmapper : EditorWindow
 		}
 		if (m_RenderView != null) {
 			m_RenderView.SetMaxTime (maxTime);
+			m_RenderView.SetGameObject (heatMapInstance);
+			m_RenderView.Update (true);
 		}
 	}
 

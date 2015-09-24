@@ -239,7 +239,8 @@ namespace UnityAnalyticsHeatmap
 		}
 
 		public void SetMaxTime(float maxTime) {
-			MaxTime = maxTime;
+			EndTime = MaxTime = maxTime;
+			StartTime = 0f;
 		}
 
 		private void Restart() {

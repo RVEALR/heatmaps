@@ -136,16 +136,19 @@ namespace UnityAnalyticsHeatmap
 				EditorPrefs.SetFloat (SPACE_KEY, space);
 			}
 
-			float oldTime = time;
-			time = EditorGUILayout.FloatField (new GUIContent("Time Smooth", "Divider to smooth out time data"), time);
-			if (oldTime != time) {
-				EditorPrefs.SetFloat (KEY_TO_TIME, time);
-			}
-
 			bool oldDisaggregateTime = disaggregateTime;
 			disaggregateTime = EditorGUILayout.Toggle (new GUIContent("Disaggregate Time", "Units of space will aggregate, but units of time won't"), disaggregateTime);
 			if (oldDisaggregateTime != disaggregateTime) {
 				EditorPrefs.SetBool (DISAGGREGATE_KEY, disaggregateTime);
+			}
+			if (disaggregateTime) {
+				float oldTime = time;
+				time = EditorGUILayout.FloatField (new GUIContent ("Time Smooth", "Divider to smooth out time data"), time);
+				if (oldTime != time) {
+					EditorPrefs.SetFloat (KEY_TO_TIME, time);
+				}
+			} else {
+				time = 1f;
 			}
 
 			GUILayout.BeginVertical ("box");
