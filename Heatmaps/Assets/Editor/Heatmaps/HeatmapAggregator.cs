@@ -1,4 +1,8 @@
-﻿using System;
+﻿/// <summary>
+/// Handles aggregation of raw data into heatmap data.
+/// </summary>
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -21,9 +25,19 @@ namespace UnityAnalyticsHeatmap
 		{
 		}
 
+		/// <summary>
+		/// Process the specified inputFiles, using the other specified parameters.
+		/// </summary>
+		/// <param name="inputFiles">A list of one or more raw data text files.</param>
+		/// <param name="startDate">Any timestamp prior to this ISO 8601 date will be trimmed.</param>
+		/// <param name="endDate">Any timestamp after to this ISO 8601 date will be trimmed.</param>
+		/// <param name="space">A smoothing value for x/y/z coordinates.</param>
+		/// <param name="time">A smoothing value for time.</param>
+		/// <param name="disaggregateTime">If set to <c>true</c> events that match in space but not time will not be aggregated.</param>
+		/// <param name="events">A list of events to explicitly include.</param>
 		public void Process(List<string> inputFiles, DateTime startDate, DateTime endDate, 
 							float space, float time, bool disaggregateTime, 
-							List<string> events)
+							List<string> events = null)
 		{
 			string outputFileName = System.IO.Path.GetFileName (inputFiles [0]).Replace(".txt", ".json");
 

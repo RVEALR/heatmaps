@@ -1,7 +1,7 @@
 ﻿/// <summary>
 /// Heat map data parser.
 /// </summary>
-/// This file opens a JSON file and processes it into an array
+/// This portion of the Heatmapper opens a JSON file and processes it into an array
 /// of point data.
 /// OnGUI functionality displays the state of the data in the Heatmapper inspector.
 
@@ -50,8 +50,6 @@ namespace UnityAnalyticsHeatmap
 
 		public void OnGUI()
 		{
-			
-
 			GUILayout.BeginHorizontal ();
 			if (GUILayout.Button (new GUIContent("Find File", "Locate a JSON file to load. By default, these live in Assets/HeatmapData."))) {
 				string newPath = EditorUtility.OpenFilePanel ("Locate a JSON file", path, "json");

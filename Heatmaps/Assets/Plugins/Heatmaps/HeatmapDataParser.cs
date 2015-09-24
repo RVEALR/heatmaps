@@ -1,4 +1,19 @@
-﻿using System;
+﻿/// <summary>
+/// Parses heatmap JSON data for the purpose of loading into the renderer.
+/// </summary>
+/// This code assumes that data is in the form:
+/// {
+/// 	"EventName": [
+/// 		{"y": XX, "x": XX, "z": -XX, "t": XX, "d": XX},
+/// 		...
+/// 	],
+/// 	"AnotherEventName": [
+/// 		...
+/// 	],
+/// 	...
+/// }
+
+using System;
 using UnityEngine;
 using System.IO;
 using System.Collections.Generic;
@@ -16,6 +31,12 @@ namespace UnityAnalyticsHeatmap
 		{
 		}
 
+		/// <summary>
+		/// Loads the data.
+		/// </summary>
+		/// <param name="path">A location from which to load the data.</param>
+		/// <param name="handler">A method handler to which we return the data.</param>
+		/// <param name="asResource">If set to <c>true</c> the path is assumed to be a Resource location rather than a URI.</param>
 		public void LoadData(string path, ParseHandler handler, bool asResource=false) {
 			this.handler = handler;
 			if (!string.IsNullOrEmpty (path)) {
@@ -27,6 +48,10 @@ namespace UnityAnalyticsHeatmap
 			}
 		}
 
+		/// <summary>
+		/// Load data from a URI
+		/// </summary>
+		/// <param name="path">A location from which to load the data.</param>
 		protected void LoadStream(string path) {
 			StreamReader reader = new StreamReader(path);
 			using (reader)
@@ -35,11 +60,19 @@ namespace UnityAnalyticsHeatmap
 			}
 		}
 
+		/// <summary>
+		/// Load data from a Resource location (suitable for runtime use)
+		/// </summary>
+		/// <param name="path">A location from which to load the data.</param>
 		protected void LoadResource(string path) {
 			TextAsset ta = Resources.Load (path) as TextAsset;
 			ConsumeHeatmapData (ta.text);
 		}
 
+		/// <summary>
+		/// Read the JSON data and convert into Lists of HeatPoint structs.
+		/// </summary>
+		/// <param name="text">The loaded data.</param>
 		protected void ConsumeHeatmapData(string text) 
 		{
 			Dictionary<string, HeatPoint[]> heatData = new Dictionary<string, HeatPoint[]> ();
@@ -90,7 +123,6 @@ namespace UnityAnalyticsHeatmap
 				}
 				heatData[kv.Key] = array;
 			}
-
 
 			if (handler != null) {
 				handler (heatData, maxDensity, maxTime, keys.ToArray (typeof(string)) as string[]);

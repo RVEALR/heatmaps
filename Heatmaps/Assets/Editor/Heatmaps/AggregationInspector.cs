@@ -1,4 +1,6 @@
-﻿
+﻿/// <summary>
+/// Inspector for the Aggregation portion of the Heatmapper.
+/// </summary>
 
 using System;
 using System.Collections;

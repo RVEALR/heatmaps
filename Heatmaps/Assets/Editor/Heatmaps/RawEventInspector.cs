@@ -1,4 +1,8 @@
-﻿using System;
+﻿/// <summary>
+/// The portion of the Heatmapper that controls downloading data from the Unity Analytics Raw Event API.
+/// </summary>
+
+using System;
 using UnityEngine;
 using System.Collections;
 using UnityEditor;
@@ -34,7 +38,7 @@ namespace UnityAnalyticsHeatmap
 			startDate = EditorGUILayout.TextField (new GUIContent("Start Date (YYYY-MM-DD)",  "Start date as ISO-8601 datetime"), startDate);
 			endDate = EditorGUILayout.TextField (new GUIContent("End Date (YYYY-MM-DD)",  "End date as ISO-8601 datetime"), endDate);
 
-				if (GUILayout.Button (new GUIContent("Download", "Download raw data in the specified range"))) {
+			if (GUILayout.Button (new GUIContent("Download", "Download raw data in the specified range")) && !string.IsNullOrEmpty(path)) {
 				EditorPrefs.SetString (URL_KEY, path);
 				DateTime start, end;
 				try {

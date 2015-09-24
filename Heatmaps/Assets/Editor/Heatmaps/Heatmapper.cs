@@ -1,7 +1,7 @@
 ﻿/// <summary>
 /// Heatmapper inspector.
 /// </summary>
-/// This code drives the Heat Mapper inspector
+/// This code drives the Heatmapper inspector
 /// The HeatmapDataParser handles loading and parsing the data.
 /// The HeatmapRendererInspector speaks to the Renderer to achieve a desired look.
 
