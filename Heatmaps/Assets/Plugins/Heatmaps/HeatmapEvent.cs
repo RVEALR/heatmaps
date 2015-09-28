@@ -4,7 +4,7 @@
 /// This is <i>simply</i> an adapter. As such, you could choose not to
 /// use it at all, but by passing your events through this API you gain type
 /// safety and ensure that you're conforming to the data that the aggregator
-/// and Heat Mapper expect to receive.
+/// and Heatmapper expect to receive.
 /// 
 /// The script is designed to work in Unity 4.6 > 5.x
 
@@ -27,36 +27,117 @@ namespace UnityAnalyticsHeatmap
 	{
 		private static Dictionary<string, object> dict = new Dictionary<string, object> ();
 
-		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector3 v)
+		/// <summary>
+		/// Send the event with position and an optional dictionary.
+		/// </summary>
+		/// Note that Vector2 will implicitly convert to Vector3
+		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector3 v, Dictionary<string, object> options = null)
 		{
-			dict ["x"] = v.x;
-			dict ["y"] = v.y;
-			dict ["z"] = v.z;
+			AddXY (v.x, v.y);
+			AddZ (v.z);
+			AddOptions (options);
+			return Commit (eventName);
+		}
+
+		/// <summary>
+		/// Send the event with position, time and an optional dictionary.
+		/// </summary>
+		/// Note that Vector2 will implicitly convert to Vector3
+		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector3 v, float time, Dictionary<string, object> options = null)
+		{
+			AddXY (v.x, v.y);
+			AddZ (v.z);
+			AddTime (time);
+			AddOptions (options);
+			return Commit (eventName);
+		}
+
+		/// <summary>
+		/// Send the event with position, time and an optional dictionary.
+		/// </summary>
+		/// Note that Vector2 will implicitly convert to Vector3
+		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector3 v, float time, float rotation, Dictionary<string, object> options = null)
+		{
+			AddXY (v.x, v.y);
+			AddZ (v.z);
+			dict ["rx"] = rotation;
+			AddTime (time);
+			AddOptions (options);
+			return Commit (eventName);
+		}
+
+		/// <summary>
+		/// Send the event with position, rotation and an optional dictionary.
+		/// </summary>
+		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Transform trans, Dictionary<string, object> options = null)
+		{
+			AddXY (trans.position.x, trans.position.y);
+			AddZ (trans.position.z);
+			AddRotation (trans.rotation.eulerAngles);
+			AddOptions (options);
+			return Commit (eventName);
+		}
+
+		/// <summary>
+		/// Send the event with position, rotation, time and an optional dictionary.
+		/// </summary>
+		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Transform trans, float time, Dictionary<string, object> options = null)
+		{
+			AddXY (trans.position.x, trans.position.y);
+			AddZ (trans.position.z);
+			AddRotation (trans.rotation.eulerAngles);
+			AddTime (time);
+			AddOptions (options);
+			return Commit (eventName);
+		}
+
+		/// <summary>
+		/// Transmit the event
+		/// </summary>
+		protected static analyticsResultNamespace.AnalyticsResult Commit(string eventName) {
 			return analyticsEventNamespace.CustomEvent ("Heatmap." + eventName, dict);
 		}
 
-		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector2 v)
-		{
-			dict ["x"] = v.x;
-			dict ["y"] = v.y;
-			return analyticsEventNamespace.CustomEvent ("Heatmap." + eventName, dict);
+		/// <summary>
+		/// Convenience method for adding X/Y to dict
+		/// </summary>
+		protected static void AddXY(float x, float y) {
+			dict ["x"] = x;
+			dict ["y"] = y;
 		}
 
-		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector3 v, float time)
-		{
-			dict ["x"] = v.x;
-			dict ["y"] = v.y;
-			dict ["z"] = v.z;
+		/// <summary>
+		/// Convenience method for adding Z to dict
+		/// </summary>
+		protected static void AddZ(float z) {
+			dict ["z"] = z;
+		}
+
+		/// <summary>
+		/// Convenience method for adding time to dict
+		/// </summary>
+		protected static void AddTime(float time) {
 			dict ["t"] = time;
-			return analyticsEventNamespace.CustomEvent ("Heatmap." + eventName, dict);
 		}
 
-		public static analyticsResultNamespace.AnalyticsResult Send (string eventName, Vector2 v, float time)
-		{
-			dict ["x"] = v.x;
-			dict ["y"] = v.y;
-			dict ["t"] = time;
-			return analyticsEventNamespace.CustomEvent ("Heatmap." + eventName, dict);
+		/// <summary>
+		/// Convenience method for adding rotation
+		/// </summary>
+		protected static void AddRotation(Vector3 r) {
+			dict["rx"] = r.x;
+			dict["ry"] = r.y;
+			dict["rz"] = r.z;
+		}
+
+		/// <summary>
+		/// Convenience method for adding options to dict
+		/// </summary>
+		protected static void AddOptions(Dictionary<string, object> options) {
+			if (options != null) {
+				foreach (KeyValuePair<string, object> entry in options) {
+					dict [entry.Key] = entry.Value;
+				}
+			}
 		}
 	}
 }

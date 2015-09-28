@@ -273,10 +273,10 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 				allVectors.Add (vector3);
 				allTris.Add (AddCubeTrisToMesh (a * vector3.Length));
 				break;
-			case RenderShape.PYRAMID:
-				vector3 = AddPyramidVectorsToMesh (position.x, position.y, position.z);
+			case RenderShape.ARROW:
+				vector3 = AddArrowVectorsToMesh (position.x, position.y, position.z);
 				allVectors.Add (vector3);
-				allTris.Add (AddPyramidTrisToMesh (a * vector3.Length));
+				allTris.Add (AddArrowTrisToMesh (a * vector3.Length));
 				break;
 			case RenderShape.SQUARE:
 				vector3 = AddSquareVectorsToMesh (position.x, position.y, position.z);
@@ -342,24 +342,50 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		return tris;
 	}
 
-	private Vector3[] AddPyramidVectorsToMesh(float x, float y, float z) {
-		float halfP = particleSize / 2;
+	float rx = 0f;
+	float ry = 0f;
+	float rz = 0f;
 
-		Vector3 p0 = new Vector3 (x-halfP, y-halfP, z-halfP);
-		Vector3 p1 = new Vector3 (x+halfP, y-halfP, z-halfP);
-		Vector3 p2 = new Vector3 (x, y-halfP, z+halfP);
-		Vector3 p3 = new Vector3 (x, y+halfP, z);
+	private Vector3[] AddArrowVectorsToMesh(float x, float y, float z) {
+		float halfP = particleSize / 2f;
+		float thirdP = particleSize / 3f;
 
-		return new Vector3[] { p0, p1, p2, p3 };
+		Vector3 offset = new Vector3 (x, y, z);
+
+
+		Vector3 p0 = new Vector3 (0f, 0f, -halfP);
+		Vector3 p1 = new Vector3 (0f, 0f, 0f);
+		Vector3 p2 = new Vector3 (-halfP, 0f, halfP);
+		Vector3 p3 = new Vector3 (-halfP, 0f, thirdP);
+		Vector3 p4 = new Vector3 (halfP, 0f, thirdP);
+		Vector3 p5 = new Vector3 (halfP, 0f, halfP);
+
+		Vector3[] v = new Vector3[] { p0, p1, p2, p3, p4, p5 };
+
+		float range = 5f;
+		rx += UnityEngine.Random.Range (-range, range);
+		ry += UnityEngine.Random.Range (-range, range);
+		rz += UnityEngine.Random.Range (-range, range);
+
+		Quaternion rotation = Quaternion.Euler(rx, ry, rz);
+		//Quaternion rotation = Quaternion.Euler(0f,0f,0f);
+
+		for (int a = 0; a < v.Length; a++) {
+			Matrix4x4 m = Matrix4x4.TRS(offset, rotation, Vector3.one);
+			v[a] = m.MultiplyPoint3x4(v[a]);
+		}
+
+		return v;
 	}
 
 	//Generate a pyramid mesh procedurally
-	private int[] AddPyramidTrisToMesh(int offset) {
+	private int[] AddArrowTrisToMesh(int offset) {
 		var tris = new int[] {
-			0, 1, 2,	//bottom
-			0, 3, 1,	//front
-			1, 3, 2,	//right-b
-			2, 3, 1,	//left-b
+			0, 1, 2,	//Left
+			0, 2, 3,
+			0, 4, 1,	//Right
+			1, 4, 5
+
 		};
 		for (int a = 0; a < tris.Length; a++) {
 			tris[a] += offset;
@@ -454,8 +480,8 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		case RenderShape.CUBE:
 			verts = 8;
 			break;
-		case RenderShape.PYRAMID:
-			verts = 4;
+		case RenderShape.ARROW:
+			verts = 6;
 			break;
 		case RenderShape.SQUARE:
 			verts = 4;
@@ -475,7 +501,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		case RenderShape.CUBE:
 			tris = 32;
 			break;
-		case RenderShape.PYRAMID:
+		case RenderShape.ARROW:
 			tris = 4;
 			break;
 		case RenderShape.SQUARE:

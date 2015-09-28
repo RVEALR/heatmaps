@@ -5,7 +5,7 @@ namespace UnityAnalyticsHeatmap
 	public enum RenderShape
 	{
 		CUBE,
-		PYRAMID,
+		ARROW,
 		SQUARE,
 		TRI
 	}
