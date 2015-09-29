@@ -90,7 +90,7 @@ namespace UnityAnalyticsHeatmap
 				for (int a = 0, aa = pointList.Count; a < aa; a++)
 				{
 					array[a] = new HeatPoint();
-					float x = 0, y = 0, z = 0, t = 0;
+					float x = 0, y = 0, z = 0, t = 0, rx = 0, ry = 0, rz = 0;
 					float d = 0;
 					Dictionary<string, object> pt = pointList [a] as Dictionary<string, object>;
 
@@ -113,9 +113,19 @@ namespace UnityAnalyticsHeatmap
 						case "d":
 							d = value;
 							break;
+						case "rx":
+							rx = value;
+							break;
+						case "ry":
+							ry = value;
+							break;
+						case "rz":
+							rz = value;
+							break;
 						}
 					}
 					array[a].position = new Vector3(x,y,z);
+					array[a].rotation = new Vector3(rx,ry,rz);
 					array[a].density = d;
 					array [a].time = t;
 					maxDensity = Mathf.Max (d, maxDensity);

@@ -18,9 +18,6 @@ public class FlyingSphere : MonoBehaviour
 	string currentResponse = "Not sent yet";
 
 	void Start() {
-
-		Debug.Log (Application.persistentDataPath);
-
 		ChangeCourse ();
 		StartCoroutine (ChangeAgain());
 	}

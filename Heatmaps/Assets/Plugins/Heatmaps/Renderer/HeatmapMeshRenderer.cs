@@ -267,6 +267,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		for (int a = 0; a < submap.Count; a++) {
 			materials [a] = PickMaterial (submap [a].density / maxDensity);
 			Vector3 position = data [a].position;
+			Vector3 rotation = data [a].rotation;
 			switch (renderStyle) {
 			case RenderShape.CUBE:
 				vector3 = AddCubeVectorsToMesh (position.x, position.y, position.z);
@@ -274,7 +275,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 				allTris.Add (AddCubeTrisToMesh (a * vector3.Length));
 				break;
 			case RenderShape.ARROW:
-				vector3 = AddArrowVectorsToMesh (position.x, position.y, position.z);
+				vector3 = AddArrowVectorsToMesh (position, rotation);
 				allVectors.Add (vector3);
 				allTris.Add (AddArrowTrisToMesh (a * vector3.Length));
 				break;
@@ -342,16 +343,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		return tris;
 	}
 
-	float rx = 0f;
-	float ry = 0f;
-	float rz = 0f;
-
-	private Vector3[] AddArrowVectorsToMesh(float x, float y, float z) {
+	private Vector3[] AddArrowVectorsToMesh(Vector3 position, Vector3 rotation) {
 		float halfP = particleSize / 2f;
 		float thirdP = particleSize / 3f;
-
-		Vector3 offset = new Vector3 (x, y, z);
-
 
 		Vector3 p0 = new Vector3 (0f, 0f, -halfP);
 		Vector3 p1 = new Vector3 (0f, 0f, 0f);
@@ -362,16 +356,10 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
 		Vector3[] v = new Vector3[] { p0, p1, p2, p3, p4, p5 };
 
-		float range = 5f;
-		rx += UnityEngine.Random.Range (-range, range);
-		ry += UnityEngine.Random.Range (-range, range);
-		rz += UnityEngine.Random.Range (-range, range);
-
-		Quaternion rotation = Quaternion.Euler(rx, ry, rz);
-		//Quaternion rotation = Quaternion.Euler(0f,0f,0f);
+		Quaternion q = Quaternion.Euler (rotation);
 
 		for (int a = 0; a < v.Length; a++) {
-			Matrix4x4 m = Matrix4x4.TRS(offset, rotation, Vector3.one);
+			Matrix4x4 m = Matrix4x4.TRS(position, q, Vector3.one);
 			v[a] = m.MultiplyPoint3x4(v[a]);
 		}
 
