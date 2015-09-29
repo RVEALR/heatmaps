@@ -17,7 +17,9 @@ namespace UnityAnalyticsHeatmap
 		private const string LAST_IMPORT_PATH_KEY = "UnityAnalyticsHeatmapAggregationLastImportPath";
 		private const string SPACE_KEY = "UnityAnalyticsHeatmapAggregationSpace";
 		private const string KEY_TO_TIME = "UnityAnalyticsHeatmapAggregationTime";
-		private const string DISAGGREGATE_KEY = "UnityAnalyticsHeatmapAggregationDisaggregate";
+		private const string ANGLE_KEY = "UnityAnalyticsHeatmapAggregationAngle";
+		private const string DISAGGREGATE_TIME_KEY = "UnityAnalyticsHeatmapAggregationDisaggregateTime";
+		private const string DISAGGREGATE_ANGLE_KEY = "UnityAnalyticsHeatmapAggregationDisaggregateAngle";
 		private const string EVENTS_KEY = "UnityAnalyticsHeatmapAggregationEvents";
 		private const string TRIM_DATES_KEY = "UnityAnalyticsHeatmapAggregationTrimDates";
 
@@ -25,6 +27,7 @@ namespace UnityAnalyticsHeatmap
 
 		private const float DEFAULT_SPACE = 10f;
 		private const float DEFAULT_TIME = 10f;
+		private const float DEFAULT_ANGLE = 15f;
 
 		private Dictionary<string, HeatPoint[]> heatData;
 
@@ -40,7 +43,9 @@ namespace UnityAnalyticsHeatmap
 		private string endDate = "";
 		private float space = DEFAULT_SPACE;
 		private float time = DEFAULT_TIME;
+		private float angle = DEFAULT_ANGLE;
 		private bool disaggregateTime = false;
+		private bool disaggregateAngle = false;
 		private bool trimDates = false;
 
 		private List<string> events = new List<string>{};
@@ -67,7 +72,9 @@ namespace UnityAnalyticsHeatmap
 			// Restore other options
 			space = EditorPrefs.GetFloat (SPACE_KEY) == 0 ? DEFAULT_SPACE : EditorPrefs.GetFloat (SPACE_KEY);
 			time = EditorPrefs.GetFloat (KEY_TO_TIME) == 0 ?  DEFAULT_TIME : EditorPrefs.GetFloat (KEY_TO_TIME);
-			disaggregateTime = EditorPrefs.GetBool (DISAGGREGATE_KEY);
+			angle = EditorPrefs.GetFloat (ANGLE_KEY) == 0 ?  DEFAULT_ANGLE : EditorPrefs.GetFloat (ANGLE_KEY);
+			disaggregateTime = EditorPrefs.GetBool (DISAGGREGATE_TIME_KEY);
+			disaggregateAngle = EditorPrefs.GetBool (DISAGGREGATE_ANGLE_KEY);
 			trimDates = EditorPrefs.GetBool (TRIM_DATES_KEY);
 
 			// Restore list of events
@@ -141,7 +148,7 @@ namespace UnityAnalyticsHeatmap
 			bool oldDisaggregateTime = disaggregateTime;
 			disaggregateTime = EditorGUILayout.Toggle (new GUIContent("Disaggregate Time", "Units of space will aggregate, but units of time won't"), disaggregateTime);
 			if (oldDisaggregateTime != disaggregateTime) {
-				EditorPrefs.SetBool (DISAGGREGATE_KEY, disaggregateTime);
+				EditorPrefs.SetBool (DISAGGREGATE_TIME_KEY, disaggregateTime);
 			}
 			if (disaggregateTime) {
 				float oldTime = time;
@@ -151,6 +158,21 @@ namespace UnityAnalyticsHeatmap
 				}
 			} else {
 				time = 1f;
+			}
+
+			bool oldDisaggregateAngle = disaggregateAngle;
+			disaggregateAngle = EditorGUILayout.Toggle (new GUIContent("Disaggregate Direction", "Units of space will aggregate, but different angles won't"), disaggregateAngle);
+			if (oldDisaggregateAngle != disaggregateAngle) {
+				EditorPrefs.SetBool (DISAGGREGATE_ANGLE_KEY, disaggregateAngle);
+			}
+			if (disaggregateAngle) {
+				float oldAngle = angle;
+				angle = EditorGUILayout.FloatField (new GUIContent ("Direction Smooth", "Divider to smooth out angle data"), angle);
+				if (oldAngle != angle) {
+					EditorPrefs.SetFloat (ANGLE_KEY, angle);
+				}
+			} else {
+				angle = 1f;
 			}
 
 			GUILayout.BeginVertical ("box");
@@ -193,7 +215,7 @@ namespace UnityAnalyticsHeatmap
 					start = DateTime.Parse ("2000-01-01");
 					end = DateTime.UtcNow;
 				}
-				processor.Process (inputFiles, start, end, space, time, disaggregateTime, events);
+				processor.Process (inputFiles, start, end, space, time, angle, disaggregateTime, disaggregateAngle, events);
 			}
 		}
 

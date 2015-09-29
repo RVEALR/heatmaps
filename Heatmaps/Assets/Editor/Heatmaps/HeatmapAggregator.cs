@@ -36,7 +36,8 @@ namespace UnityAnalyticsHeatmap
 		/// <param name="disaggregateTime">If set to <c>true</c> events that match in space but not time will not be aggregated.</param>
 		/// <param name="events">A list of events to explicitly include.</param>
 		public void Process(List<string> inputFiles, DateTime startDate, DateTime endDate, 
-							float space, float time, bool disaggregateTime, 
+			float space, float time, float angle,
+			bool disaggregateTime, bool disaggregateAngle,
 							List<string> events = null)
 		{
 			string outputFileName = System.IO.Path.GetFileName (inputFiles [0]).Replace(".txt", ".json");
@@ -50,7 +51,7 @@ namespace UnityAnalyticsHeatmap
 
 			foreach (string file in inputFiles) {
 				reportFiles++;
-				LoadStream (outputData, file, startDate, endDate, space, time, disaggregateTime, events, outputFileName);
+				LoadStream (outputData, file, startDate, endDate, space, time, angle, disaggregateTime, disaggregateAngle, events, outputFileName);
 			}
 
 			// Test if any data was generated
@@ -82,7 +83,8 @@ namespace UnityAnalyticsHeatmap
 		protected void LoadStream(Dictionary<string, List<Dictionary<string, float>>> outputData,
 									string path, 
 									DateTime startDate, DateTime endDate, 
-									float space, float time, bool disaggregateTime, 
+									float space, float time, float angle,
+									bool disaggregateTime, bool disaggregateAngle,
 									List<string> events, string outputFileName)
 		{
 			StreamReader reader = new StreamReader(path);
@@ -117,7 +119,8 @@ namespace UnityAnalyticsHeatmap
 
 					// If no x/y, this isn't a Heatmap Event. Pass.
 					if (!datum.ContainsKey ("x") || !datum.ContainsKey ("y")) {
-						Debug.Log ("Unable to find x/y in: " + datum.ToString () + ". Skipping...");
+						//Re-enable this log line if you want to be see events that aren't valid for heatmapping
+						//Debug.Log ("Unable to find x/y in: " + datum.ToString () + ". Skipping...");
 						continue;
 					}
 
@@ -139,8 +142,16 @@ namespace UnityAnalyticsHeatmap
 					float t = !datum.ContainsKey ("t") || !disaggregateTime ? 0 : float.Parse ((string)datum ["t"]);
 					t = Divide (t, time);
 
+					//rotation values are optional and always 0 if we're not disaggragating
+					float rx = !datum.ContainsKey ("rx") || !disaggregateAngle ? 0 : float.Parse ((string)datum ["rx"]);
+					rx = Divide (rx, angle);
+					float ry = !datum.ContainsKey ("ry") || !disaggregateAngle ? 0 : float.Parse ((string)datum ["ry"]);
+					ry = Divide (ry, angle);
+					float rz = !datum.ContainsKey ("rz") || !disaggregateAngle ? 0 : float.Parse ((string)datum ["rz"]);
+					rz = Divide (rz, angle);
+
 					// Tuple-like key to determine if this point is unique, or needs to be merged with another
-					Tuplish tuple = new Tuplish (new object[]{eventName, x, y, z, t});
+					Tuplish tuple = new Tuplish (new object[]{eventName, x, y, z, t, rx, ry, rz});
 
 					Dictionary<string, float> point;
 					if (pointDict.ContainsKey (tuple)) {
@@ -154,6 +165,9 @@ namespace UnityAnalyticsHeatmap
 						point ["y"] = y;
 						point ["z"] = z;
 						point ["t"] = t;
+						point ["rx"] = rx;
+						point ["ry"] = ry;
+						point ["rz"] = rz;
 						point ["d"] = 1;
 						pointDict [tuple] = point;
 
