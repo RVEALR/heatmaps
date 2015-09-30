@@ -12,7 +12,9 @@ using UnityAnalyticsHeatmap;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 
+[ExecuteInEditMode]
 public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 {
 
@@ -149,8 +151,8 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 				}
 				break;
 			case UPDATE_MATERIALS:
-				int pt = 0;
-				int indexPt = 0;
+				int pt = 0;			//cursor that increments each time we find a point in the time range
+				int indexPt = 0; 	//cursor based on pt, but returns to 0 each time we shift to a new submap
 				int currentSubmap = 0;
 				int oldSubmap = -1;
 				int verticesPerShape = GetVecticesForShape ();
@@ -199,7 +201,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 			int currentSubmap = 0;
 			int verticesPerShape = GetVecticesForShape ();
 
-
 			for (int a = 0; a < data.Length; a++) {
 				//FILTER FOR TIME
 				if (data [a].time >= StartTime && data [a].time <= EndTime) {
@@ -235,20 +236,12 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
 			for (int b = 0; b < gameObjects.Length; b++) {
 				GameObject go = new GameObject ("Submap" + b);
-
-				go.AddComponent<MeshFilter> ();
-				go.AddComponent<MeshRenderer> ();
-
+				go.AddComponent<HeatmapSubmap> ();
 				Mesh renderMesh = new Mesh ();
 				renderMesh.Clear ();
 				renderMesh.subMeshCount = submaps[b].Count;
 
 				go.GetComponent<MeshFilter> ().mesh = renderMesh;
-				go.GetComponent<MeshRenderer> ().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-				go.GetComponent<MeshRenderer> ().receiveShadows = false;
-				go.GetComponent<MeshRenderer> ().useLightProbes = false;
-				go.GetComponent<MeshRenderer> ().reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
-
 
 				gameObjects [b] = go;
 				go.transform.parent = gameObject.transform;
@@ -259,6 +252,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 	}
 
 	private void RenderSubmap(GameObject go, List<HeatPoint> submap) {
+		
 		List<int[]> allTris = new List<int[]> ();
 		List<Vector3[]> allVectors = new List<Vector3[]> ();
 		Vector3[] vector3;
@@ -266,8 +260,10 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
 		for (int a = 0; a < submap.Count; a++) {
 			materials [a] = PickMaterial (submap [a].density / maxDensity);
-			Vector3 position = data [a].position;
-			Vector3 rotation = data [a].rotation;
+
+			Vector3 position = submap [a].position;
+			Vector3 rotation = submap [a].rotation;
+
 			switch (renderStyle) {
 			case RenderShape.CUBE:
 				vector3 = AddCubeVectorsToMesh (position.x, position.y, position.z);
