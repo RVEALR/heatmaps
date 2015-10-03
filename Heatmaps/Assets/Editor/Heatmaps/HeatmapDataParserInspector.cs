@@ -48,19 +48,13 @@ namespace UnityAnalyticsHeatmap
 			handler (heatData [optionKeys [optionIndex]], maxDensity, maxTime);
 		}
 
+		public void SetDataPath(string jsonPath) {
+			path = jsonPath;
+			parser.LoadData (path, ParseHandler);
+		}
+
 		public void OnGUI()
 		{
-			GUILayout.BeginHorizontal ();
-			if (GUILayout.Button (new GUIContent("Find File", "Locate a JSON file to load. By default, these live in Assets/HeatmapData."))) {
-				string newPath = EditorUtility.OpenFilePanel ("Locate a JSON file", path, "json");
-				if (!string.IsNullOrEmpty(newPath)) {
-					path = newPath;
-					EditorPrefs.SetString (DATA_PATH_KEY, path);
-				}
-			}
-			path = EditorGUILayout.TextField (path);
-			GUILayout.EndHorizontal ();
-
 			if (heatData != null && optionKeys != null && optionIndex > -1 && optionIndex < optionKeys.Length && heatData.ContainsKey(optionKeys[optionIndex])) {
 				int oldIndex = optionIndex;
 				optionIndex = EditorGUILayout.Popup("Option", optionIndex, optionKeys);
@@ -68,9 +62,6 @@ namespace UnityAnalyticsHeatmap
 					RecalculateMax ();
 					Dispatch ();
 				}
-			}
-			if (GUILayout.Button (new GUIContent("Load", "Load the specified JSON file"))) {
-				parser.LoadData (path, ParseHandler);
 			}
 		}
 

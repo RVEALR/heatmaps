@@ -20,6 +20,11 @@ namespace UnityAnalyticsHeatmap
 
 		private Dictionary<Tuplish, Dictionary<string, float>> pointDict;
 
+		string persistentDataPath = Application.persistentDataPath;
+
+		public delegate void CompletionHandler (string jsonPath);
+		private CompletionHandler completionHandler;
+
 
 		public HeatmapAggregator ()
 		{
@@ -35,13 +40,15 @@ namespace UnityAnalyticsHeatmap
 		/// <param name="time">A smoothing value for time.</param>
 		/// <param name="disaggregateTime">If set to <c>true</c> events that match in space but not time will not be aggregated.</param>
 		/// <param name="events">A list of events to explicitly include.</param>
-		public void Process(List<string> inputFiles, DateTime startDate, DateTime endDate, 
+		public void Process(CompletionHandler completionHandler,
+			List<string> inputFiles, DateTime startDate, DateTime endDate,
 			float space, float time, float angle,
 			bool disaggregateTime, bool disaggregateAngle,
-							List<string> events = null)
+			List<string> events = null)
 		{
-			string outputFileName = System.IO.Path.GetFileName (inputFiles [0]).Replace(".txt", ".json");
+			this.completionHandler = completionHandler;
 
+			string outputFileName = System.IO.Path.GetFileName (inputFiles [0]).Replace(".txt", ".json");
 			Dictionary<string, List<Dictionary<string, float>>> outputData = new Dictionary<string, List<Dictionary<string, float>>> ();
 
 			reportFiles = 0;
@@ -98,7 +105,8 @@ namespace UnityAnalyticsHeatmap
 					string[] rowData = rows [a].Split ('\t');
 
 					if (string.IsNullOrEmpty(rowData [0]) || string.IsNullOrEmpty(rowData [2]) || string.IsNullOrEmpty(rowData [3])) {
-						Debug.Log ("Empty Line...skipping");
+						//Re-enable this log if you want to see empty lines
+						//Debug.Log ("Empty Line...skipping");
 						continue;
 					}
 
@@ -183,13 +191,16 @@ namespace UnityAnalyticsHeatmap
 		}
 
 		protected void SaveFile(string outputFileName, Dictionary<string, List<Dictionary<string, float>>> outputData) {
-			string savePath = System.IO.Path.Combine (Application.dataPath, "HeatmapData");
+			string savePath = System.IO.Path.Combine (persistentDataPath, "HeatmapData");
 			if (!System.IO.Directory.Exists (savePath)) {
 				System.IO.Directory.CreateDirectory (savePath);
 			}
 
 			var json = MiniJSON.Json.Serialize (outputData);
-			System.IO.File.WriteAllText (savePath + Path.DirectorySeparatorChar + outputFileName, json);
+			string jsonPath = savePath + Path.DirectorySeparatorChar + outputFileName;
+			System.IO.File.WriteAllText (jsonPath, json);
+
+			completionHandler (jsonPath);
 		}
 
 		protected float Divide(float value, float divisor) {

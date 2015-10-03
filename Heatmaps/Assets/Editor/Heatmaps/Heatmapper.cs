@@ -8,6 +8,7 @@
 using UnityEngine;
 using UnityEditor;
 using UnityAnalyticsHeatmap;
+using System.Collections.Generic;
 
 public class Heatmapper : EditorWindow
 {
@@ -17,19 +18,22 @@ public class Heatmapper : EditorWindow
 		EditorWindow.GetWindow (typeof(Heatmapper));
 	}
 
-	private RawEventInspector m_FetchView;
-	private AggregationInspector m_AggregateView;
-	private HeatmapDataParserInspector m_ParseView;
-	private HeatmapRendererInspector m_RenderView;
+	//Views
+	//private RawEventInspector FetchView;
+	private AggregationInspector AggregationView;
+	private HeatmapDataParserInspector ParserView;
+	private HeatmapRendererInspector RenderView;
+
+	//Data handlers
+	private RawEventClient EventClient = new RawEventClient ();
+	private HeatmapAggregator Aggregator = new HeatmapAggregator ();
 
 	private GameObject heatMapInstance;
 
-	bool normalizeData;
-
-	bool showFetch = false;
 	bool showAggregate = false;
 	bool showRender = false;
 
+	Dictionary<string, object> pointData;
 
 	void OnGUI ()
 	{
@@ -39,47 +43,43 @@ public class Heatmapper : EditorWindow
 			SystemReset ();
 		}
 		if (GUILayout.Button ("Documentation")) {
-			Application.OpenURL("https://docs.google.com/document/d/1ZTTS_GZE7VaQK_y8dgsACX1JTFiWHcQUT-ro3g2DGAk");
+			Application.OpenURL("https://bitbucket.org/strangeioc/heatmaps/wiki/Home");
+		}
+		if (GUILayout.Button ("Purge")) {
+			PurgeData ();
 		}
 		GUILayout.EndHorizontal ();
 		GUILayout.EndVertical ();
 
 		GUILayout.BeginVertical ("box");
-		if (m_FetchView == null) {
-			m_FetchView = RawEventInspector.Init ();
-		}
-		showFetch = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), showFetch, "Fetch Raw Custom Events", true);
-		if (showFetch) {
-			m_FetchView.OnGUI ();
-		}
-		GUILayout.EndVertical ();
-
-		GUILayout.BeginVertical ("box");
-		if (m_AggregateView == null) {
-			m_AggregateView = AggregationInspector.Init (OnAggregation);
+		if (AggregationView == null) {
+			AggregationView = AggregationInspector.Init (EventClient, Aggregator);
 		}
 		showAggregate = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), showAggregate, "Aggregate Events", true);
 		if (showAggregate) {
-			m_AggregateView.OnGUI ();
+			AggregationView.OnGUI ();
+			if (GUILayout.Button ("Fetch and Process")) {
+				SystemProcess ();
+			}
 		}
 		GUILayout.EndVertical ();
 
 		GUILayout.BeginVertical ("box");
-		if (m_ParseView == null) {
-			m_ParseView = HeatmapDataParserInspector.Init (PointDataHandler);
+		if (ParserView == null) {
+			ParserView = HeatmapDataParserInspector.Init (OnPointData);
 		}
-		if (m_RenderView == null) {
-			m_RenderView = HeatmapRendererInspector.Init (this);
+		if (RenderView == null) {
+			RenderView = HeatmapRendererInspector.Init (this);
 		}
 
 		showRender = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), showRender, "Render", true);
-		if (showRender && m_ParseView != null) {
-			m_ParseView.OnGUI ();
-			m_RenderView.OnGUI ();
+		if (showRender && ParserView != null) {
+			ParserView.OnGUI ();
+			RenderView.OnGUI ();
 		}
 
 		if (heatMapInstance) {
-			m_RenderView.SetGameObject (heatMapInstance);
+			RenderView.SetGameObject (heatMapInstance);
 		}
 		GUILayout.EndVertical ();
 	}
@@ -90,8 +90,35 @@ public class Heatmapper : EditorWindow
 		{
 			heatMapInstance.GetComponent<IHeatmapRenderer> ().RenderHeatmap ();
 		}
-		if (m_RenderView != null) {
-			m_RenderView.Update ();
+		if (RenderView != null) {
+			RenderView.Update ();
+		}
+
+		if (pointData != null) {
+			if (heatMapInstance == null) {
+				CreateHeatmapInstance ();
+			}
+
+			if (heatMapInstance.GetComponent<HeatmapMeshRenderer> () != null) {
+				heatMapInstance.GetComponent<HeatmapMeshRenderer> ().UpdatePointData (pointData["heatData"] as HeatPoint[], (float)pointData["maxDensity"]);
+			}
+
+			if (RenderView != null) {
+				RenderView.SetMaxTime ((float)pointData["maxTime"]);
+				RenderView.SetGameObject (heatMapInstance);
+				RenderView.Update (true);
+			}
+
+			pointData = null;
+		}
+	}
+
+	void SystemProcess() {
+		if (heatMapInstance == null) {
+			CreateHeatmapInstance ();
+		}
+		if (AggregationView != null) {
+			AggregationView.Fetch (OnAggregation);
 		}
 	}
 
@@ -100,31 +127,28 @@ public class Heatmapper : EditorWindow
 		if (heatMapInstance) {
 			heatMapInstance.transform.parent = null;
 			DestroyImmediate (heatMapInstance);
-			CreateHeatmapInstance ();
 		}
 	}
 
-	void RawDataHandler(string[] paths) {
-		// All the paths
+	void PurgeData() {
+		if (EditorUtility.DisplayDialog ("Destroy local data?", "You are about to delete your local heatmaps data cache, meaning you'll have to reload from the server. Are you sure?", "Purge", "Cancel")) {
+			if (AggregationView != null) {
+				AggregationView.PurgeData ();
+			}
+		}
 	}
 
-	void OnAggregation(string[] paths) {
-		//The aggregated data
+	void OnAggregation(string jsonPath) {
+		ParserView.SetDataPath (jsonPath);
 	}
 
-	void PointDataHandler(HeatPoint[] heatData, float maxDensity, float maxTime)
+	void OnPointData(HeatPoint[] heatData, float maxDensity, float maxTime)
 	{
-		if (heatMapInstance == null) {
-			CreateHeatmapInstance ();
-		}
-		if (heatMapInstance.GetComponent<IHeatmapRenderer> () != null) {
-			heatMapInstance.GetComponent<IHeatmapRenderer> ().UpdatePointData (heatData, maxDensity);
-		}
-		if (m_RenderView != null) {
-			m_RenderView.SetMaxTime (maxTime);
-			m_RenderView.SetGameObject (heatMapInstance);
-			m_RenderView.Update (true);
-		}
+		//Creating this data allows the renderer to use it on the next Update pass
+		pointData = new Dictionary<string, object> ();
+		pointData ["heatData"] = heatData;
+		pointData ["maxDensity"] = maxDensity;
+		pointData ["maxTime"] = maxTime;
 	}
 
 	/// <summary>
