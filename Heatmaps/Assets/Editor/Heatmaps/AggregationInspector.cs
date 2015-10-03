@@ -5,201 +5,242 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
-using System.IO;
 
 namespace UnityAnalyticsHeatmap
 {
-	public class AggregationInspector
-	{
-		private const string URL_KEY = "UnityAnalyticsHeatmapDataExportUrlKey";
+    public class AggregationInspector
+    {
+        const string k_UrlKey = "UnityAnalyticsHeatmapDataExportUrlKey";
 
-		private const string LAST_IMPORT_PATH_KEY = "UnityAnalyticsHeatmapAggregationLastImportPath";
-		private const string SPACE_KEY = "UnityAnalyticsHeatmapAggregationSpace";
-		private const string KEY_TO_TIME = "UnityAnalyticsHeatmapAggregationTime";
-		private const string ANGLE_KEY = "UnityAnalyticsHeatmapAggregationAngle";
-		private const string AGGREGATE_TIME_KEY = "UnityAnalyticsHeatmapAggregationAggregateTime";
-		private const string AGGREGATE_ANGLE_KEY = "UnityAnalyticsHeatmapAggregationAggregateAngle";
-		private const string EVENTS_KEY = "UnityAnalyticsHeatmapAggregationEvents";
+        const string k_SpaceKey = "UnityAnalyticsHeatmapAggregationSpace";
+        const string k_KeyToTime = "UnityAnalyticsHeatmapAggregationTime";
+        const string k_AngleKey = "UnityAnalyticsHeatmapAggregationAngle";
+        const string k_AggregateTimeKey = "UnityAnalyticsHeatmapAggregationAggregateTime";
+        const string k_AggregateAngleKey = "UnityAnalyticsHeatmapAggregationAggregateAngle";
+        const string k_EventsKey = "UnityAnalyticsHeatmapAggregationEvents";
 
-		private string rawDataPath = "";
+        const float k_DefaultSpace = 10f;
+        const float k_DefaultTime = 10f;
+        const float k_DefaultAngle = 15f;
 
-		private const float DEFAULT_SPACE = 10f;
-		private const float DEFAULT_TIME = 10f;
-		private const float DEFAULT_ANGLE = 15f;
 
-		private Dictionary<string, HeatPoint[]> heatData;
+        string m_RawDataPath = "";
 
-		public delegate void AggregationHandler (string jsonPath);
-		private AggregationHandler handler;
 
-		private RawEventClient rawEventClient;
-		private HeatmapAggregator aggregator;
+        Dictionary<string, HeatPoint[]> m_HeatData;
 
-		private string startDate = "";
-		private string endDate = "";
-		private float space = DEFAULT_SPACE;
-		private float time = DEFAULT_TIME;
-		private float angle = DEFAULT_ANGLE;
-		private bool aggregateTime = true;
-		private bool aggregateAngle = true;
+        public delegate void AggregationHandler(string jsonPath);
 
-		private List<string> events = new List<string>{};
+        AggregationHandler m_AggregationHandler;
 
-		public AggregationInspector (RawEventClient client, HeatmapAggregator aggregator)
-		{
-			this.aggregator = aggregator;
-			this.rawEventClient = client;
+        RawEventClient m_RawEventClient;
+        HeatmapAggregator m_Aggregator;
 
-			// Restore cached paths
-			rawDataPath = EditorPrefs.GetString(URL_KEY);
+        string m_StartDate = "";
+        string m_EndDate = "";
+        float m_Space = k_DefaultSpace;
+        float m_Time = k_DefaultTime;
+        float m_Angle = k_DefaultAngle;
+        bool m_AggregateTime = true;
+        bool m_AggregateAngle = true;
 
-			// Set dates based on today (should this be cached?)
-			endDate = String.Format("{0:yyyy-MM-dd}", DateTime.Now);
-			startDate = String.Format("{0:yyyy-MM-dd}", DateTime.Now.Subtract(new TimeSpan(5, 0, 0, 0)));
+        List<string> m_Events = new List<string>{ };
 
-			// Restore other options
-			space = EditorPrefs.GetFloat (SPACE_KEY) == 0 ? DEFAULT_SPACE : EditorPrefs.GetFloat (SPACE_KEY);
-			time = EditorPrefs.GetFloat (KEY_TO_TIME) == 0 ?  DEFAULT_TIME : EditorPrefs.GetFloat (KEY_TO_TIME);
-			angle = EditorPrefs.GetFloat (ANGLE_KEY) == 0 ?  DEFAULT_ANGLE : EditorPrefs.GetFloat (ANGLE_KEY);
-			aggregateTime = EditorPrefs.GetBool (AGGREGATE_TIME_KEY);
-			aggregateAngle = EditorPrefs.GetBool (AGGREGATE_ANGLE_KEY);
+        public AggregationInspector(RawEventClient client, HeatmapAggregator aggregator)
+        {
+            m_Aggregator = aggregator;
+            m_RawEventClient = client;
 
-			// Restore list of events
-			string loadedEvents = EditorPrefs.GetString (EVENTS_KEY);
-			string[] eventsList;
-			if (string.IsNullOrEmpty (loadedEvents)) {
-				eventsList = new string[]{};
-			} else {
-				eventsList = loadedEvents.Split ('|');
-			}
-			events = new List<string>(eventsList);
-		}
+            // Restore cached paths
+            m_RawDataPath = EditorPrefs.GetString(k_UrlKey);
 
-		public static AggregationInspector Init(RawEventClient client, HeatmapAggregator aggregator)
-		{
-			return new AggregationInspector (client, aggregator);
-		}
+            // Set dates based on today (should this be cached?)
+            m_EndDate = String.Format("{0:yyyy-MM-dd}", DateTime.Now);
+            m_StartDate = String.Format("{0:yyyy-MM-dd}", DateTime.Now.Subtract(new TimeSpan(5, 0, 0, 0)));
 
-		public void PurgeData() {
-			rawEventClient.PurgeData ();
-		}
+            // Restore other options
+            m_Space = EditorPrefs.GetFloat(k_SpaceKey) == 0 ? k_DefaultSpace : EditorPrefs.GetFloat(k_SpaceKey);
+            m_Time = EditorPrefs.GetFloat(k_KeyToTime) == 0 ? k_DefaultTime : EditorPrefs.GetFloat(k_KeyToTime);
+            m_Angle = EditorPrefs.GetFloat(k_AngleKey) == 0 ? k_DefaultAngle : EditorPrefs.GetFloat(k_AngleKey);
+            m_AggregateTime = EditorPrefs.GetBool(k_AggregateTimeKey);
+            m_AggregateAngle = EditorPrefs.GetBool(k_AggregateAngleKey);
 
-		public void Fetch(AggregationHandler handler) {
-			this.handler = handler;
-			if (!string.IsNullOrEmpty (rawDataPath)) {
-				EditorPrefs.SetString (URL_KEY, rawDataPath);
-				DateTime start, end;
-				try {
-					start = DateTime.Parse (startDate);
-				} catch {
-					throw new Exception ("The start date is not properly formatted. Correct format is YYYY-MM-DD.");
-				}
-				try {
-					end = DateTime.Parse (endDate);
-				} catch {
-					throw new Exception ("The end date is not properly formatted. Correct format is YYYY-MM-DD.");
-				}
+            // Restore list of events
+            string loadedEvents = EditorPrefs.GetString(k_EventsKey);
+            string[] eventsList;
+            if (string.IsNullOrEmpty(loadedEvents))
+            {
+                eventsList = new string[]{ };
+            }
+            else
+            {
+                eventsList = loadedEvents.Split('|');
+            }
+            m_Events = new List<string>(eventsList);
+        }
 
-				rawEventClient.Fetch (rawDataPath, new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end, rawFetchHandler);
-			}
-		}
+        public static AggregationInspector Init(RawEventClient client, HeatmapAggregator aggregator)
+        {
+            return new AggregationInspector(client, aggregator);
+        }
 
-		public void OnGUI()
-		{
-			string oldPath = rawDataPath;
-			rawDataPath = EditorGUILayout.TextField (new GUIContent("Data Export URL", "Copy the URL from the 'Editing Project' page of your project dashboard"), rawDataPath);
-			if (oldPath != rawDataPath && !string.IsNullOrEmpty (rawDataPath)) {
-				EditorPrefs.SetString (URL_KEY, rawDataPath);
-			}
+        public void PurgeData()
+        {
+            m_RawEventClient.PurgeData();
+        }
 
-			startDate = EditorGUILayout.TextField (new GUIContent("Start Date (YYYY-MM-DD)",  "Start date as ISO-8601 datetime"), startDate);
-			endDate = EditorGUILayout.TextField (new GUIContent("End Date (YYYY-MM-DD)",  "End date as ISO-8601 datetime"), endDate);
+        public void Fetch(AggregationHandler handler)
+        {
+            m_AggregationHandler = handler;
+            if (!string.IsNullOrEmpty(m_RawDataPath))
+            {
+                EditorPrefs.SetString(k_UrlKey, m_RawDataPath);
+                DateTime start, end;
+                try
+                {
+                    start = DateTime.Parse(m_StartDate);
+                }
+                catch
+                {
+                    throw new Exception("The start date is not properly formatted. Correct format is YYYY-MM-DD.");
+                }
+                try
+                {
+                    end = DateTime.Parse(m_EndDate);
+                }
+                catch
+                {
+                    throw new Exception("The end date is not properly formatted. Correct format is YYYY-MM-DD.");
+                }
 
-			float oldSpace = space;
-			space = EditorGUILayout.FloatField (new GUIContent("Space Smooth", "Divider to smooth out x/y/z data"), space);
-			if (oldSpace != space) {
-				EditorPrefs.SetFloat (SPACE_KEY, space);
-			}
+                m_RawEventClient.Fetch(m_RawDataPath, new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end, rawFetchHandler);
+            }
+        }
 
-			GUILayout.BeginHorizontal ();
-			bool oldAggregateTime = aggregateTime;
-			aggregateTime = EditorGUILayout.Toggle (new GUIContent("Aggregate Time", "Units of space will aggregate, but units of time won't"), aggregateTime);
-			if (oldAggregateTime != aggregateTime) {
-				EditorPrefs.SetBool (AGGREGATE_TIME_KEY, aggregateTime);
-			}
-			if (!aggregateTime) {
-				float oldTime = time;
-				time = EditorGUILayout.FloatField (new GUIContent ("Smooth", "Divider to smooth out time data"), time);
-				if (oldTime != time) {
-					EditorPrefs.SetFloat (KEY_TO_TIME, time);
-				}
-			} else {
-				time = 1f;
-			}
-			GUILayout.EndHorizontal ();
+        public void OnGUI()
+        {
+            string oldPath = m_RawDataPath;
+            m_RawDataPath = EditorGUILayout.TextField(new GUIContent("Data Export URL", "Copy the URL from the 'Editing Project' page of your project dashboard"), m_RawDataPath);
+            if (oldPath != m_RawDataPath && !string.IsNullOrEmpty(m_RawDataPath))
+            {
+                EditorPrefs.SetString(k_UrlKey, m_RawDataPath);
+            }
 
-			GUILayout.BeginHorizontal ();
-			bool oldAggregateAngle = aggregateAngle;
-			aggregateAngle = EditorGUILayout.Toggle (new GUIContent("Aggregate Direction", "Units of space will aggregate, but different angles won't"), aggregateAngle);
-			if (oldAggregateAngle != aggregateAngle) {
-				EditorPrefs.SetBool (AGGREGATE_ANGLE_KEY, aggregateAngle);
-			}
-			if (!aggregateAngle) {
-				float oldAngle = angle;
-				angle = EditorGUILayout.FloatField (new GUIContent ("Smooth", "Divider to smooth out angle data"), angle);
-				if (oldAngle != angle) {
-					EditorPrefs.SetFloat (ANGLE_KEY, angle);
-				}
-			} else {
-				angle = 1f;
-			}
-			GUILayout.EndHorizontal ();
+            m_StartDate = EditorGUILayout.TextField(new GUIContent("Start Date (YYYY-MM-DD)", "Start date as ISO-8601 datetime"), m_StartDate);
+            m_EndDate = EditorGUILayout.TextField(new GUIContent("End Date (YYYY-MM-DD)", "End date as ISO-8601 datetime"), m_EndDate);
 
-			string oldEventsString = string.Join ("|", events.ToArray());
-			if (GUILayout.Button (new GUIContent("Limit To Events", "Specify events to include in the aggregation. If specified, all other events will be excluded."))) {
-				events.Add ("Event name");
-			}
-			for (var a = 0; a < events.Count; a++) {
-				GUILayout.BeginHorizontal ();
-				if (GUILayout.Button ("-", GUILayout.MaxWidth(20f))) {
-					events.RemoveAt (a);
-					break;
-				}
-				events [a] = EditorGUILayout.TextField (events [a]);
-				GUILayout.EndHorizontal ();
-			}
-			string currentEventsString = string.Join ("|", events.ToArray());
+            float oldSpace = m_Space;
+            m_Space = EditorGUILayout.FloatField(new GUIContent("Space Smooth", "Divider to smooth out x/y/z data"), m_Space);
+            if (oldSpace != m_Space)
+            {
+                EditorPrefs.SetFloat(k_SpaceKey, m_Space);
+            }
 
-			if (oldEventsString != currentEventsString) {
-				EditorPrefs.SetString (EVENTS_KEY, currentEventsString);
-			}
-		}
+            GUILayout.BeginHorizontal();
+            bool oldAggregateTime = m_AggregateTime;
+            m_AggregateTime = EditorGUILayout.Toggle(new GUIContent("Aggregate Time", "Units of space will aggregate, but units of time won't"), m_AggregateTime);
+            if (oldAggregateTime != m_AggregateTime)
+            {
+                EditorPrefs.SetBool(k_AggregateTimeKey, m_AggregateTime);
+            }
+            if (!m_AggregateTime)
+            {
+                float oldTime = m_Time;
+                m_Time = EditorGUILayout.FloatField(new GUIContent("Smooth", "Divider to smooth out time data"), m_Time);
+                if (oldTime != m_Time)
+                {
+                    EditorPrefs.SetFloat(k_KeyToTime, m_Time);
+                }
+            }
+            else
+            {
+                m_Time = 1f;
+            }
+            GUILayout.EndHorizontal();
 
-		private void rawFetchHandler(List<string> fileList) {
+            GUILayout.BeginHorizontal();
+            bool oldAggregateAngle = m_AggregateAngle;
+            m_AggregateAngle = EditorGUILayout.Toggle(new GUIContent("Aggregate Direction", "Units of space will aggregate, but different angles won't"), m_AggregateAngle);
+            if (oldAggregateAngle != m_AggregateAngle)
+            {
+                EditorPrefs.SetBool(k_AggregateAngleKey, m_AggregateAngle);
+            }
+            if (!m_AggregateAngle)
+            {
+                float oldAngle = m_Angle;
+                m_Angle = EditorGUILayout.FloatField(new GUIContent("Smooth", "Divider to smooth out angle data"), m_Angle);
+                if (oldAngle != m_Angle)
+                {
+                    EditorPrefs.SetFloat(k_AngleKey, m_Angle);
+                }
+            }
+            else
+            {
+                m_Angle = 1f;
+            }
+            GUILayout.EndHorizontal();
 
-			if (fileList.Count == 0) {
-				Debug.LogWarning ("No matching data found.");
-			} else {
-				DateTime start, end;
-				try {
-					start = DateTime.Parse (startDate);
-				} catch {
-					start = DateTime.Parse ("2000-01-01");
-				}
-				try {
-					end = DateTime.Parse (endDate);
-				} catch {
-					end = DateTime.UtcNow;
-				}
+            string oldEventsString = string.Join("|", m_Events.ToArray());
+            if (GUILayout.Button(new GUIContent("Limit To Events", "Specify events to include in the aggregation. If specified, all other events will be excluded.")))
+            {
+                m_Events.Add("Event name");
+            }
+            for (var a = 0; a < m_Events.Count; a++)
+            {
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("-", GUILayout.MaxWidth(20f)))
+                {
+                    m_Events.RemoveAt(a);
+                    break;
+                }
+                m_Events[a] = EditorGUILayout.TextField(m_Events[a]);
+                GUILayout.EndHorizontal();
+            }
+            string currentEventsString = string.Join("|", m_Events.ToArray());
 
-				aggregator.Process (aggregationHandler, fileList, start, end, space, time, angle, !aggregateTime, !aggregateAngle, events);
-			}
-		}
+            if (oldEventsString != currentEventsString)
+            {
+                EditorPrefs.SetString(k_EventsKey, currentEventsString);
+            }
+        }
 
-		private void aggregationHandler(string jsonPath) {
-			handler (jsonPath);
-		}
-	}
+        void rawFetchHandler(List<string> fileList)
+        {
+
+            if (fileList.Count == 0)
+            {
+                Debug.LogWarning("No matching data found.");
+            }
+            else
+            {
+                DateTime start, end;
+                try
+                {
+                    start = DateTime.Parse(m_StartDate);
+                }
+                catch
+                {
+                    start = DateTime.Parse("2000-01-01");
+                }
+                try
+                {
+                    end = DateTime.Parse(m_EndDate);
+                }
+                catch
+                {
+                    end = DateTime.UtcNow;
+                }
+
+                m_Aggregator.Process(aggregationHandler, fileList, start, end, m_Space, m_Time, m_Angle, !m_AggregateTime, !m_AggregateAngle, m_Events);
+            }
+        }
+
+        void aggregationHandler(string jsonPath)
+        {
+            m_AggregationHandler(jsonPath);
+        }
+    }
 }

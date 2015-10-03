@@ -2,11 +2,10 @@
 
 namespace UnityAnalyticsHeatmap
 {
-	public enum RenderDirection
-	{
-		YZ,
-		XZ,
-		XY
-	}
+    public enum RenderDirection
+    {
+        YZ,
+        XZ,
+        XY
+    }
 }
-

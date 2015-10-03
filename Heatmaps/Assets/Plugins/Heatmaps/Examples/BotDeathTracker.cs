@@ -5,8 +5,8 @@
 /// by firing OnDestroy. Note how we call analyticsEnabled = false when the app
 /// quits. This suppresses false positives when the user quits the game.
 
-using UnityEngine;
 using UnityAnalyticsHeatmap;
+using UnityEngine;
 
 public class BotDeathTracker : MonoBehaviour, IAnalyticsDispatcher
 {
@@ -17,7 +17,7 @@ public class BotDeathTracker : MonoBehaviour, IAnalyticsDispatcher
     {
         if (analyticsEnabled)
         {
-			HeatmapEvent.Send("BotKill", transform.position, Time.timeSinceLevelLoad);
+            HeatmapEvent.Send("BotKill", transform.position, Time.timeSinceLevelLoad);
         }
     }
 

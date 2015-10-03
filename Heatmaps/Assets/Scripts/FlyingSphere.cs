@@ -6,67 +6,78 @@ using UnityAnalyticsHeatmap;
 
 public class FlyingSphere : MonoBehaviour
 {
-	public float xOff = 0f;
-	public float yOff = 0f;
-	public float zOff = 0f;
+    public float xOffset = 0f;
+    public float yOffset = 0f;
+    public float zOffset = 0f;
 
-	float maxVec = 5f;
-	float randSize = 1f;
-	float limit = 100f;
+    float m_MaxVec = 5f;
+    float m_RandomSize = 1f;
+    float m_Limit = 100f;
 
-	float changeFreq = 2f;
-	string currentResponse = "Not sent yet";
+    float m_ChangeFreq = 2f;
+    string m_CurrentResponse = "Not sent yet";
 
-	void Start() {
-		ChangeCourse ();
-		StartCoroutine (ChangeAgain());
-	}
+    void Start()
+    {
+        ChangeCourse();
+        StartCoroutine(ChangeAgain());
+    }
 
-	void FixedUpdate() {
-		Vector3 pos = transform.position;
-		pos.x += xOff;
-		pos.y += yOff;
-		pos.z += zOff;
-		transform.position = pos;
+    void FixedUpdate()
+    {
+        Vector3 pos = transform.position;
+        pos.x += xOffset;
+        pos.y += yOffset;
+        pos.z += zOffset;
+        transform.position = pos;
 
-		Camera.main.transform.LookAt (transform);
-	}
+        Camera.main.transform.LookAt(transform);
+    }
 
-	void OnGUI() {
-		GUI.TextArea (new Rect (10f, 10f, 250f, 20f), "Last Analytics result: " + currentResponse);
-	}
+    void OnGUI()
+    {
+        GUI.TextArea(new Rect(10f, 10f, 250f, 20f), "Last Analytics result: " + m_CurrentResponse);
+    }
 
-	void ChangeCourse() {
-		Vector3 pos = transform.position;
+    void ChangeCourse()
+    {
+        Vector3 pos = transform.position;
 
-		//Reverse!
-		if (xOff > maxVec || xOff < maxVec) {
-			xOff *= -.5f;
-		}
-		if (yOff > maxVec || yOff < maxVec) {
-			yOff *= -.5f;
-		}
-		if (zOff > maxVec || zOff < maxVec) {
-			zOff *= -.5f;
-		}
+        //Reverse!
+        if (xOffset > m_MaxVec || xOffset < m_MaxVec)
+        {
+            xOffset *= -.5f;
+        }
+        if (yOffset > m_MaxVec || yOffset < m_MaxVec)
+        {
+            yOffset *= -.5f;
+        }
+        if (zOffset > m_MaxVec || zOffset < m_MaxVec)
+        {
+            zOffset *= -.5f;
+        }
 
-		if (Mathf.Abs (pos.x) > limit || Mathf.Abs (pos.y) > limit || Mathf.Abs (pos.z) > limit) {
-			Vector3 v = Vector3.Normalize (pos) * -1f;
+        if (Mathf.Abs(pos.x) > m_Limit || Mathf.Abs(pos.y) > m_Limit || Mathf.Abs(pos.z) > m_Limit)
+        {
+            Vector3 v = Vector3.Normalize(pos) * -1f;
 
-			xOff = v.x;
-			yOff = v.y;
-			zOff = v.z;
-		} else {
-			xOff += UnityEngine.Random.Range (-randSize, randSize);
-			yOff += UnityEngine.Random.Range (-randSize, randSize);
-			zOff += UnityEngine.Random.Range (-randSize, randSize);
-		}
-	}
+            xOffset = v.x;
+            yOffset = v.y;
+            zOffset = v.z;
+        }
+        else
+        {
+            xOffset += UnityEngine.Random.Range(-m_RandomSize, m_RandomSize);
+            yOffset += UnityEngine.Random.Range(-m_RandomSize, m_RandomSize);
+            zOffset += UnityEngine.Random.Range(-m_RandomSize, m_RandomSize);
+        }
+    }
 
-	IEnumerator ChangeAgain() {
-		yield return new WaitForSeconds(changeFreq);
-		currentResponse  = HeatmapEvent.Send ("ChangeCourse", transform.position, Time.fixedTime).ToString();
-		ChangeCourse ();
-		StartCoroutine (ChangeAgain());
-	}
+    IEnumerator ChangeAgain()
+    {
+        yield return new WaitForSeconds(m_ChangeFreq);
+        m_CurrentResponse = HeatmapEvent.Send("ChangeCourse", transform.position, Time.fixedTime).ToString();
+        ChangeCourse();
+        StartCoroutine(ChangeAgain());
+    }
 }

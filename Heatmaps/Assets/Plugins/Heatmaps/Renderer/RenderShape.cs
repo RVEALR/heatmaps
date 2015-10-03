@@ -2,12 +2,11 @@
 
 namespace UnityAnalyticsHeatmap
 {
-	public enum RenderShape
-	{
-		CUBE,
-		ARROW,
-		SQUARE,
-		TRI
-	}
+    public enum RenderShape
+    {
+        Cube,
+        Arrow,
+        Square,
+        Triangle
+    }
 }
-

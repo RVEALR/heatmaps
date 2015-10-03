@@ -16,74 +16,76 @@
 
 
 using System;
-using UnityEngine;
-using UnityAnalyticsHeatmap;
 using System.Collections.Generic;
+using UnityAnalyticsHeatmap;
+using UnityEngine;
 
 
-[RequireComponent (typeof (HeatmapMeshRenderer))]
+[RequireComponent(typeof(HeatmapMeshRenderer))]
 public class HeatmapController : MonoBehaviour
 {
+    public string dataPath = "";
+    public string[] options;
+    public int optionIndex = 0;
+    public float pointSize = 10;
 
-	private HeatmapDataParser parser = new HeatmapDataParser();
-	private Dictionary<string, HeatPoint[]> data; 
+    HeatmapDataParser m_DataParser = new HeatmapDataParser();
+    Dictionary<string, HeatPoint[]> m_Data;
 
-	public string dataPath = "";
-	public string[] options;
-	public int optionIndex = 0;
-	public float pointSize = 10;
+    static Color s_HighDensityColor = new Color(1f, 0, 0, .1f);
+    static Color s_MediumDensityColor = new Color(1f, 1f, 0, .1f);
+    static Color s_LowDensityColor = new Color(0, 1f, 1f, .1f);
 
-	private static Color HighDensityColor = new Color(1f, 0, 0, .1f);
-	private static Color MediumDensityColor = new Color(1f, 1f, 0, .1f);
-	private static Color LowDensityColor = new Color(0, 1f, 1f, .1f);
+    Color[] m_Colors = new Color[]{ s_LowDensityColor, s_MediumDensityColor, s_HighDensityColor };
+    float[] m_Thresholds = new float[]{ .1f, .9f };
 
-	private Color[] colors = new Color[]{LowDensityColor, MediumDensityColor, HighDensityColor};
-	private float[] thresholds = new float[]{.1f, .9f};
+    float m_MaxDensity = 0;
+    float m_MaxTime = 0;
 
-	float maxDensity = 0;
-	float maxTime = 0;
+    void Start()
+    {
+        // If there's a path, load data
+        if (!String.IsNullOrEmpty(dataPath))
+        {
+            LoadData();
+        }
+    }
 
-	void Start() {
-		// If there's a path, load data
-		if (!String.IsNullOrEmpty(dataPath)) {
-			LoadData ();
-		}
-	}
+    void LoadData()
+    {
+        // Use the parser to load data
+        m_DataParser.LoadData(dataPath, parseHandler, true);
+    }
 
-	void LoadData() {
-		// Use the parser to load data
-		parser.LoadData (dataPath, parseHandler, true);
-	}
+    /// <summary>
+    /// Once loaded, returns all the important info.
+    /// </summary>
+    /// <param name="heatData">A dictionary of all the heat data.</param>
+    /// <param name="maxDensity">The maximum data density.</param>
+    /// <param name="maxTime">The maximum time from the data.</param>
+    /// <param name="options">The list of possible options (usually event names).</param>
+    void parseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, string[] options)
+    {
+        m_Data = heatData;
+        this.options = options;
+        m_MaxDensity = maxDensity;
+        m_MaxTime = maxTime;
+        Render();
+    }
 
-	/// <summary>
-	/// Once loaded, returns all the important info.
-	/// </summary>
-	/// <param name="heatData">A dictionary of all the heat data.</param>
-	/// <param name="maxDensity">The maximum data density.</param>
-	/// <param name="maxTime">The maximum time from the data.</param>
-	/// <param name="options">The list of possible options (usually event names).</param>
-	void parseHandler (Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, string[] options) {
-		data = heatData;
-		this.options = options;
-		this.maxDensity = maxDensity;
-		this.maxTime = maxTime;
-		Render ();
-	}
-
-	/// <summary>
-	/// Renders the heatmap
-	/// </summary>
-	void Render() {
-		var r = gameObject.GetComponent<IHeatmapRenderer> ();
-		r.allowRender = true;
-		r.pointSize = pointSize;
-		r.UpdateColors (colors);
-		r.UpdateThresholds (thresholds);
-		r.UpdateTimeLimits (0, maxTime);
-		r.UpdateRenderStyle (RenderShape.TRI, RenderDirection.YZ);
-		r.UpdatePointData (data[options[optionIndex]], maxDensity);
-		r.RenderHeatmap ();
-	}
+    /// <summary>
+    /// Renders the heatmap
+    /// </summary>
+    void Render()
+    {
+        var r = gameObject.GetComponent<IHeatmapRenderer>();
+        r.allowRender = true;
+        r.pointSize = pointSize;
+        r.UpdateColors(m_Colors);
+        r.UpdateThresholds(m_Thresholds);
+        r.UpdateTimeLimits(0, m_MaxTime);
+        r.UpdateRenderStyle(RenderShape.Triangle, RenderDirection.YZ);
+        r.UpdatePointData(m_Data[options[optionIndex]], m_MaxDensity);
+        r.RenderHeatmap();
+    }
 }
-
-

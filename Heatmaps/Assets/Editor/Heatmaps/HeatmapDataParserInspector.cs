@@ -13,79 +13,85 @@ using UnityEngine;
 
 namespace UnityAnalyticsHeatmap
 {
-	public class HeatmapDataParserInspector
-	{
-		private const string DATA_PATH_KEY = "UnityAnalyticsHeatmapDataPath";
+    public class HeatmapDataParserInspector
+    {
+        const string k_DataPathKey = "UnityAnalyticsHeatmapDataPath";
 
-		private string path = "";
+        string m_Path = "";
 
-		private Dictionary<string, HeatPoint[]> heatData;
-		private float maxDensity = 0;
-		private float maxTime = 0;
-		private int optionIndex = 0;
-		private string[] optionKeys;
+        Dictionary<string, HeatPoint[]> m_HeatData;
+        float m_MaxDensity = 0;
+        float m_MaxTime = 0;
+        int m_OptionIndex = 0;
+        string[] m_OptionKeys;
 
-		public delegate void PointHandler (HeatPoint[] heatData, float maxDensity, float maxTime);
+        public delegate void PointHandler(HeatPoint[] heatData, float maxDensity, float maxTime);
 
-		private PointHandler handler;
+        PointHandler m_PointHandler;
 
-		private HeatmapDataParser parser = new HeatmapDataParser ();
+        HeatmapDataParser m_DataParser = new HeatmapDataParser();
 
 
-		public HeatmapDataParserInspector (PointHandler handler)
-		{
-			this.handler = handler;
-			path = EditorPrefs.GetString(DATA_PATH_KEY);
-		}
+        public HeatmapDataParserInspector(PointHandler handler)
+        {
+            m_PointHandler = handler;
+            m_Path = EditorPrefs.GetString(k_DataPathKey);
+        }
 
-		public static HeatmapDataParserInspector Init(PointHandler handler)
-		{
-			return new HeatmapDataParserInspector (handler);
-		}
+        public static HeatmapDataParserInspector Init(PointHandler handler)
+        {
+            return new HeatmapDataParserInspector(handler);
+        }
 
-		private void Dispatch()
-		{
-			handler (heatData [optionKeys [optionIndex]], maxDensity, maxTime);
-		}
+        void Dispatch()
+        {
+            m_PointHandler(m_HeatData[m_OptionKeys[m_OptionIndex]], m_MaxDensity, m_MaxTime);
+        }
 
-		public void SetDataPath(string jsonPath) {
-			path = jsonPath;
-			parser.LoadData (path, ParseHandler);
-		}
+        public void SetDataPath(string jsonPath)
+        {
+            m_Path = jsonPath;
+            m_DataParser.LoadData(m_Path, ParseHandler);
+        }
 
-		public void OnGUI()
-		{
-			if (heatData != null && optionKeys != null && optionIndex > -1 && optionIndex < optionKeys.Length && heatData.ContainsKey(optionKeys[optionIndex])) {
-				int oldIndex = optionIndex;
-				optionIndex = EditorGUILayout.Popup("Option", optionIndex, optionKeys);
-				if (optionIndex != oldIndex) {
-					RecalculateMax ();
-					Dispatch ();
-				}
-			}
-		}
+        public void OnGUI()
+        {
+            if (m_HeatData != null && m_OptionKeys != null && m_OptionIndex > -1 && m_OptionIndex < m_OptionKeys.Length && m_HeatData.ContainsKey(m_OptionKeys[m_OptionIndex]))
+            {
+                int oldIndex = m_OptionIndex;
+                m_OptionIndex = EditorGUILayout.Popup("Option", m_OptionIndex, m_OptionKeys);
+                if (m_OptionIndex != oldIndex)
+                {
+                    RecalculateMax();
+                    Dispatch();
+                }
+            }
+        }
 
-		private void RecalculateMax() {
-			HeatPoint[] points = heatData [optionKeys [optionIndex]];
-			maxDensity = 0;
-			maxTime = 0;
+        void RecalculateMax()
+        {
+            HeatPoint[] points = m_HeatData[m_OptionKeys[m_OptionIndex]];
+            m_MaxDensity = 0;
+            m_MaxTime = 0;
 
-			for (int i = 0; i < points.Length; i++) {
-				maxDensity = Mathf.Max (maxDensity, points [i].density);
-				maxTime = Mathf.Max (maxTime, points [i].time);
-			}
-		}
+            for (int i = 0; i < points.Length; i++)
+            {
+                m_MaxDensity = Mathf.Max(m_MaxDensity, points[i].density);
+                m_MaxTime = Mathf.Max(m_MaxTime, points[i].time);
+            }
+        }
 
-		private void ParseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, string[] options) {
-			this.heatData = heatData;
-			if (heatData != null) {
-				optionKeys = options;
-				optionIndex = 0;
-				this.maxDensity = maxDensity;
-				this.maxTime = maxTime;
-				Dispatch ();
-			}
-		}
-	}
+        void ParseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, string[] options)
+        {
+            m_HeatData = heatData;
+            if (heatData != null)
+            {
+                m_OptionKeys = options;
+                m_OptionIndex = 0;
+                m_MaxDensity = maxDensity;
+                m_MaxTime = maxTime;
+                Dispatch();
+            }
+        }
+    }
 }
-

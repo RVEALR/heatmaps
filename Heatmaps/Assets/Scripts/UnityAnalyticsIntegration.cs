@@ -1,20 +1,21 @@
 
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 #if UNITY_4_0 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 ||  UNITY_4_4 || UNITY_4_5 || UNITY_4_6 || UNITY_5_0
 using UnityEngine.Cloud.Analytics;
+
 #else
 using UnityEngine.Analytics;
 #endif
 
-public class UnityAnalyticsIntegration : MonoBehaviour {
+public class UnityAnalyticsIntegration : MonoBehaviour
+{
 
-	#if UNITY_4_0 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 ||  UNITY_4_4 || UNITY_4_5 || UNITY_4_6 || UNITY_5_0
-	void Start () {
-		const string projectId = "5ac1db07-fa32-4355-9d15-3089fb0b1d0f";
-		UnityEngine.Cloud.Analytics.UnityAnalytics.StartSDK (projectId);
-	}
-	#endif
+    #if UNITY_4_0 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 ||  UNITY_4_4 || UNITY_4_5 || UNITY_4_6 || UNITY_5_0
+    void Start () {
+        const string projectId = "5ac1db07-fa32-4355-9d15-3089fb0b1d0f";
+        UnityEngine.Cloud.Analytics.UnityAnalytics.StartSDK (projectId);
+    }
+    #endif
 }
-

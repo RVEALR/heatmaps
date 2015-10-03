@@ -4,11 +4,11 @@
 
 namespace UnityAnalyticsHeatmap
 {
-	public interface IAnalyticsDispatcher
-	{
+    public interface IAnalyticsDispatcher
+    {
 
-		void DisableAnalytics();
+        void DisableAnalytics();
 
-		void EnableAnalytics();
-	}
+        void EnableAnalytics();
+    }
 }
