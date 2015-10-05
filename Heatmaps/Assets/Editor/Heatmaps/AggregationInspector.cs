@@ -92,7 +92,7 @@ namespace UnityAnalyticsHeatmap
             m_RawEventClient.PurgeData();
         }
 
-        public void Fetch(AggregationHandler handler)
+        public void Fetch(AggregationHandler handler, bool localOnly)
         {
             m_AggregationHandler = handler;
             if (!string.IsNullOrEmpty(m_RawDataPath))
@@ -116,7 +116,7 @@ namespace UnityAnalyticsHeatmap
                     throw new Exception("The end date is not properly formatted. Correct format is YYYY-MM-DD.");
                 }
 
-                m_RawEventClient.Fetch(m_RawDataPath, new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end, rawFetchHandler);
+                m_RawEventClient.Fetch(m_RawDataPath, localOnly, new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end, rawFetchHandler);
             }
         }
 
@@ -209,7 +209,6 @@ namespace UnityAnalyticsHeatmap
 
         void rawFetchHandler(List<string> fileList)
         {
-
             if (fileList.Count == 0)
             {
                 Debug.LogWarning("No matching data found.");

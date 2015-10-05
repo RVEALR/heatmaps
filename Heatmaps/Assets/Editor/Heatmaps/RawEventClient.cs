@@ -31,7 +31,7 @@ namespace UnityAnalyticsHeatmap
         List<string> m_FilesToFetch;
         int m_DownloadedCount;
 
-        public void Fetch(string path, UnityAnalyticsEventType[] events, DateTime startDate, DateTime endDate, CompletionHandler handler)
+        public void Fetch(string path, bool localOnly, UnityAnalyticsEventType[] events, DateTime startDate, DateTime endDate, CompletionHandler handler)
         {
             m_UrlsToFetch = new List<string>();
             m_FilesToFetch = new List<string>();
@@ -43,11 +43,13 @@ namespace UnityAnalyticsHeatmap
             }
 
             m_CompletionHandler = handler;
-
-            // Load the Data Export Manifest
-            object manifest = FetchData(path);
-            List<object> data = manifest as List<object>;
-
+            List<object> data = null;
+            if (!localOnly)
+            {
+                // Load the Data Export Manifest
+                object manifest = FetchData(path);
+                data = manifest as List<object>;
+            }
             if (data != null)
             {
 
@@ -105,11 +107,31 @@ namespace UnityAnalyticsHeatmap
             }
             else
             {
-                // No internet connection. Return local files
+                // No internet connection, or user has chosen local mode. Return local files only.
                 string savePath = GetSavePath();
                 if (System.IO.Directory.Exists(savePath))
                 {
-                    m_FilesToFetch = new List<string>(Directory.GetFiles(savePath, "*.txt"));
+                    var possibleFilesToFetch = new List<string>(Directory.GetFiles(savePath, "*.txt"));
+
+                    m_FilesToFetch = new List<string>();
+
+                    // Trim the local file list heuristically (i.e., make a generouse guess as to which ones are even worth looking at)
+                    TimeSpan oneDay = new TimeSpan(24, 0, 0);
+                    DateTime heuristicStart = startDate.Subtract(oneDay);
+                    DateTime heuristicEnd = endDate.Add(oneDay);
+                    for (int a = 0; a < possibleFilesToFetch.Count; a++)
+                    {
+                        string fileName = Path.GetFileName(possibleFilesToFetch[a]);
+                        Double fileDateString = Convert.ToDouble(fileName.Substring(0, fileName.IndexOf("_")));
+                        // Create a date at the epoch, then add to it
+                        DateTime fileDate = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
+                        fileDate = fileDate.AddSeconds(fileDateString);
+                        if (fileDate >= heuristicStart && fileDate <= heuristicEnd)
+                        {
+                            m_FilesToFetch.Add(possibleFilesToFetch[a]);
+                        }
+                    }
+
                 }
                 m_CompletionHandler(m_FilesToFetch);
             }

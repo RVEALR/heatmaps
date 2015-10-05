@@ -31,6 +31,7 @@ public class Heatmapper : EditorWindow
 
     bool m_ShowAggregate = false;
     bool m_ShowRender = false;
+    bool m_LocalOnly = false;
 
     Dictionary<string, object> m_PointData;
 
@@ -62,10 +63,15 @@ public class Heatmapper : EditorWindow
         if (m_ShowAggregate)
         {
             m_AggregationView.OnGUI();
-            if (GUILayout.Button("Fetch and Process"))
+            GUILayout.BeginHorizontal();
+
+            m_LocalOnly = GUILayout.Toggle(m_LocalOnly, new GUIContent("Local only", "If checked, don't attempt to download raw data from the server."));
+            string fetchButtonText = m_LocalOnly ? "Process" : "Fetch and Process";
+            if (GUILayout.Button(fetchButtonText))
             {
                 SystemProcess();
             }
+            GUILayout.EndHorizontal();
         }
         GUILayout.EndVertical();
 
@@ -135,7 +141,7 @@ public class Heatmapper : EditorWindow
         }
         if (m_AggregationView != null)
         {
-            m_AggregationView.Fetch(OnAggregation);
+            m_AggregationView.Fetch(OnAggregation, m_LocalOnly);
         }
     }
 
