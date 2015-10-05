@@ -48,7 +48,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     int m_RenderState = k_NotRendering;
 
-    GameObject[] m_GameObjects;
+    List<GameObject> m_GameObjects = new List<GameObject>();
 
     void Start()
     {
@@ -232,43 +232,50 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                 }
             }
 
-            // Remove existing GOs
-            // FIXME: optimize since most of the time we won't need to destroy and create GOs
-
-            int c = 0;
-            int bailout = 99;
-            while (gameObject.transform.childCount > 0 && c < bailout)
-            {
-                Transform trans = gameObject.transform.FindChild("Submap" + c);
-                if (trans != null)
-                {
-                    trans.parent = null;
-                    GameObject.DestroyImmediate(trans.gameObject);
-                }
-                c++;
-            }
-
             if (currentPoints == 0)
             {
                 m_RenderState = k_NotRendering;
                 return;
             }
 
-            m_GameObjects = new GameObject[submaps.Count];
+            int neededSubmaps = submaps.Count;
+            int currentSubmaps = m_GameObjects.Count;
+            int addCount = neededSubmaps - currentSubmaps;
 
-            for (int b = 0; b < m_GameObjects.Length; b++)
+            if (addCount > 0)
             {
-                var go = new GameObject("Submap" + b);
-                go.AddComponent<HeatmapSubmap>();
-                var renderMesh = new Mesh();
+                // Add submaps if we need more
+                for (int a = 0; a < addCount; a++)
+                {
+                    int submapID = currentSubmaps + a;
+                    var go = new GameObject("Submap" + submapID);
+                    go.AddComponent<HeatmapSubmap>();
+                    go.GetComponent<MeshFilter>().sharedMesh = new Mesh();
+                    go.transform.parent = gameObject.transform;
+                    m_GameObjects.Add(go);
+                }
+            }
+            else if (addCount < 0)
+            {
+                // Dispose of excess submaps
+                for (var a = neededSubmaps; a < currentSubmaps; a++)
+                {
+                    Transform trans = gameObject.transform.FindChild("Submap" + a);
+                    if (trans != null)
+                    {
+                        trans.parent = null;
+                        m_GameObjects.Remove(trans.gameObject);
+                        GameObject.DestroyImmediate(trans.gameObject);
+                    }
+                }
+            }
+            //Render submaps
+            for (var a = 0; a < m_GameObjects.Count; a++)
+            {
+                Mesh renderMesh = m_GameObjects[a].GetComponent<MeshFilter>().sharedMesh;
                 renderMesh.Clear();
-                renderMesh.subMeshCount = submaps[b].Count;
-
-                go.GetComponent<MeshFilter>().mesh = renderMesh;
-
-                m_GameObjects[b] = go;
-                go.transform.parent = gameObject.transform;
-                RenderSubmap(go, submaps[b]);
+                renderMesh.subMeshCount = submaps[a].Count;
+                RenderSubmap(m_GameObjects[a], submaps[a]);
             }
             m_RenderState = k_NotRendering;
         }
