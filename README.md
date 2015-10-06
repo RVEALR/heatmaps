@@ -39,3 +39,5 @@ Steps 2 and 3 occur inside the Heatmapper inspector in Unity.
     * If you don't see a heatmap, you may need to play with the various settings, including Color, Particle Size, Start Time and End Time. For example, one reason for no data appearing is Particle Size == 0.
 
 Please refer to the complete [documentation](https://bitbucket.org/strangeioc/heatmaps/wiki/browse/) for a comprehensive explanation of all features.
+
+Unity Heatmaps is covered under the [MIT/X11 license](https://bitbucket.org/strangeioc/heatmaps/src/49337ad264cc3761f40066fcd3e6de086d4ae1c0/license.txt?at=master&fileviewer=file-view-default).
