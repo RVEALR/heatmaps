@@ -22,6 +22,7 @@ Steps 2 and 3 occur inside the Heatmapper inspector in Unity.
 
 ## 'Quick' start
 'Quick' is in quotes, because even at the fastest, you'll need to take some time to generate some Heatmap events.
+
 1. Download or clone this repo.
 2. Double-click the installer and follow instructions to install this plug-in.
 3. Set up some Heatmap events in the general form:
