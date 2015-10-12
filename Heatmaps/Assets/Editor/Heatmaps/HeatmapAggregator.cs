@@ -41,17 +41,20 @@ namespace UnityAnalyticsHeatmap
         /// <param name="space">A smoothing value for x/y/z coordinates.</param>
         /// <param name="time">A smoothing value for time.</param>
         /// <param name="disaggregateTime">If set to <c>true</c> events that match in space but not time will not be aggregated.</param>
+        /// <param name="disaggregateDeviceIds">If set to <c>true</c> each device id will separate into its individual array.</param>
         /// <param name="events">A list of events to explicitly include.</param>
         public void Process(CompletionHandler completionHandler,
             List<string> inputFiles, DateTime startDate, DateTime endDate,
             float space, float time, float angle,
             bool disaggregateTime, bool disaggregateAngle,
+            bool disaggregateDeviceIds,
+            List<string> arbitraryFields = null,
             List<string> events = null)
         {
             m_CompletionHandler = completionHandler;
 
             string outputFileName = System.IO.Path.GetFileName(inputFiles[0]).Replace(".txt", ".json");
-            var outputData = new Dictionary<string, List<Dictionary<string, float>>>();
+            var outputData = new Dictionary<Tuplish, List<Dictionary<string, float>>>();
 
             m_ReportFiles = 0;
             m_ReportLegalPoints = 0;
@@ -61,7 +64,9 @@ namespace UnityAnalyticsHeatmap
             foreach (string file in inputFiles)
             {
                 m_ReportFiles++;
-                LoadStream(outputData, file, startDate, endDate, space, time, angle, disaggregateTime, disaggregateAngle, events, outputFileName);
+                LoadStream(outputData, file, startDate, endDate, space, time, angle, 
+                    disaggregateTime, disaggregateAngle, disaggregateDeviceIds, 
+                    arbitraryFields, events, outputFileName);
             }
 
             // Test if any data was generated
@@ -95,11 +100,13 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        protected void LoadStream(Dictionary<string, List<Dictionary<string, float>>> outputData,
+        internal void LoadStream(Dictionary<Tuplish, List<Dictionary<string, float>>> outputData,
             string path, 
             DateTime startDate, DateTime endDate, 
             float space, float time, float angle,
             bool disaggregateTime, bool disaggregateAngle,
+            bool disaggregateDeviceIds, 
+            List<string> arbitraryFields,
             List<string> events, string outputFileName)
         {
             var reader = new StreamReader(path);
@@ -121,6 +128,7 @@ namespace UnityAnalyticsHeatmap
                     }
 
                     DateTime rowDate = DateTime.Parse(rowData[0]);
+                    string deviceID = rowData[1];
 
                     // Pass on rows outside any date trimming
                     if (rowDate < startDate || rowDate > endDate)
@@ -171,8 +179,35 @@ namespace UnityAnalyticsHeatmap
                     float rz = !datum.ContainsKey("rz") || !disaggregateAngle ? 0 : float.Parse((string)datum["rz"]);
                     rz = Divide(rz, angle);
 
+                    //Construct the list of elements that signify a unique item
+                    var tupleList = new List<object>{ eventName, x, y, z };
+                    if (disaggregateTime)
+                    {
+                        tupleList.Add(t);
+                    }
+                    if (disaggregateAngle)
+                    {
+                        tupleList.Add(rx);
+                        tupleList.Add(ry);
+                        tupleList.Add(rz);
+                    }
+                    if (disaggregateDeviceIds)
+                    {
+                        tupleList.Add(deviceID);
+                    }
+                    if (arbitraryFields != null && arbitraryFields.Count > 0)
+                    {
+                        foreach (var field in arbitraryFields)
+                        {
+                            if (datum.ContainsKey(field))
+                            {
+                                tupleList.Add(datum[field]);
+                            }
+                        }
+                    }
+
                     // Tuple-like key to determine if this point is unique, or needs to be merged with another
-                    var tuple = new Tuplish(new object[]{ eventName, x, y, z, t, rx, ry, rz });
+                    var tuple = new Tuplish(tupleList.ToArray());
 
                     Dictionary<string, float> point;
                     if (m_PointDict.ContainsKey(tuple))
@@ -195,19 +230,38 @@ namespace UnityAnalyticsHeatmap
                         point["d"] = 1;
                         m_PointDict[tuple] = point;
 
-                        // Create the event list if it doesn't exist
-                        if (!outputData.ContainsKey(eventName))
+                        var listTupleKeyList = new List<object>{ eventName };
+                        if (arbitraryFields != null && arbitraryFields.Count > 0)
                         {
-                            outputData.Add(eventName, new List<Dictionary<string, float>>());
+                            foreach (var field in arbitraryFields)
+                            {
+                                if (datum.ContainsKey(field))
+                                {
+                                    listTupleKeyList.Add(field + ":" + datum[field]);
+                                }
+                            }
+                        }
+                        if (disaggregateDeviceIds)
+                        {
+                            listTupleKeyList.Add("Device:" + deviceID);
+                        }
+
+                        var listTupleKey = new Tuplish(listTupleKeyList.ToArray());
+
+                        // Create the event list if the key doesn't exist
+                        if (!outputData.ContainsKey(listTupleKey))
+                        {
+                            outputData.Add(listTupleKey, new List<Dictionary<string, float>>());
                         }
                         // Add the new point to the list
-                        outputData[eventName].Add(point);
+                        outputData[listTupleKey].Add(point);
                     }
                 }
             }
         }
 
-        protected void SaveFile(string outputFileName, Dictionary<string, List<Dictionary<string, float>>> outputData)
+        internal void SaveFile(string outputFileName, Dictionary<Tuplish, 
+            List<Dictionary<string, float>>> outputData)
         {
             string savePath = System.IO.Path.Combine(m_PersistentDataPath, "HeatmapData");
             if (!System.IO.Directory.Exists(savePath))
@@ -215,6 +269,10 @@ namespace UnityAnalyticsHeatmap
                 System.IO.Directory.CreateDirectory(savePath);
             }
 
+            foreach (var k in outputData)
+            {
+                Debug.Log(k.Key);
+            }
             var json = MiniJSON.Json.Serialize(outputData);
             string jsonPath = savePath + Path.DirectorySeparatorChar + outputFileName;
             System.IO.File.WriteAllText(jsonPath, json);
@@ -269,9 +327,13 @@ namespace UnityAnalyticsHeatmap
             string s = "";
             foreach (var o in objects)
             {
-                s += o.ToString() + "   |||   ";
+                s += o.ToString() + ":";
             }
-            return "Tuplish: " + s + " >>> " + GetHashCode();
+            if (s.LastIndexOf(':') == s.Length - 1)
+            {
+                s = s.Substring(0, s.Length - 1);
+            }
+            return s;
         }
     }
 }

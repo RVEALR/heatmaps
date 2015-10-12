@@ -20,12 +20,13 @@ namespace UnityAnalyticsHeatmap
         const string k_AngleKey = "UnityAnalyticsHeatmapAggregationAngle";
         const string k_AggregateTimeKey = "UnityAnalyticsHeatmapAggregationAggregateTime";
         const string k_AggregateAngleKey = "UnityAnalyticsHeatmapAggregationAggregateAngle";
+        const string k_AggregateDevicesKey = "UnityAnalyticsHeatmapAggregationAggregateDeviceIDs";
+        const string k_ArbitraryFieldsKey = "UnityAnalyticsHeatmapAggregationArbitraryFields";
         const string k_EventsKey = "UnityAnalyticsHeatmapAggregationEvents";
 
         const float k_DefaultSpace = 10f;
         const float k_DefaultTime = 10f;
         const float k_DefaultAngle = 15f;
-
 
         string m_RawDataPath = "";
 
@@ -46,7 +47,9 @@ namespace UnityAnalyticsHeatmap
         float m_Angle = k_DefaultAngle;
         bool m_AggregateTime = true;
         bool m_AggregateAngle = true;
+        bool m_AggregateDevices = true;
 
+        List<string> m_ArbitraryFields = new List<string>{ };
         List<string> m_Events = new List<string>{ };
 
         public AggregationInspector(RawEventClient client, HeatmapAggregator aggregator)
@@ -67,6 +70,20 @@ namespace UnityAnalyticsHeatmap
             m_Angle = EditorPrefs.GetFloat(k_AngleKey) == 0 ? k_DefaultAngle : EditorPrefs.GetFloat(k_AngleKey);
             m_AggregateTime = EditorPrefs.GetBool(k_AggregateTimeKey);
             m_AggregateAngle = EditorPrefs.GetBool(k_AggregateAngleKey);
+            m_AggregateDevices = EditorPrefs.GetBool(k_AggregateDevicesKey);
+
+            // Restore list of arbitrary aggregation fields
+            string loadedArbitraryFields = EditorPrefs.GetString(k_ArbitraryFieldsKey);
+            string[] arbitraryFieldsList;
+            if (string.IsNullOrEmpty(loadedArbitraryFields))
+            {
+                arbitraryFieldsList = new string[]{ };
+            }
+            else
+            {
+                arbitraryFieldsList = loadedArbitraryFields.Split('|');
+            }
+            m_ArbitraryFields = new List<string>(arbitraryFieldsList);
 
             // Restore list of events
             string loadedEvents = EditorPrefs.GetString(k_EventsKey);
@@ -183,8 +200,38 @@ namespace UnityAnalyticsHeatmap
             }
             GUILayout.EndHorizontal();
 
+            bool oldAggregateDevices = m_AggregateDevices;
+            m_AggregateDevices = EditorGUILayout.Toggle(new GUIContent("Aggregate Devices", "Takes no account of unque device IDs. NOTE: Disaggregating device IDs can be slow!"), m_AggregateDevices);
+            if (oldAggregateDevices != m_AggregateDevices)
+            {
+                EditorPrefs.SetBool(k_AggregateDevicesKey, m_AggregateDevices);
+            }
+
+            string oldArbitraryFieldsString = string.Join("|", m_ArbitraryFields.ToArray());
+            if (GUILayout.Button(new GUIContent("Add Arbitrary Field", "Specify arbitrary additional fields on which to aggregate.")))
+            {
+                m_ArbitraryFields.Add("Field name");
+            }
+            for (var a = 0; a < m_ArbitraryFields.Count; a++)
+            {
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("-", GUILayout.MaxWidth(20f)))
+                {
+                    m_ArbitraryFields.RemoveAt(a);
+                    break;
+                }
+                m_ArbitraryFields[a] = EditorGUILayout.TextField(m_ArbitraryFields[a]);
+                GUILayout.EndHorizontal();
+            }
+            string currentArbitraryFieldsString = string.Join("|", m_ArbitraryFields.ToArray());
+
+            if (oldArbitraryFieldsString != currentArbitraryFieldsString)
+            {
+                EditorPrefs.SetString(k_ArbitraryFieldsKey, currentArbitraryFieldsString);
+            }
+
             string oldEventsString = string.Join("|", m_Events.ToArray());
-            if (GUILayout.Button(new GUIContent("Limit To Events", "Specify events to include in the aggregation. If specified, all other events will be excluded.")))
+            if (GUILayout.Button(new GUIContent("Add Whitelist Event", "Specify events to include in the aggregation. If specified, all other events will be excluded.")))
             {
                 m_Events.Add("Event name");
             }
@@ -233,7 +280,7 @@ namespace UnityAnalyticsHeatmap
                     end = DateTime.UtcNow;
                 }
 
-                m_Aggregator.Process(aggregationHandler, fileList, start, end, m_Space, m_Time, m_Angle, !m_AggregateTime, !m_AggregateAngle, m_Events);
+                m_Aggregator.Process(aggregationHandler, fileList, start, end, m_Space, m_Time, m_Angle, !m_AggregateTime, !m_AggregateAngle, !m_AggregateDevices, m_ArbitraryFields, m_Events);
             }
         }
 
