@@ -280,7 +280,45 @@ namespace UnityAnalyticsHeatmap
                     end = DateTime.UtcNow;
                 }
 
-                m_Aggregator.Process(aggregationHandler, fileList, start, end, m_Space, m_Time, m_Angle, !m_AggregateTime, !m_AggregateAngle, !m_AggregateDevices, m_ArbitraryFields, m_Events);
+                var aggregateOn = new List<string>(){ "x", "y", "z", "t", "rx", "ry", "rz" };
+
+                // Specify smoothing properties (must be a subset of aggregateOn)
+                var smoothOn = new Dictionary<string, float>();
+                // Always smooth on space
+                smoothOn.Add("x", m_Space);
+                smoothOn.Add("y", m_Space);
+                smoothOn.Add("z", m_Space);
+                // Time is optional
+                if (!m_AggregateTime)
+                {
+                    smoothOn.Add("t", m_Time);
+                }
+                // Angle is optional
+                if (!m_AggregateAngle)
+                {
+                    smoothOn.Add("rx", m_Angle);
+                    smoothOn.Add("ry", m_Angle);
+                    smoothOn.Add("rz", m_Angle);
+                }
+
+                // Specify groupings
+                // Always group on eventName
+                var groupOn = new List<string>(){ "eventName" };
+                // deviceID is optional
+                if (!m_AggregateDevices)
+                {
+                    aggregateOn.Add("deviceID");
+                    groupOn.Add("deviceID");
+                }
+                // Arbitrary Fields are included if specified
+                if (m_ArbitraryFields != null && m_ArbitraryFields.Count > 0)
+                {
+                    aggregateOn.AddRange(m_ArbitraryFields);
+                    groupOn.AddRange(m_ArbitraryFields);
+                }
+
+                m_Aggregator.Process(aggregationHandler, fileList, start, end,
+                    aggregateOn, smoothOn, groupOn, m_Events);
             }
         }
 

@@ -38,17 +38,15 @@ namespace UnityAnalyticsHeatmap
         /// <param name="inputFiles">A list of one or more raw data text files.</param>
         /// <param name="startDate">Any timestamp prior to this ISO 8601 date will be trimmed.</param>
         /// <param name="endDate">Any timestamp after to this ISO 8601 date will be trimmed.</param>
-        /// <param name="space">A smoothing value for x/y/z coordinates.</param>
-        /// <param name="time">A smoothing value for time.</param>
-        /// <param name="disaggregateTime">If set to <c>true</c> events that match in space but not time will not be aggregated.</param>
-        /// <param name="disaggregateDeviceIds">If set to <c>true</c> each device id will separate into its individual array.</param>
+        /// <param name="aggregateOn">A list of properties on which to specify point uniqueness.</param>
+        /// <param name="smoothOn">A dictionary of properties that are smoothable, along with their smoothing values. <b>Must be a subset of aggregateOn.</b></param>
+        /// <param name="groupOn">A list of properties on which to group resulting lists (supports arbitrary data, plus 'eventName' and 'deviceID').</param>
         /// <param name="events">A list of events to explicitly include.</param>
         public void Process(CompletionHandler completionHandler,
             List<string> inputFiles, DateTime startDate, DateTime endDate,
-            float space, float time, float angle,
-            bool disaggregateTime, bool disaggregateAngle,
-            bool disaggregateDeviceIds,
-            List<string> arbitraryFields = null,
+            List<string> aggregateOn,
+            Dictionary<string, float> smoothOn,
+            List<string> groupOn,
             List<string> events = null)
         {
             m_CompletionHandler = completionHandler;
@@ -64,9 +62,9 @@ namespace UnityAnalyticsHeatmap
             foreach (string file in inputFiles)
             {
                 m_ReportFiles++;
-                LoadStream(outputData, file, startDate, endDate, space, time, angle, 
-                    disaggregateTime, disaggregateAngle, disaggregateDeviceIds, 
-                    arbitraryFields, events, outputFileName);
+                LoadStream(outputData, file, startDate, endDate,
+                    aggregateOn, smoothOn, groupOn,
+                    events, outputFileName);
             }
 
             // Test if any data was generated
@@ -102,13 +100,15 @@ namespace UnityAnalyticsHeatmap
 
         internal void LoadStream(Dictionary<Tuplish, List<Dictionary<string, float>>> outputData,
             string path, 
-            DateTime startDate, DateTime endDate, 
-            float space, float time, float angle,
-            bool disaggregateTime, bool disaggregateAngle,
-            bool disaggregateDeviceIds, 
-            List<string> arbitraryFields,
-            List<string> events, string outputFileName)
+            DateTime startDate, DateTime endDate,
+            List<string> aggregateOn,
+            Dictionary<string, float> smoothOn,
+            List<string> groupOn,
+            List<string> eventsWhitelist, string outputFileName)
         {
+            // Every point will contain these properties
+            var pointProperties = new string[]{ "x", "y", "z", "t", "rx", "ry", "rz" };
+
             var reader = new StreamReader(path);
             using (reader)
             {
@@ -129,6 +129,7 @@ namespace UnityAnalyticsHeatmap
 
                     DateTime rowDate = DateTime.Parse(rowData[0]);
                     string deviceID = rowData[1];
+                    string eventName = rowData[2];
 
                     // Pass on rows outside any date trimming
                     if (rowDate < startDate || rowDate > endDate)
@@ -136,15 +137,13 @@ namespace UnityAnalyticsHeatmap
                         continue;
                     }
 
-                    string eventName = rowData[2];
-                    Dictionary<string, object> datum = MiniJSON.Json.Deserialize(rowData[3]) as Dictionary<string, object>;
-					
                     // If we're filtering events, pass if not in list
-                    if (events.Count > 0 && events.IndexOf(eventName) == -1)
+                    if (eventsWhitelist.Count > 0 && eventsWhitelist.IndexOf(eventName) == -1)
                     {
                         continue;
                     }
 
+                    Dictionary<string, object> datum = MiniJSON.Json.Deserialize(rowData[3]) as Dictionary<string, object>;
                     // If no x/y, this isn't a Heatmap Event. Pass.
                     if (!datum.ContainsKey("x") || !datum.ContainsKey("y"))
                     {
@@ -156,60 +155,43 @@ namespace UnityAnalyticsHeatmap
                     // Passed all checks. Consider as legal point
                     m_ReportLegalPoints++;
 
-                    float x = float.Parse((string)datum["x"]);
-                    float y = float.Parse((string)datum["y"]);
-
-                    // z is optional
-                    float z = datum.ContainsKey("z") ? float.Parse((string)datum["z"]) : 0;
-
-                    // Round
-                    x = Divide(x, space);
-                    y = Divide(y, space);
-                    z = Divide(z, space);
-
-                    // t is optional and always 0 if we're not disaggregating
-                    float t = !datum.ContainsKey("t") || !disaggregateTime ? 0 : float.Parse((string)datum["t"]);
-                    t = Divide(t, time);
-
-                    // rotation values are optional and always 0 if we're not disaggragating
-                    float rx = !datum.ContainsKey("rx") || !disaggregateAngle ? 0 : float.Parse((string)datum["rx"]);
-                    rx = Divide(rx, angle);
-                    float ry = !datum.ContainsKey("ry") || !disaggregateAngle ? 0 : float.Parse((string)datum["ry"]);
-                    ry = Divide(ry, angle);
-                    float rz = !datum.ContainsKey("rz") || !disaggregateAngle ? 0 : float.Parse((string)datum["rz"]);
-                    rz = Divide(rz, angle);
-
-                    //Construct the list of elements that signify a unique item
-                    var tupleList = new List<object>{ eventName, x, y, z };
-                    if (disaggregateTime)
+                    // Construct both the list of elements that signify a unique item...
+                    var tupleList = new List<object>{ eventName };
+                    // ...and the point that represents that item
+                    var point = new Dictionary<string, float>();
+                    foreach (var ag in aggregateOn)
                     {
-                        tupleList.Add(t);
-                    }
-                    if (disaggregateAngle)
-                    {
-                        tupleList.Add(rx);
-                        tupleList.Add(ry);
-                        tupleList.Add(rz);
-                    }
-                    if (disaggregateDeviceIds)
-                    {
-                        tupleList.Add(deviceID);
-                    }
-                    if (arbitraryFields != null && arbitraryFields.Count > 0)
-                    {
-                        foreach (var field in arbitraryFields)
+                        float floatValue = 0f;
+                        object arbitraryValue = 0f;
+                        // Special case for DeviceIDs, which aren't in the JSON
+                        if (ag == "deviceID")
                         {
-                            if (datum.ContainsKey(field))
+                            arbitraryValue = deviceID;
+                        }
+                        else if (datum.ContainsKey(ag))
+                        {
+                            // parse and divide all in smoothing list
+                            float.TryParse((string)datum[ag], out floatValue);
+                            if (smoothOn.ContainsKey(ag))
                             {
-                                tupleList.Add(datum[field]);
+                                floatValue = Divide(floatValue, smoothOn[ag]);
                             }
+                            else
+                            {
+                                floatValue = 0;
+                            }
+                            arbitraryValue = floatValue;
+                        }
+
+                        tupleList.Add(arbitraryValue);
+                        if (pointProperties.Contains(ag))
+                        {
+                            point[ag] = floatValue;
                         }
                     }
 
                     // Tuple-like key to determine if this point is unique, or needs to be merged with another
                     var tuple = new Tuplish(tupleList.ToArray());
-
-                    Dictionary<string, float> point;
                     if (m_PointDict.ContainsKey(tuple))
                     {
                         // Use existing point if it exists
@@ -218,34 +200,29 @@ namespace UnityAnalyticsHeatmap
                     }
                     else
                     {
-                        // Create point if it doesn't exist
-                        point = new Dictionary<string, float>();
-                        point["x"] = x;
-                        point["y"] = y;
-                        point["z"] = z;
-                        point["t"] = t;
-                        point["rx"] = rx;
-                        point["ry"] = ry;
-                        point["rz"] = rz;
                         point["d"] = 1;
                         m_PointDict[tuple] = point;
 
-                        var listTupleKeyList = new List<object>{ eventName };
-                        if (arbitraryFields != null && arbitraryFields.Count > 0)
+                        // Group
+                        var listTupleKeyList = new List<object>();
+                        foreach (var field in groupOn)
                         {
-                            foreach (var field in arbitraryFields)
+                            // Special case for eventName
+                            if (field == "eventName")
                             {
-                                if (datum.ContainsKey(field))
-                                {
-                                    listTupleKeyList.Add(field + ":" + datum[field]);
-                                }
+                                listTupleKeyList.Add(eventName);
+                            }
+                            // Special case for deviceID
+                            else if (field == "deviceID")
+                            {
+                                listTupleKeyList.Add("device:" + deviceID);
+                            }
+                            // Everything else just added to key
+                            else if (datum.ContainsKey(field))
+                            {
+                                listTupleKeyList.Add(field + ":" + datum[field]);
                             }
                         }
-                        if (disaggregateDeviceIds)
-                        {
-                            listTupleKeyList.Add("Device:" + deviceID);
-                        }
-
                         var listTupleKey = new Tuplish(listTupleKeyList.ToArray());
 
                         // Create the event list if the key doesn't exist
@@ -269,10 +246,6 @@ namespace UnityAnalyticsHeatmap
                 System.IO.Directory.CreateDirectory(savePath);
             }
 
-            foreach (var k in outputData)
-            {
-                Debug.Log(k.Key);
-            }
             var json = MiniJSON.Json.Serialize(outputData);
             string jsonPath = savePath + Path.DirectorySeparatorChar + outputFileName;
             System.IO.File.WriteAllText(jsonPath, json);
