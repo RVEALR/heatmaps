@@ -45,7 +45,7 @@ public class Heatmapper : EditorWindow
         }
         if (GUILayout.Button("Documentation"))
         {
-            Application.OpenURL("https://bitbucket.org/strangeioc/heatmaps/wiki/Home");
+            Application.OpenURL("https://bitbucket.org/Unity-Technologies/heatmaps/wiki/Home");
         }
         if (GUILayout.Button("Purge"))
         {
