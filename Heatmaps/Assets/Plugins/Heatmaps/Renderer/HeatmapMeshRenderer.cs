@@ -161,46 +161,49 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                     }
                     break;
                 case k_UpdateMaterials:
-                    int pt = 0;			// cursor that increments each time we find a point in the time range
-                    int indexPt = 0; 	// cursor based on pt, but returns to 0 each time we shift to a new submap
-                    int currentSubmap = 0;
-                    int oldSubmap = -1;
-                    int verticesPerShape = GetVecticesForShape();
-                    GameObject go = null;
-                    Material[] materials = null;
-                    for (int a = 0; a < m_Data.Length; a++)
+                    if (hasData())
                     {
-                        if (m_Data[a].time >= m_StartTime && m_Data[a].time <= m_EndTime)
+                        int pt = 0;         // cursor that increments each time we find a point in the time range
+                        int indexPt = 0;    // cursor based on pt, but returns to 0 each time we shift to a new submap
+                        int currentSubmap = 0;
+                        int oldSubmap = -1;
+                        int verticesPerShape = GetVecticesForShape();
+                        GameObject go = null;
+                        Material[] materials = null;
+                        for (int a = 0; a < m_Data.Length; a++)
                         {
-
-                            currentSubmap = (pt * verticesPerShape) / k_VerticesPerMesh;
-
-                            if (currentSubmap != oldSubmap)
+                            if (m_Data[a].time >= m_StartTime && m_Data[a].time <= m_EndTime)
                             {
-                                if (go != null && materials != null)
+
+                                currentSubmap = (pt * verticesPerShape) / k_VerticesPerMesh;
+
+                                if (currentSubmap != oldSubmap)
                                 {
-                                    go.GetComponent<Renderer>().materials = materials;
+                                    if (go != null && materials != null)
+                                    {
+                                        go.GetComponent<Renderer>().materials = materials;
+                                    }
+
+                                    indexPt = 0;
+                                    go = m_GameObjects[currentSubmap];
+                                    materials = go.GetComponent<Renderer>().sharedMaterials;
                                 }
 
-                                indexPt = 0;
-                                go = m_GameObjects[currentSubmap];
-                                materials = go.GetComponent<Renderer>().sharedMaterials;
+
+                                materials[indexPt] = PickMaterial(m_Data[a].density / m_MaxDensity);
+
+                                oldSubmap = currentSubmap;
+                                pt++;
+                                indexPt++;
                             }
-
-
-                            materials[indexPt] = PickMaterial(m_Data[a].density / m_MaxDensity);
-
-                            oldSubmap = currentSubmap;
-                            pt++;
-                            indexPt++;
                         }
-                    }
-                    if (go != null && materials != null)
-                    {
-                        go.GetComponent<Renderer>().materials = materials;
-                    }
+                        if (go != null && materials != null)
+                        {
+                            go.GetComponent<Renderer>().materials = materials;
+                        }
 
-                    m_RenderState = k_NotRendering;
+                        m_RenderState = k_NotRendering;
+                    }
                     break;
             }
         }
