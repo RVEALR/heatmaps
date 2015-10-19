@@ -5,13 +5,19 @@ namespace UnityAnalyticsHeatmap
 {
     public interface IHeatmapperView
     {
-        Signal processSignal{ get; }
+        Signal processSignal { get; }
 
-        Signal goToDocumentationSignal{ get; }
+        Signal goToDocumentationSignal { get; }
 
-        Signal purgeMetadataSignal{ get; }
+        Signal purgeMetadataSignal { get; }
+        
+        Signal resetSignal { get; }
+        
+        Signal renderSignal { get; }
+        
+        Signal renderNewDataSignal { get; }
 
-        Signal resetSignal{ get; }
+        void Init(IAggregationSettings aggregationSettings, IRendererSettings rendererSettings, IRenderInfo renderInfo, IRenderData renderData);
     }
 }
 

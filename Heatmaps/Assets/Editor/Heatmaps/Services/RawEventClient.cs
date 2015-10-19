@@ -31,6 +31,8 @@ namespace UnityAnalyticsHeatmap
         List<string> m_FilesToFetch;
         int m_DownloadedCount;
 
+        string m_PersistentDataPath = Application.persistentDataPath;
+
         public void Fetch(string path, bool localOnly, UnityAnalyticsEventType[] events, DateTime startDate, DateTime endDate, CompletionHandler handler)
         {
             m_UrlsToFetch = new List<string>();
@@ -218,7 +220,7 @@ namespace UnityAnalyticsHeatmap
 
         string GetSavePath()
         {
-            string savePath = System.IO.Path.Combine(Application.persistentDataPath, "HeatmapData");
+            string savePath = System.IO.Path.Combine(m_PersistentDataPath, "HeatmapData");
             return savePath;
         }
     }

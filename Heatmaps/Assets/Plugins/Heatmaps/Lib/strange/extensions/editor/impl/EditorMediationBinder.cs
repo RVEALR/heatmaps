@@ -65,9 +65,6 @@ namespace strange.extensions.editor.impl
 
             }
             List<IMediator> editorMediators = mediators[view];
-
-            Debug.Log("Mediator create: " + mediator);
-
             editorMediators.Add(mediator);
             return mediator;
         }

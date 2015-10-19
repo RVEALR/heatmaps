@@ -18,8 +18,16 @@ namespace UnityAnalyticsHeatmap
     public class ResetSignal : Signal
     {
     }
-
+    
     public class ProcessSignal : Signal
+    {
+    }
+    
+    public class RenderSignal : Signal
+    {
+    }
+    
+    public class RenderNewDataSignal : Signal
     {
     }
 }

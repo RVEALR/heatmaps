@@ -16,6 +16,11 @@ using strange.extensions.editor.impl;
 public class Heatmapper : EditorView, IHeatmapperView
 {
 
+    
+    // Views
+    AggregationInspector m_AggregationView ;
+    HeatmapRendererInspector m_RenderView;
+
     [MenuItem("Window/Heatmapper #%h")]
     static void HeatmapperMenuOption()
     {
@@ -26,66 +31,86 @@ public class Heatmapper : EditorView, IHeatmapperView
     {
         if (context == null)
         {
+            m_AggregationView = new AggregationInspector();
+            m_RenderView = new HeatmapRendererInspector(this);
             context = new HeatmapperContext(this);
         }
     }
 
-    private Signal _processSignal = new Signal();
+    public void Init(IAggregationSettings aggregationSettings, IRendererSettings rendererSettings, IRenderInfo renderInfo, IRenderData renderData)
+    {
+        if (m_AggregationView == null)
+            m_AggregationView = new AggregationInspector();
 
+        m_AggregationView.settings = aggregationSettings;
+        m_AggregationView.processSignal = processSignal;
+
+        if (m_RenderView == null)
+            m_RenderView = new HeatmapRendererInspector(this);
+
+        m_RenderView.settings = rendererSettings;
+        m_RenderView.renderSignal = renderSignal;
+        m_RenderView.renderInfo = renderInfo;
+        m_RenderView.renderData = renderData;
+        m_RenderView.renderNewDataSignal = renderNewDataSignal;
+    }
+
+    private Signal m_ProcessSignal = new Signal();
     public Signal processSignal
     {
         get
         {
-            return _processSignal;
+            return m_ProcessSignal;
         }
     }
 
-    private Signal _goToDocumentationSignal = new Signal();
-
+    private Signal m_GoToDocumentationSignal = new Signal();
     public Signal goToDocumentationSignal
     {
         get
         {
-            return _goToDocumentationSignal;
+            return m_GoToDocumentationSignal;
         }
     }
 
-    private Signal _purgeMetadataSignal = new Signal();
-
+    private Signal m_PurgeMetadataSignal = new Signal();
     public Signal purgeMetadataSignal
     {
         get
         {
-            return _purgeMetadataSignal;
+            return m_PurgeMetadataSignal;
         }
     }
-
-    private Signal _resetSignal = new Signal();
-
+    
+    private Signal m_ResetSignal = new Signal();
     public Signal resetSignal
     {
         get
         {
-            return _resetSignal;
+            return m_ResetSignal;
+        }
+    }
+    
+    private Signal m_RenderSignal = new Signal();
+    public Signal renderSignal
+    {
+        get
+        {
+            return m_RenderSignal;
+        }
+    }
+    
+    private Signal m_RenderNewDataSignal = new Signal();
+    public Signal renderNewDataSignal
+    {
+        get
+        {
+            return m_RenderNewDataSignal;
         }
     }
 
-    // Views
-    AggregationInspector m_AggregationView;
-    HeatmapDataParserInspector m_ParserView;
-    HeatmapRendererInspector m_RenderView;
-
-    // Data handlers
-    RawEventClient m_EventClient = new RawEventClient();
-    HeatmapAggregator m_Aggregator = new HeatmapAggregator();
-
-    GameObject m_HeatMapInstance;
-
     bool m_ShowAggregate = false;
     bool m_ShowRender = false;
-    bool m_LocalOnly = false;
-
-    Dictionary<string, object> m_PointData;
 
     void OnGUI()
     {
@@ -93,6 +118,8 @@ public class Heatmapper : EditorView, IHeatmapperView
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Reset"))
         {
+            context = null;
+            OnFocus();
             resetSignal.Dispatch();
         }
         if (GUILayout.Button("Documentation"))
@@ -110,130 +137,29 @@ public class Heatmapper : EditorView, IHeatmapperView
         GUILayout.EndVertical();
 
         GUILayout.BeginVertical("box");
-        if (m_AggregationView == null)
-        {
-            m_AggregationView = AggregationInspector.Init(m_EventClient, m_Aggregator);
-        }
+
         m_ShowAggregate = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), m_ShowAggregate, "Aggregate Events", true);
         if (m_ShowAggregate)
         {
             m_AggregationView.OnGUI();
-            GUILayout.BeginHorizontal();
-
-            m_LocalOnly = GUILayout.Toggle(m_LocalOnly, new GUIContent("Local only", "If checked, don't attempt to download raw data from the server."));
-            string fetchButtonText = m_LocalOnly ? "Process" : "Fetch and Process";
-            if (GUILayout.Button(fetchButtonText))
-            {
-                SystemProcess();
-            }
-            GUILayout.EndHorizontal();
         }
         GUILayout.EndVertical();
 
         GUILayout.BeginVertical("box");
-        if (m_ParserView == null)
-        {
-            m_ParserView = HeatmapDataParserInspector.Init(OnPointData);
-        }
-        if (m_RenderView == null)
-        {
-            m_RenderView = HeatmapRendererInspector.Init(this);
-        }
-
         m_ShowRender = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), m_ShowRender, "Render", true);
-        if (m_ShowRender && m_ParserView != null)
+        if (m_ShowRender && m_RenderView != null)
         {
-            m_ParserView.OnGUI();
             m_RenderView.OnGUI();
         }
 
-        if (m_HeatMapInstance)
-        {
-            m_RenderView.SetGameObject(m_HeatMapInstance);
-        }
         GUILayout.EndVertical();
     }
 
     void Update()
     {
-        if (m_HeatMapInstance != null)
-        {
-            m_HeatMapInstance.GetComponent<IHeatmapRenderer>().RenderHeatmap();
-        }
         if (m_RenderView != null)
         {
-            m_RenderView.Update();
+            m_RenderView.Update ();
         }
-
-        if (m_PointData != null)
-        {
-            if (m_HeatMapInstance == null)
-            {
-                CreateHeatmapInstance();
-            }
-
-            if (m_HeatMapInstance.GetComponent<HeatmapMeshRenderer>() != null)
-            {
-                m_HeatMapInstance.GetComponent<HeatmapMeshRenderer>().UpdatePointData(m_PointData["heatData"] as HeatPoint[], (float)m_PointData["maxDensity"]);
-            }
-
-            if (m_RenderView != null)
-            {
-                m_RenderView.SetMaxTime((float)m_PointData["maxTime"]);
-                m_RenderView.SetGameObject(m_HeatMapInstance);
-                m_RenderView.Update(true);
-            }
-
-            m_PointData = null;
-        }
-    }
-
-    void SystemProcess()
-    {
-        if (m_HeatMapInstance == null)
-        {
-            CreateHeatmapInstance();
-        }
-        if (m_AggregationView != null)
-        {
-            m_AggregationView.Fetch(OnAggregation, m_LocalOnly);
-        }
-    }
-
-    void SystemReset()
-    {
-        if (m_HeatMapInstance)
-        {
-            m_HeatMapInstance.transform.parent = null;
-            DestroyImmediate(m_HeatMapInstance);
-        }
-    }
-
-    void OnAggregation(string jsonPath)
-    {
-        m_ParserView.SetDataPath(jsonPath);
-    }
-
-    void OnPointData(HeatPoint[] heatData, float maxDensity, float maxTime)
-    {
-        // Creating this data allows the renderer to use it on the next Update pass
-        m_PointData = new Dictionary<string, object>();
-        m_PointData["heatData"] = heatData;
-        m_PointData["maxDensity"] = maxDensity;
-        m_PointData["maxTime"] = maxTime;
-    }
-
-    /// <summary>
-    /// Creates the heat map instance.
-    /// </summary>
-    /// We've hard-coded the Component here. Everywhere else, we use the interface.
-    /// If you want to write a custom Renderer, this is the place to sub it in.
-    void CreateHeatmapInstance()
-    {
-        m_HeatMapInstance = new GameObject();
-        m_HeatMapInstance.tag = "EditorOnly";
-        m_HeatMapInstance.name = "UnityAnalytics__Heatmap";
-        m_HeatMapInstance.AddComponent<HeatmapMeshRenderer>();
-        m_HeatMapInstance.GetComponent<IHeatmapRenderer>().allowRender = true;
     }
 }

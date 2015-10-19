@@ -14,19 +14,41 @@ namespace UnityAnalyticsHeatmap
 
         [Inject]
         public GoToDocumentationSignal goToDocumentationSignal{ get; set; }
-
+        
         [Inject]
         public ResetSignal resetSignal { get; set; }
+        
+        [Inject]
+        public RenderSignal renderSignal { get; set; }
+        
+        [Inject]
+        public RenderSignal renderNewDataSignal { get; set; }
 
         [Inject]
         public PurgeMetadataSignal purgeMetadataSignal { get; set; }
+        
+        [Inject]
+        public IAggregationSettings aggregationSettings { get; set; }
+        
+        [Inject]
+        public IRendererSettings rendererSettings { get; set; }
+        
+        [Inject]
+        public IRenderInfo renderInfo { get; set; }
+        
+        [Inject]
+        public IRenderData renderData { get; set; }
 
         public override void OnRegister()
         {
             view.processSignal.AddListener(Process);
             view.goToDocumentationSignal.AddListener(GoToDocumentation);
             view.resetSignal.AddListener(Reset);
+            view.renderSignal.AddListener(Render);
+            view.renderNewDataSignal.AddListener(RenderNewData);
             view.purgeMetadataSignal.AddListener(PurgeMetadata);
+
+            view.Init(aggregationSettings, rendererSettings, renderInfo, renderData);
         }
 
         public override void OnRemove()
@@ -34,6 +56,8 @@ namespace UnityAnalyticsHeatmap
             view.processSignal.RemoveListener(Process);
             view.goToDocumentationSignal.RemoveListener(GoToDocumentation);
             view.resetSignal.RemoveListener(Reset);
+            view.renderSignal.RemoveListener(Render);
+            view.renderNewDataSignal.RemoveListener(RenderNewData);
             view.purgeMetadataSignal.RemoveListener(PurgeMetadata);
         }
 
@@ -51,6 +75,16 @@ namespace UnityAnalyticsHeatmap
         {
             Debug.Log("Reset");
             resetSignal.Dispatch();
+        }
+        
+        void Render()
+        {
+            renderSignal.Dispatch();
+        }
+        
+        void RenderNewData()
+        {
+            renderNewDataSignal.Dispatch();
         }
 
         void PurgeMetadata()
