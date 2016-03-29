@@ -91,15 +91,15 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     public void UpdateThresholds(float[] threshholds)
     {
-		float t0 = ( Mathf.Log(1f-threshholds[0]) / -6f) ;
-		float t1 = ( Mathf.Log(1f-threshholds[1]) / -6f) ;
+        float t0 = ( Mathf.Log(1f-threshholds[0]) / -6f) ;
+        float t1 = ( Mathf.Log(1f-threshholds[1]) / -6f) ;
 
-		if (float.IsInfinity(t0)) {
-			t0 = 0;
-		}
-		if (float.IsInfinity(t1)) {
-			t1 = 1;
-		}
+        if (float.IsInfinity(t0)) {
+            t0 = 0;
+        }
+        if (float.IsInfinity(t1)) {
+            t1 = 1;
+        }
         if (m_HighThreshold != t1 || m_LowThreshold != t0)
         {
             m_HighThreshold = t1;
@@ -389,17 +389,17 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     Vector3[] AddArrowVectorsToMesh(Vector3 position, Vector3 rotation)
     {
-        float halfP = m_ParticleSize / 2f;
         float thirdP = m_ParticleSize / 3f;
 
-        var p0 = new Vector3(0f, 0f, -halfP);
-        var p1 = new Vector3(0f, 0f, 0f);
-        var p2 = new Vector3(-halfP, 0f, halfP);
-        var p3 = new Vector3(-halfP, 0f, thirdP);
-        var p4 = new Vector3(halfP, 0f, thirdP);
-        var p5 = new Vector3(halfP, 0f, halfP);
+        var p0 = new Vector3(-thirdP, 0f, 0f);
+        var p1 = new Vector3(-thirdP, 0f, -m_ParticleSize * 2f);
+        var p2 = new Vector3(-m_ParticleSize, 0f, -m_ParticleSize * 2f);
+        var p3 = new Vector3(0f, 0f, -m_ParticleSize * 3f);
+        var p4 = new Vector3(m_ParticleSize, 0f, -m_ParticleSize * 2f);
+        var p5 = new Vector3(thirdP, 0f, -m_ParticleSize * 2f);
+        var p6 = new Vector3(thirdP, 0f, 0f);
 
-        var v = new Vector3[] { p0, p1, p2, p3, p4, p5 };
+        var v = new Vector3[] { p0, p1, p2, p3, p4, p5, p6 };
 
         Quaternion q = Quaternion.Euler(rotation);
 
@@ -408,7 +408,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             Matrix4x4 m = Matrix4x4.TRS(position, q, Vector3.one);
             v[a] = m.MultiplyPoint3x4(v[a]);
         }
-
         return v;
     }
 
@@ -417,11 +416,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     {
         var tris = new int[]
         {
-            0, 1, 2,	// left
-            0, 2, 3,
-            0, 4, 1,	// right
-            1, 4, 5
-
+            0, 1, 5,	// left
+            6, 0, 5,	//right
+            3, 4, 2		// head
         };
         for (int a = 0; a < tris.Length; a++)
         {
