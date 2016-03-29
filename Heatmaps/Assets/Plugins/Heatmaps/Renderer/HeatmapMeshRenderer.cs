@@ -100,9 +100,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 		if (float.IsInfinity(t1)) {
 			t1 = 1;
 		}
-
-		float newLowThreshold = t0;
-		float newHighThreshold = t1;
         if (m_HighThreshold != t1 || m_LowThreshold != t0)
         {
             m_HighThreshold = t1;
