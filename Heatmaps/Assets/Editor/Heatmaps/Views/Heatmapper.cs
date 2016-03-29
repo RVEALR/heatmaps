@@ -9,65 +9,14 @@ using System.Collections.Generic;
 using UnityAnalyticsHeatmap;
 using UnityEditor;
 using UnityEngine;
-using strange.extensions.context.api;
-using strange.extensions.signal.impl;
-using strange.extensions.editor.impl;
 
-public class Heatmapper : EditorView, IHeatmapperView
+public class Heatmapper : EditorWindow
 {
 
     [MenuItem("Window/Heatmapper #%h")]
     static void HeatmapperMenuOption()
     {
         EditorWindow.GetWindow(typeof(Heatmapper));
-    }
-
-    override protected void OnFocus()
-    {
-        if (context == null)
-        {
-            context = new HeatmapperContext(this);
-        }
-    }
-
-    private Signal _processSignal = new Signal();
-
-    public Signal processSignal
-    {
-        get
-        {
-            return _processSignal;
-        }
-    }
-
-    private Signal _goToDocumentationSignal = new Signal();
-
-    public Signal goToDocumentationSignal
-    {
-        get
-        {
-            return _goToDocumentationSignal;
-        }
-    }
-
-    private Signal _purgeMetadataSignal = new Signal();
-
-    public Signal purgeMetadataSignal
-    {
-        get
-        {
-            return _purgeMetadataSignal;
-        }
-    }
-
-    private Signal _resetSignal = new Signal();
-
-    public Signal resetSignal
-    {
-        get
-        {
-            return _resetSignal;
-        }
     }
 
     // Views
@@ -93,17 +42,17 @@ public class Heatmapper : EditorView, IHeatmapperView
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Reset"))
         {
-            resetSignal.Dispatch();
+			SystemReset();
         }
         if (GUILayout.Button("Documentation"))
         {
-            goToDocumentationSignal.Dispatch();
+			Application.OpenURL("https://bitbucket.org/Unity-Technologies/heatmaps/wiki/Home");
         }
         if (GUILayout.Button("Purge"))
         {
             if (EditorUtility.DisplayDialog("Destroy local data?", "You are about to delete your local heatmaps data cache, meaning you'll have to reload from the server. Are you sure?", "Purge", "Cancel"))
             {
-                purgeMetadataSignal.Dispatch();
+				m_EventClient.PurgeData();
             }
         }
         GUILayout.EndHorizontal();
