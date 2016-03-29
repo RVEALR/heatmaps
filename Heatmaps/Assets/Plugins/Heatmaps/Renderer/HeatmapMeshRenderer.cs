@@ -91,12 +91,22 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     public void UpdateThresholds(float[] threshholds)
     {
-        float newLowThreshold = threshholds[0];
-        float newHighThreshold = threshholds[1];
-        if (m_HighThreshold != newHighThreshold || m_LowThreshold != newLowThreshold)
+		float t0 = ( Mathf.Log(1f-threshholds[0]) / -6f) ;
+		float t1 = ( Mathf.Log(1f-threshholds[1]) / -6f) ;
+
+		if (float.IsInfinity(t0)) {
+			t0 = 0;
+		}
+		if (float.IsInfinity(t1)) {
+			t1 = 1;
+		}
+
+		float newLowThreshold = t0;
+		float newHighThreshold = t1;
+        if (m_HighThreshold != t1 || m_LowThreshold != t0)
         {
-            m_HighThreshold = newHighThreshold;
-            m_LowThreshold = newLowThreshold;
+            m_HighThreshold = t1;
+            m_LowThreshold = t0;
             m_RenderState = k_UpdateMaterials;
         }
     }
