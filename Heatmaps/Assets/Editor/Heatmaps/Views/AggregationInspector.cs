@@ -104,9 +104,9 @@ namespace UnityAnalyticsHeatmap
             return new AggregationInspector(client, aggregator);
         }
 
-        public void PurgeData()
+        public void SystemReset()
         {
-            m_RawEventClient.PurgeData();
+            //TODO
         }
 
         public void Fetch(AggregationHandler handler, bool localOnly)
@@ -149,6 +149,9 @@ namespace UnityAnalyticsHeatmap
             m_StartDate = EditorGUILayout.TextField(new GUIContent("Start Date (YYYY-MM-DD)", "Start date as ISO-8601 datetime"), m_StartDate);
             m_EndDate = EditorGUILayout.TextField(new GUIContent("End Date (YYYY-MM-DD)", "End date as ISO-8601 datetime"), m_EndDate);
 
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Aggregate", EditorStyles.boldLabel);
+
             float oldSpace = m_Space;
             m_Space = EditorGUILayout.FloatField(new GUIContent("Space Smooth", "Divider to smooth out x/y/z data"), m_Space);
             if (oldSpace != m_Space)
@@ -156,9 +159,10 @@ namespace UnityAnalyticsHeatmap
                 EditorPrefs.SetFloat(k_SpaceKey, m_Space);
             }
 
-            GUILayout.BeginHorizontal();
+
+           
             bool oldAggregateTime = m_AggregateTime;
-            m_AggregateTime = EditorGUILayout.Toggle(new GUIContent("Aggregate Time", "Units of space will aggregate, but units of time won't"), m_AggregateTime);
+            m_AggregateTime = EditorGUILayout.Toggle(new GUIContent("Time", "Units of space will aggregate, but units of time won't"), m_AggregateTime);
             if (oldAggregateTime != m_AggregateTime)
             {
                 EditorPrefs.SetBool(k_AggregateTimeKey, m_AggregateTime);
@@ -166,7 +170,7 @@ namespace UnityAnalyticsHeatmap
             if (!m_AggregateTime)
             {
                 float oldTime = m_Time;
-                m_Time = EditorGUILayout.FloatField(new GUIContent("Smooth", "Divider to smooth out time data"), m_Time);
+                m_Time = EditorGUILayout.FloatField(new GUIContent("Time Smooth", "Divider to smooth out time data"), m_Time);
                 if (oldTime != m_Time)
                 {
                     EditorPrefs.SetFloat(k_KeyToTime, m_Time);
@@ -176,11 +180,11 @@ namespace UnityAnalyticsHeatmap
             {
                 m_Time = 1f;
             }
-            GUILayout.EndHorizontal();
+            
 
-            GUILayout.BeginHorizontal();
+            
             bool oldAggregateAngle = m_AggregateAngle;
-            m_AggregateAngle = EditorGUILayout.Toggle(new GUIContent("Aggregate Direction", "Units of space will aggregate, but different angles won't"), m_AggregateAngle);
+            m_AggregateAngle = EditorGUILayout.Toggle(new GUIContent("Direction", "Units of space will aggregate, but different angles won't"), m_AggregateAngle);
             if (oldAggregateAngle != m_AggregateAngle)
             {
                 EditorPrefs.SetBool(k_AggregateAngleKey, m_AggregateAngle);
@@ -188,7 +192,7 @@ namespace UnityAnalyticsHeatmap
             if (!m_AggregateAngle)
             {
                 float oldAngle = m_Angle;
-                m_Angle = EditorGUILayout.FloatField(new GUIContent("Smooth", "Divider to smooth out angle data"), m_Angle);
+                m_Angle = EditorGUILayout.FloatField(new GUIContent("Angle Smooth", "Divider to smooth out angle data"), m_Angle);
                 if (oldAngle != m_Angle)
                 {
                     EditorPrefs.SetFloat(k_AngleKey, m_Angle);
@@ -198,17 +202,21 @@ namespace UnityAnalyticsHeatmap
             {
                 m_Angle = 1f;
             }
-            GUILayout.EndHorizontal();
+            
 
             bool oldAggregateDevices = m_AggregateDevices;
-            m_AggregateDevices = EditorGUILayout.Toggle(new GUIContent("Aggregate Devices", "Takes no account of unque device IDs. NOTE: Disaggregating device IDs can be slow!"), m_AggregateDevices);
+            m_AggregateDevices = EditorGUILayout.Toggle(new GUIContent("Devices", "Takes no account of unque device IDs. NOTE: Disaggregating device IDs can be slow!"), m_AggregateDevices);
             if (oldAggregateDevices != m_AggregateDevices)
             {
                 EditorPrefs.SetBool(k_AggregateDevicesKey, m_AggregateDevices);
             }
+            EditorGUILayout.EndVertical();
 
             string oldArbitraryFieldsString = string.Join("|", m_ArbitraryFields.ToArray());
-            if (GUILayout.Button(new GUIContent("Add Arbitrary Field", "Specify arbitrary additional fields on which to aggregate.")))
+
+
+
+            if (GUILayout.Button(new GUIContent("Separate on Field", "Specify arbitrary fields with which to bucket data.")))
             {
                 m_ArbitraryFields.Add("Field name");
             }
@@ -231,7 +239,7 @@ namespace UnityAnalyticsHeatmap
             }
 
             string oldEventsString = string.Join("|", m_Events.ToArray());
-            if (GUILayout.Button(new GUIContent("Add Whitelist Event", "Specify events to include in the aggregation. If specified, all other events will be excluded.")))
+            if (GUILayout.Button(new GUIContent("Add Whitelist Event", "Specify event names to include in the aggregation. By default all events are included.")))
             {
                 m_Events.Add("Event name");
             }
