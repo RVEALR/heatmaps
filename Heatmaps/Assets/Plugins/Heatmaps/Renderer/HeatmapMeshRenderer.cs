@@ -64,28 +64,20 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     public void UpdateColors(Color[] colors)
     {
-        Color newLowColor = colors[0];
-        Color newMediumColor = colors[1];
-        Color newHighColor = colors[2];
-
-        if (m_Materials == null || m_Materials.Length == 0 ||
-            m_Materials[0].GetColor("_TintColor") != newLowColor ||
-            m_Materials[1].GetColor("_TintColor") != newMediumColor ||
-            m_Materials[2].GetColor("_TintColor") != newHighColor)
+        if (m_Materials == null || m_Materials.Length == 0)
         {
-
             m_Shader = Shader.Find("Heatmaps/Particles/AlphaBlend");
-            m_Materials = new Material[3];
-            m_Materials[0] = new Material(m_Shader);
-            m_Materials[0].SetColor("_TintColor", newLowColor);
-
-            m_Materials[1] = new Material(m_Shader);
-            m_Materials[1].SetColor("_TintColor", newMediumColor);
-
-            m_Materials[2] = new Material(m_Shader);
-            m_Materials[2].SetColor("_TintColor", newHighColor);
-
-            m_RenderState = k_UpdateMaterials;
+            m_Materials = new Material[colors.Length];
+        }
+        for(int a = 0; a < colors.Length; a++) {
+            if (m_Materials[a] == null) {
+                m_Materials[a] = new Material(m_Shader);
+            }
+            if (m_Materials[a].GetColor("_TintColor") != colors[a]) {
+                Material mat = m_Materials[a];
+                mat.SetColor("_TintColor", colors[a]);
+                m_RenderState = k_UpdateMaterials;
+            }
         }
     }
 
