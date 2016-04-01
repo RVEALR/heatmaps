@@ -6,6 +6,7 @@ namespace UnityAnalyticsHeatmap
     {
         Cube,
         Arrow,
+        PointToPoint,
         Square,
         Triangle
     }
