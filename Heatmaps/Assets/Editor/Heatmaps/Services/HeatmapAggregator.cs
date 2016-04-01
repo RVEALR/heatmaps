@@ -19,17 +19,16 @@ namespace UnityAnalyticsHeatmap
         int m_ReportLegalPoints = 0;
 
         Dictionary<Tuplish, Dictionary<string, float>> m_PointDict;
-
-        // Stored because we need to apply it at non-main-thread time
-        string m_PersistentDataPath = Application.persistentDataPath;
+        string m_DataPath = "";
 
         public delegate void CompletionHandler(string jsonPath);
 
         CompletionHandler m_CompletionHandler;
 
 
-        public HeatmapAggregator()
+        public HeatmapAggregator(string dataPath)
         {
+            m_DataPath = dataPath;
         }
 
         /// <summary>
@@ -240,7 +239,7 @@ namespace UnityAnalyticsHeatmap
         internal void SaveFile(string outputFileName, Dictionary<Tuplish, 
             List<Dictionary<string, float>>> outputData)
         {
-            string savePath = System.IO.Path.Combine(m_PersistentDataPath, "HeatmapData");
+            string savePath = System.IO.Path.Combine(m_DataPath, "HeatmapData");
             if (!System.IO.Directory.Exists(savePath))
             {
                 System.IO.Directory.CreateDirectory(savePath);

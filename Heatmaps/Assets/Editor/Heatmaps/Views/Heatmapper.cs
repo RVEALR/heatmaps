@@ -19,14 +19,20 @@ public class Heatmapper : EditorWindow
         EditorWindow.GetWindow(typeof(Heatmapper));
     }
 
+    public Heatmapper()
+    {
+        m_Aggregator = new HeatmapAggregator(Application.persistentDataPath);
+        m_EventClient = new RawEventClient(Application.persistentDataPath);
+    }
+
     // Views
     AggregationInspector m_AggregationView;
     HeatmapDataParserInspector m_ParserView;
     HeatmapRendererInspector m_RenderView;
 
     // Data handlers
-    RawEventClient m_EventClient = new RawEventClient();
-    HeatmapAggregator m_Aggregator = new HeatmapAggregator();
+    RawEventClient m_EventClient;
+    HeatmapAggregator m_Aggregator;
 
     GameObject m_HeatMapInstance;
 
@@ -100,6 +106,10 @@ public class Heatmapper : EditorWindow
         {
             m_RenderView.SetGameObject(m_HeatMapInstance);
         }
+        else
+        {
+            AttemptReconnectWithHeatmapInstance();
+        }
         GUILayout.EndVertical();
     }
 
@@ -151,6 +161,12 @@ public class Heatmapper : EditorWindow
 
     void SystemReset()
     {
+        if (m_AggregationView != null) {
+            m_AggregationView.SystemReset();
+        }
+        if (m_RenderView != null) {
+            m_RenderView.SystemReset();
+        }
         if (m_HeatMapInstance)
         {
             m_HeatMapInstance.transform.parent = null;
@@ -184,5 +200,13 @@ public class Heatmapper : EditorWindow
         m_HeatMapInstance.name = "UnityAnalytics__Heatmap";
         m_HeatMapInstance.AddComponent<HeatmapMeshRenderer>();
         m_HeatMapInstance.GetComponent<IHeatmapRenderer>().allowRender = true;
+    }
+
+    /// <summary>
+    /// Attempts to reconnect with a heatmap instance.
+    /// </summary>
+    void AttemptReconnectWithHeatmapInstance()
+    {
+        m_HeatMapInstance = GameObject.Find("UnityAnalytics__Heatmap");
     }
 }
