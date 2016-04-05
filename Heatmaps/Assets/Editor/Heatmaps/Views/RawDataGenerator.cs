@@ -33,7 +33,7 @@ public class RawDataGenerator : EditorWindow
     private static string k_MinZ = "UnityAnalyticsRawDataGenMinZ";
     private static string k_MaxZ = "UnityAnalyticsRawDataGenMaxZ";
 
-    private static string k_IncludeRotationKey = "UnityAnalyticsRawDataGenIncludeRotation";
+    private static string k_RotationKey = "UnityAnalyticsRawDataGenRotation";
     private static string k_MinRX = "UnityAnalyticsRawDataGenMinRX";
     private static string k_MaxRX = "UnityAnalyticsRawDataGenMaxRX";
     private static string k_MinRY = "UnityAnalyticsRawDataGenMinRY";
@@ -41,7 +41,6 @@ public class RawDataGenerator : EditorWindow
     private static string k_MinRZ = "UnityAnalyticsRawDataGenMinRZ";
     private static string k_MaxRZ = "UnityAnalyticsRawDataGenMaxRZ";
 
-    private static string k_IncludeDestinationKey = "UnityAnalyticsRawDataGenIncludeDestination";
     private static string k_MinDX = "UnityAnalyticsRawDataGenMinDX";
     private static string k_MaxDX = "UnityAnalyticsRawDataGenMaxDX";
     private static string k_MinDY = "UnityAnalyticsRawDataGenMinDY";
@@ -54,7 +53,6 @@ public class RawDataGenerator : EditorWindow
     {
         EditorWindow.GetWindow(typeof(RawDataGenerator));
     }
-
 
     string m_DataPath = "";
     int m_EventCount = 100;
@@ -75,7 +73,11 @@ public class RawDataGenerator : EditorWindow
     float m_MinZ = -100f;
     float m_MaxZ = 100f;
 
-    bool m_IncludeRotation = false;
+    // Flag for rotation vs destination
+    int m_Rotational = 0;
+    static int ROTATION = 1;
+    static int DESTINATION = 2;
+
     float m_MinRX = 0f;
     float m_MaxRX = 360f;
     float m_MinRY = 0f;
@@ -83,18 +85,17 @@ public class RawDataGenerator : EditorWindow
     float m_MinRZ = 0f;
     float m_MaxRZ = 360f;
 
-    bool m_IncludeDestination = false;
     float m_MinDX = -100f;
     float m_MaxDX = 100f;
     float m_MinDY = -100f;
     float m_MaxDY = 100f;
     float m_MinDZ = -100f;
     float m_MaxDZ = 100f;
-    
+
     bool m_IncludeLevel = false;
     int m_MinLevel = 1;
     int m_MaxLevel = 99;
-    
+
     bool m_IncludeFPS = false;
     float m_MinFPS = 1f;
     float m_MaxFPS = 99f;
@@ -113,7 +114,7 @@ public class RawDataGenerator : EditorWindow
         m_MinZ = EditorPrefs.GetFloat(k_MinZ);
         m_MaxZ = EditorPrefs.GetFloat(k_MaxZ);
 
-        m_IncludeRotation = EditorPrefs.GetBool(k_IncludeRotationKey);
+        m_Rotational = EditorPrefs.GetInt(k_RotationKey);
         m_MinRX = EditorPrefs.GetFloat(k_MinRX);
         m_MaxRX = EditorPrefs.GetFloat(k_MaxRX);
         m_MinRY = EditorPrefs.GetFloat(k_MinRY);
@@ -121,7 +122,6 @@ public class RawDataGenerator : EditorWindow
         m_MinRZ = EditorPrefs.GetFloat(k_MinRZ);
         m_MaxRZ = EditorPrefs.GetFloat(k_MaxRZ);
 
-        m_IncludeDestination = EditorPrefs.GetBool(k_IncludeDestinationKey);
         m_MinDX = EditorPrefs.GetFloat(k_MinDX);
         m_MaxDX = EditorPrefs.GetFloat(k_MaxDX);
         m_MinDY = EditorPrefs.GetFloat(k_MinDY);
@@ -150,14 +150,14 @@ public class RawDataGenerator : EditorWindow
         }
         m_Events = new List<string>(eventsList);
     }
-    
+
     void OnGUI()
     {
         //output path
         EditorGUILayout.LabelField("Output path", EditorStyles.boldLabel);
         m_DataPath = EditorGUILayout.TextField(m_DataPath);
         if (m_DataPath == "") {
-            m_DataPath = Application.persistentDataPath + "/HeatmapData/";
+            m_DataPath = Application.persistentDataPath;
         }
         EditorPrefs.SetString(k_DataPathKey, m_DataPath);
         if (GUILayout.Button("Open folder"))
@@ -167,7 +167,6 @@ public class RawDataGenerator : EditorWindow
 
         //time
         IncludeSet(ref m_IncludeTime, "time", k_IncludeTimeKey);
-
 
         //x
         GUILayout.BeginHorizontal();
@@ -187,9 +186,11 @@ public class RawDataGenerator : EditorWindow
             DrawFloatRange(ref m_MinZ, ref m_MaxZ, k_MinZ, k_MaxZ);
         }
         GUILayout.EndHorizontal();
-        
-        //rotation
-        if (IncludeSet(ref m_IncludeRotation, "rotation", k_IncludeRotationKey)) {
+
+        m_Rotational = GUILayout.SelectionGrid(m_Rotational, new string[] {"None", "Rotation", "Destination"}, 3);
+        EditorPrefs.SetInt(k_RotationKey, m_Rotational);
+
+        if (m_Rotational == ROTATION) {
             GUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("rx");
             DrawFloatRange(ref m_MinRX, ref m_MaxRX, k_MinRX, k_MaxRX);
@@ -202,10 +203,8 @@ public class RawDataGenerator : EditorWindow
             EditorGUILayout.LabelField("rz");
             DrawFloatRange(ref m_MinRZ, ref m_MaxRZ, k_MinRZ, k_MaxRZ);
             GUILayout.EndHorizontal();
-        }
-        
-        //destination
-        if (IncludeSet(ref m_IncludeDestination, "destination", k_IncludeDestinationKey)) {
+        } else if (m_Rotational == DESTINATION) {
+            //destination
             GUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("dx");
             DrawFloatRange(ref m_MinDX, ref m_MaxDX, k_MinDX, k_MaxDX);
@@ -251,7 +250,7 @@ public class RawDataGenerator : EditorWindow
             GUILayout.EndHorizontal();
         }
         string currentEventsString = string.Join("|", m_Events.ToArray());
-        
+
         if (oldEventsString != currentEventsString)
         {
             EditorPrefs.SetString(k_EventNamesKey, currentEventsString);
@@ -273,6 +272,82 @@ public class RawDataGenerator : EditorWindow
         {
             GenerateData();
         }
+        CreateCode();
+    }
+
+    void CreateCode()
+    {
+        EditorGUILayout.LabelField("Example code", EditorStyles.boldLabel);
+
+        string code = "using UnityAnalyticsHeatmap;\n";
+        bool needDict = false;
+
+        if (m_IncludeFPS || m_IncludeLevel)
+        {
+            needDict = true;
+            code += "using System.Collections.Generic;\n\n";
+            code += "// Dictionary variables are examples. You must create your own!\n";
+        }
+
+        if (!m_IncludeX || !m_IncludeY)
+        {
+            code = "All events must include at a minimum x and y.";
+        }
+        else
+        {
+            code += "HeatmapEvent.Send(";
+            string testEventName = "someEvent";
+            if (m_Events != null && m_Events.Count > 0) {
+                testEventName = m_Events[0];
+            }
+            string eventName = "\"" + testEventName + "\"";
+            string transformText = "";
+            string time = "";
+            string dict = "";
+
+            if (m_Rotational == ROTATION)
+            {
+                transformText += "transform";
+            }
+            else if (m_IncludeZ)
+            {
+                transformText += "transform.position";
+            }
+            else
+            {
+                transformText += "new Vector2(transform.position.x, transform.position.y)";
+            }
+            if (m_Rotational == DESTINATION)
+            {
+                transformText += ",otherGameObject.transform.position";
+            }
+
+            if (m_IncludeTime)
+            {
+                time = ",Time.timesinceLevelLoad";
+            }
+            if (needDict)
+            {
+                dict = ",new Dictionary<string,object>(){";
+                if (m_IncludeLevel)
+                {
+                    dict += "{\"level\", levelId}";
+                }
+                if (m_IncludeLevel && m_IncludeFPS)
+                {
+                    dict += ",";
+                }
+                if (m_IncludeFPS)
+                {
+                    dict += "{\"fps\", fps}";
+                }
+                dict += "}";
+            }
+            code += eventName + "," + transformText + time + dict + ");";
+        }
+        var g = new GUIStyle(GUI.skin.textArea);
+        g.wordWrap = true;
+        EditorGUILayout.TextArea(code, g);
     }
 
     void GenerateData()
@@ -286,18 +361,14 @@ public class RawDataGenerator : EditorWindow
 
         for (int a = 0; a < m_EventCount; a++)
         {
-
-
-            string eventName = m_Events[UnityEngine.Random.Range(0, m_Events.Count)];
+            string eventName = "Heatmap." + m_Events[UnityEngine.Random.Range(0, m_Events.Count)];
             string evt = "";
-
 
             // Date
             DateTime dt = now.Subtract(new TimeSpan(TimeSpan.TicksPerSecond * (m_EventCount - a)));
             string dts = dt.ToString("yyyy-MM-dd hh:mm:ss.ms");
             evt += dts + "\t";
             if (currentFileLines == 0) {
-
                 firstDate = Math.Round((dt - epoch).TotalSeconds);
             }
 
@@ -313,26 +384,26 @@ public class RawDataGenerator : EditorWindow
                 float t = UnityEngine.Random.Range(0, 300f);
                 evt += "\"t\":\"" + t + "\",";
             }
-            
+
             if (m_IncludeX)
             {
                 float x = UnityEngine.Random.Range(m_MinX, m_MaxX);
                 evt += "\"x\":\"" + x + "\",";
             }
-            
+
             if (m_IncludeY)
             {
                 float y = UnityEngine.Random.Range(m_MinY, m_MaxY);
                 evt += "\"y\":\"" + y + "\",";
             }
-            
+
             if (m_IncludeZ)
             {
                 float z = UnityEngine.Random.Range(m_MinZ, m_MaxZ);
                 evt += "\"z\":\"" + z + "\",";
             }
 
-            if (m_IncludeRotation)
+            if (m_Rotational == ROTATION)
             {
                 float rx = UnityEngine.Random.Range(m_MinRX, m_MaxRX);
                 evt += "\"rx\":\"" + rx + "\",";
@@ -341,8 +412,8 @@ public class RawDataGenerator : EditorWindow
                 float rz = UnityEngine.Random.Range(m_MinRZ, m_MaxRZ);
                 evt += "\"rz\":\"" + rz + "\",";
             }
-            
-            if (m_IncludeDestination)
+
+            if (m_Rotational == DESTINATION)
             {
                 float dx = UnityEngine.Random.Range(m_MinDX, m_MaxDX);
                 evt += "\"dx\":\"" + dx + "\",";
@@ -351,12 +422,12 @@ public class RawDataGenerator : EditorWindow
                 float dz = UnityEngine.Random.Range(m_MinDZ, m_MaxDZ);
                 evt += "\"dz\":\"" + dz + "\",";
             }
-            
+
             if (m_IncludeLevel) {
                 int level =  UnityEngine.Random.Range(m_MinLevel, m_MaxLevel);
                 evt += "\"level\":\"" + level + "\",";
             }
-            
+
             if (m_IncludeFPS) {
                 float fps =  UnityEngine.Random.Range(m_MinFPS, m_MaxFPS);
                 evt += "\"fps\":\"" + fps + "\",";
@@ -378,7 +449,7 @@ public class RawDataGenerator : EditorWindow
         EditorPrefs.SetBool(key, value);
         return value;
     }
-    
+
     void DrawFloatRange(ref float min, ref float max, string minKey, string maxKey)
     {
         float oldMin = min;
@@ -394,7 +465,7 @@ public class RawDataGenerator : EditorWindow
             EditorPrefs.SetFloat(maxKey, max);
         }
     }
-    
+
     void DrawIntRange(ref int min, ref int max, string minKey, string maxKey)
     {
         int oldMin = min;
@@ -413,7 +484,7 @@ public class RawDataGenerator : EditorWindow
 
     void SaveFile(string data, double firstDate)
     {
-        string savePath = GetSavePath();
+        string savePath = System.IO.Path.Combine(GetSavePath(), "HeatmapData");
         // Create the save path if necessary
         if (!System.IO.Directory.Exists(savePath))
         {
@@ -423,7 +494,7 @@ public class RawDataGenerator : EditorWindow
         string path = System.IO.Path.Combine(savePath, outputFileName);
         System.IO.File.WriteAllText(path, data);
     }
-    
+
     string GetSavePath()
     {
         return m_DataPath;
