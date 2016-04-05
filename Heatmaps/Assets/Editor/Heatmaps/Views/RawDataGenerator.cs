@@ -160,10 +160,19 @@ public class RawDataGenerator : EditorWindow
             m_DataPath = Application.persistentDataPath;
         }
         EditorPrefs.SetString(k_DataPathKey, m_DataPath);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Purge"))
+        {
+            if (EditorUtility.DisplayDialog("Destroy local data?", "You are about to delete your local heatmaps data cache, meaning you'll have to reload from the server (or regenerate from this tool). Are you sure?", "Purge", "Cancel"))
+            {
+                PurgeData();
+            }
+        }
         if (GUILayout.Button("Open folder"))
         {
             EditorUtility.RevealInFinder(m_DataPath);
         }
+        GUILayout.EndHorizontal();
 
         //time
         IncludeSet(ref m_IncludeTime, "time", k_IncludeTimeKey);
@@ -498,6 +507,15 @@ public class RawDataGenerator : EditorWindow
     string GetSavePath()
     {
         return m_DataPath;
+    }
+    
+    public void PurgeData()
+    {
+        string savePath = System.IO.Path.Combine(GetSavePath(), "HeatmapData");
+        if (System.IO.Directory.Exists(savePath))
+        {
+            System.IO.Directory.Delete(savePath, true);
+        }
     }
 }
 
