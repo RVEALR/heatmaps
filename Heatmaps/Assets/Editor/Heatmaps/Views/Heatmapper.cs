@@ -21,8 +21,9 @@ public class Heatmapper : EditorWindow
 
     public Heatmapper()
     {
-        m_Aggregator = new HeatmapAggregator(Application.persistentDataPath);
-        m_EventClient = new RawEventClient(Application.persistentDataPath);
+        m_DataPath = "";
+        m_Aggregator = new HeatmapAggregator(m_DataPath);
+        m_EventClient = new RawEventClient(m_DataPath);
     }
 
     // Views
@@ -41,6 +42,7 @@ public class Heatmapper : EditorWindow
     bool m_LocalOnly = false;
 
     Dictionary<string, object> m_PointData;
+    string m_DataPath = "";
 
     void OnGUI()
     {
@@ -48,17 +50,17 @@ public class Heatmapper : EditorWindow
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Reset"))
         {
-			SystemReset();
+            SystemReset();
         }
         if (GUILayout.Button("Documentation"))
         {
-			Application.OpenURL("https://bitbucket.org/Unity-Technologies/heatmaps/wiki/Home");
+            Application.OpenURL("https://bitbucket.org/Unity-Technologies/heatmaps/wiki/Home");
         }
         if (GUILayout.Button("Purge"))
         {
             if (EditorUtility.DisplayDialog("Destroy local data?", "You are about to delete your local heatmaps data cache, meaning you'll have to reload from the server. Are you sure?", "Purge", "Cancel"))
             {
-				m_EventClient.PurgeData();
+                m_EventClient.PurgeData();
             }
         }
         GUILayout.EndHorizontal();
@@ -131,9 +133,9 @@ public class Heatmapper : EditorWindow
                 CreateHeatmapInstance();
             }
 
-            if (m_HeatMapInstance.GetComponent<HeatmapMeshRenderer>() != null)
+            if (m_HeatMapInstance.GetComponent<IHeatmapRenderer>() != null)
             {
-                m_HeatMapInstance.GetComponent<HeatmapMeshRenderer>().UpdatePointData(m_PointData["heatData"] as HeatPoint[], (float)m_PointData["maxDensity"]);
+                m_HeatMapInstance.GetComponent<IHeatmapRenderer>().UpdatePointData(m_PointData["heatData"] as HeatPoint[], (float)m_PointData["maxDensity"]);
             }
 
             if (m_RenderView != null)

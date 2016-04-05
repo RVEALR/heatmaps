@@ -28,6 +28,15 @@ namespace UnityAnalyticsHeatmap
 
         public HeatmapAggregator(string dataPath)
         {
+            SetDataPath(dataPath);
+        }
+
+        /// <summary>
+        /// Sets the data path.
+        /// </summary>
+        /// <param name="dataPath">The location on the host machine from which to retrieve data.</param>
+        public void SetDataPath(string dataPath)
+        {
             m_DataPath = dataPath;
         }
 
@@ -105,8 +114,8 @@ namespace UnityAnalyticsHeatmap
             List<string> groupOn,
             List<string> eventsWhitelist, string outputFileName)
         {
-            // Every point will contain these properties
-            var pointProperties = new string[]{ "x", "y", "z", "t", "rx", "ry", "rz" };
+            // Every point contains at least x/y and potentially these others
+            var pointProperties = new string[]{ "x", "y", "z", "t", "rx", "ry", "rz", "dx", "dy", "dz" };
 
             var reader = new StreamReader(path);
             using (reader)
@@ -185,6 +194,7 @@ namespace UnityAnalyticsHeatmap
                         tupleList.Add(arbitraryValue);
                         if (pointProperties.Contains(ag))
                         {
+                            Debug.Log(ag);
                             point[ag] = floatValue;
                         }
                     }
@@ -195,6 +205,8 @@ namespace UnityAnalyticsHeatmap
                     {
                         // Use existing point if it exists
                         point = m_PointDict[tuple];
+                        // TODO
+                        // This is where we need to look to remap density
                         point["d"] = point["d"] + 1;
                     }
                     else

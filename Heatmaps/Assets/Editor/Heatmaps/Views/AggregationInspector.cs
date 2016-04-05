@@ -14,6 +14,8 @@ namespace UnityAnalyticsHeatmap
     public class AggregationInspector
     {
         const string k_UrlKey = "UnityAnalyticsHeatmapDataExportUrlKey";
+        const string k_DataPathKey = "UnityAnalyticsHeatmapDataPathKey";
+        const string k_UsePersistentDataPathKey = "UnityAnalyticsHeatmapUsePersistentDataPathKey";
 
         const string k_SpaceKey = "UnityAnalyticsHeatmapAggregationSpace";
         const string k_KeyToTime = "UnityAnalyticsHeatmapAggregationTime";
@@ -29,7 +31,8 @@ namespace UnityAnalyticsHeatmap
         const float k_DefaultAngle = 15f;
 
         string m_RawDataPath = "";
-
+        string m_DataPath = "";
+        bool m_UsePersistentDataPath = true;
 
         Dictionary<string, HeatPoint[]> m_HeatData;
 
@@ -59,10 +62,12 @@ namespace UnityAnalyticsHeatmap
 
             // Restore cached paths
             m_RawDataPath = EditorPrefs.GetString(k_UrlKey);
+            m_UsePersistentDataPath = EditorPrefs.GetBool(k_UsePersistentDataPathKey);
+            m_DataPath = EditorPrefs.GetString(k_DataPathKey);
 
             // Set dates based on today (should this be cached?)
-            m_EndDate = String.Format("{0:yyyy-MM-dd}", DateTime.Now);
-            m_StartDate = String.Format("{0:yyyy-MM-dd}", DateTime.Now.Subtract(new TimeSpan(5, 0, 0, 0)));
+            m_EndDate = String.Format("{0:yyyy-MM-dd}", DateTime.UtcNow);
+            m_StartDate = String.Format("{0:yyyy-MM-dd}", DateTime.UtcNow.Subtract(new TimeSpan(5, 0, 0, 0)));
 
             // Restore other options
             m_Space = EditorPrefs.GetFloat(k_SpaceKey) == 0 ? k_DefaultSpace : EditorPrefs.GetFloat(k_SpaceKey);
@@ -145,6 +150,32 @@ namespace UnityAnalyticsHeatmap
             {
                 EditorPrefs.SetString(k_UrlKey, m_RawDataPath);
             }
+            bool oldUsePersistentDataPath = m_UsePersistentDataPath;
+            m_UsePersistentDataPath = EditorGUILayout.Toggle(new GUIContent("Use persistent data path", "By default, use Application.persistentDataPath"), m_UsePersistentDataPath);
+            if (oldUsePersistentDataPath != m_UsePersistentDataPath)
+            {
+                EditorPrefs.SetBool(k_UsePersistentDataPathKey, m_UsePersistentDataPath);
+            }
+
+            if (m_UsePersistentDataPath)
+            {
+                m_DataPath = Application.persistentDataPath;
+            }
+            else
+            {
+                string oldDataPath = m_DataPath;
+                m_DataPath = EditorGUILayout.TextField(new GUIContent("Save to path", "Where to save and retrieve data (defaults to Application.persistentDataPath"), m_DataPath);
+                if (string.IsNullOrEmpty(m_DataPath))
+                {
+                    m_DataPath = Application.persistentDataPath;
+                }
+                if (oldDataPath != m_DataPath )
+                {
+                    EditorPrefs.SetString(k_DataPathKey, m_DataPath);
+                }
+            }
+            m_Aggregator.SetDataPath(m_DataPath);
+            m_RawEventClient.SetDataPath(m_DataPath);
 
             m_StartDate = EditorGUILayout.TextField(new GUIContent("Start Date (YYYY-MM-DD)", "Start date as ISO-8601 datetime"), m_StartDate);
             m_EndDate = EditorGUILayout.TextField(new GUIContent("End Date (YYYY-MM-DD)", "End date as ISO-8601 datetime"), m_EndDate);
@@ -273,22 +304,22 @@ namespace UnityAnalyticsHeatmap
                 DateTime start, end;
                 try
                 {
-                    start = DateTime.Parse(m_StartDate);
+                    start = DateTime.Parse(m_StartDate).ToUniversalTime();
                 }
                 catch
                 {
-                    start = DateTime.Parse("2000-01-01");
+                    start = DateTime.Parse("2000-01-01").ToUniversalTime();
                 }
                 try
                 {
-                    end = DateTime.Parse(m_EndDate);
+                    end = DateTime.Parse(m_EndDate).ToUniversalTime();
                 }
                 catch
                 {
                     end = DateTime.UtcNow;
                 }
 
-                var aggregateOn = new List<string>(){ "x", "y", "z", "t", "rx", "ry", "rz" };
+                var aggregateOn = new List<string>(){ "x", "y", "z", "t", "rx", "ry", "rz", "dx", "dy", "dz", "z" };
 
                 // Specify smoothing properties (must be a subset of aggregateOn)
                 var smoothOn = new Dictionary<string, float>();
@@ -296,6 +327,9 @@ namespace UnityAnalyticsHeatmap
                 smoothOn.Add("x", m_Space);
                 smoothOn.Add("y", m_Space);
                 smoothOn.Add("z", m_Space);
+                smoothOn.Add("dx", m_Space);
+                smoothOn.Add("dy", m_Space);
+                smoothOn.Add("dz", m_Space);
                 // Time is optional
                 if (!m_AggregateTime)
                 {

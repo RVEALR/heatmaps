@@ -285,7 +285,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     void RenderSubmap(GameObject go, List<HeatPoint> submap)
     {
-		
         var allTris = new List<int[]>();
         var allVectors = new List<Vector3[]>();
         Vector3[] vector3;
@@ -297,6 +296,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
             Vector3 position = submap[a].position;
             Vector3 rotation = submap[a].rotation;
+            Vector3 destination = submap[a].destination;
 
             switch (m_RenderStyle)
             {
@@ -319,6 +319,11 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                     vector3 = AddTriVectorsToMesh(position.x, position.y, position.z);
                     allVectors.Add(vector3);
                     allTris.Add(AddTriTrisToMesh(a * vector3.Length));
+                    break;
+                case RenderShape.PointToPoint:
+                    vector3 = AddP2PVectorsToMesh(position, destination);
+                    allVectors.Add(vector3);
+                    allTris.Add(AddP2PTrisToMesh(a * vector3.Length));
                     break;
             }
         }
@@ -358,18 +363,18 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     {
         var tris = new int[]
         {
-            0, 1, 2,	// bottom
+            0, 1, 2,    // bottom
             0, 2, 3,
-            4, 6, 5,	// top
+            4, 6, 5,    // top
             4, 7, 6,
-            1, 6, 2,	// right
+            1, 6, 2,    // right
             1, 5, 6,
 
-            3, 4, 0,	// left
+            3, 4, 0,    // left
             3, 7, 4,
-            2, 7, 3,	// back
+            2, 7, 3,    // back
             2, 6, 7,
-            0, 4, 5,	// front
+            0, 4, 5,    // front
             0, 5, 1
         };
         for (int a = 0; a < tris.Length; a++)
@@ -408,9 +413,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     {
         var tris = new int[]
         {
-            0, 1, 5,	// left
-            6, 0, 5,	//right
-            3, 4, 2		// head
+            0, 1, 5,    // left
+            6, 0, 5,    //right
+            3, 4, 2	    // head
         };
         for (int a = 0; a < tris.Length; a++)
         {
@@ -489,7 +494,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                 p2 = new Vector3(x + halfP, y - halfP, z);
                 break;
         }
-
         return new Vector3[] { p0, p1, p2 };
     }
 
@@ -498,7 +502,65 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     {
         var tris = new int[]
         {
-            offset, offset + 2, offset + 1	// top
+            offset, offset + 2, offset + 1  // top
+        };
+        return tris;
+    }
+
+    Vector3[] AddP2PVectorsToMesh(Vector3 fromVector, Vector3 toVector)
+    {
+        Vector3 relativePos = toVector - fromVector;
+        Quaternion q = Quaternion.LookRotation(relativePos);
+        float distance = Vector3.Distance(fromVector, toVector);
+
+        float arrowBaseZ = distance - (m_ParticleSize * 1.5f);
+        float halfP = m_ParticleSize * .5f;
+
+        // base
+        var p0 = new Vector3(-m_ParticleSize, 0f, -halfP);
+        var p1 = new Vector3(-m_ParticleSize, 0f, halfP);
+        var p2 = new Vector3(m_ParticleSize, 0f, halfP);
+        var p3 = new Vector3(m_ParticleSize, 0f, -halfP);
+        // stem
+        var p4 = new Vector3(-.5f * m_ParticleSize, 0f, -halfP);
+        var p5 = new Vector3(-.5f * m_ParticleSize, 0f, arrowBaseZ);
+        var p6 = new Vector3(.5f * m_ParticleSize, 0f, arrowBaseZ);
+        var p7 = new Vector3(.5f * m_ParticleSize, 0f, -halfP);
+        // arrow
+        var p8 = new Vector3(-m_ParticleSize, 0f, arrowBaseZ);
+        var p9 = new Vector3(0f, 0f, distance);
+        var p10 = new Vector3(m_ParticleSize, 0f, arrowBaseZ);
+        // head
+        var p11 = new Vector3(-m_ParticleSize, 0f, distance);
+        var p12 = new Vector3(-m_ParticleSize, 0f, distance + halfP);
+        var p13 = new Vector3(m_ParticleSize, 0f, distance + halfP);
+        var p14 = new Vector3(m_ParticleSize, 0f, distance);
+
+        var v = new Vector3[] { p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14 };
+        for (int a = 0; a < v.Length; a++)
+        {
+            Matrix4x4 m = Matrix4x4.TRS(fromVector, q, Vector3.one);
+            v[a] = m.MultiplyPoint3x4(v[a]);
+        }
+        return v;
+    }
+
+    //Generate a procedural P2P
+    int[] AddP2PTrisToMesh(int offset)
+    {
+        var tris = new int[]
+        {
+            // base
+            offset, offset + 1, offset + 2,
+            offset, offset + 2, offset + 3,
+            // stem
+            offset + 4, offset + 5, offset + 6,
+            offset + 4, offset + 6, offset + 7,
+            // arrow
+            offset + 8, offset + 9, offset + 10,
+            // head
+            offset + 11, offset + 12, offset + 13,
+            offset + 11, offset + 13, offset + 14
         };
         return tris;
     }
@@ -518,7 +580,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                 verts = 8;
                 break;
             case RenderShape.Arrow:
-                verts = 6;
+                verts = 7;
                 break;
             case RenderShape.Square:
                 verts = 4;
@@ -526,31 +588,11 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             case RenderShape.Triangle:
                 verts = 3;
                 break;
+            case RenderShape.PointToPoint:
+                verts = 15;
+                break;
         }
         return verts;
-    }
-
-
-
-    int GetTrisForShape()
-    {
-        int tris = 0;
-        switch (m_RenderStyle)
-        {
-            case RenderShape.Cube:
-                tris = 32;
-                break;
-            case RenderShape.Arrow:
-                tris = 4;
-                break;
-            case RenderShape.Square:
-                tris = 6;
-                break;
-            case RenderShape.Triangle:
-                tris = 3;
-                break;
-        }
-        return tris;
     }
 
     Material PickMaterial(float value)

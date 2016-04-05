@@ -34,6 +34,15 @@ namespace UnityAnalyticsHeatmap
 
         public RawEventClient(string dataPath)
         {
+            SetDataPath(dataPath);
+        }
+        
+        /// <summary>
+        /// Sets the data path.
+        /// </summary>
+        /// <param name="dataPath">The location on the host machine in which to save retrieved data.</param>
+        public void SetDataPath(string dataPath)
+        {
             m_DataPath = dataPath;
         }
 

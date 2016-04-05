@@ -325,7 +325,6 @@ namespace UnityAnalyticsHeatmap
                 a = 1f;
             }
             return new Color(r, g, b, a);
-            ;
         }
 
         Color SetAndSaveColor(GUIContent content, string key, Color currentColor)
