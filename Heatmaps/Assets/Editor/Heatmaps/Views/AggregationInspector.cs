@@ -26,6 +26,9 @@ namespace UnityAnalyticsHeatmap
         const string k_ArbitraryFieldsKey = "UnityAnalyticsHeatmapAggregationArbitraryFields";
         const string k_EventsKey = "UnityAnalyticsHeatmapAggregationEvents";
 
+        const string k_RemapColorKey = "UnityAnalyticsHeatmapRemapColorKey";
+        const string k_RemapColorFieldKey = "UnityAnalyticsHeatmapRemapColorFieldKey";
+
         const float k_DefaultSpace = 10f;
         const float k_DefaultTime = 10f;
         const float k_DefaultAngle = 15f;
@@ -52,6 +55,9 @@ namespace UnityAnalyticsHeatmap
         bool m_AggregateAngle = true;
         bool m_AggregateDevices = true;
 
+        bool m_RemapColor;
+        string m_RemapColorField = "";
+
         List<string> m_ArbitraryFields = new List<string>{ };
         List<string> m_Events = new List<string>{ };
 
@@ -76,6 +82,8 @@ namespace UnityAnalyticsHeatmap
             m_AggregateTime = EditorPrefs.GetBool(k_AggregateTimeKey);
             m_AggregateAngle = EditorPrefs.GetBool(k_AggregateAngleKey);
             m_AggregateDevices = EditorPrefs.GetBool(k_AggregateDevicesKey);
+            m_RemapColor = EditorPrefs.GetBool(k_RemapColorKey);
+            m_RemapColorField = EditorPrefs.GetString(k_RemapColorFieldKey);
 
             // Restore list of arbitrary aggregation fields
             string loadedArbitraryFields = EditorPrefs.GetString(k_ArbitraryFieldsKey);
@@ -123,7 +131,7 @@ namespace UnityAnalyticsHeatmap
                 DateTime start, end;
                 try
                 {
-                    start = DateTime.Parse(m_StartDate);
+                    start = DateTime.Parse(m_StartDate).ToUniversalTime();
                 }
                 catch
                 {
@@ -131,7 +139,8 @@ namespace UnityAnalyticsHeatmap
                 }
                 try
                 {
-                    end = DateTime.Parse(m_EndDate);
+                    // Add one day to include the whole of that day
+                    end = DateTime.Parse(m_EndDate).ToUniversalTime().Add(new TimeSpan(24, 0, 0));
                 }
                 catch
                 {
@@ -190,8 +199,6 @@ namespace UnityAnalyticsHeatmap
                 EditorPrefs.SetFloat(k_SpaceKey, m_Space);
             }
 
-
-           
             bool oldAggregateTime = m_AggregateTime;
             m_AggregateTime = EditorGUILayout.Toggle(new GUIContent("Time", "Units of space will aggregate, but units of time won't"), m_AggregateTime);
             if (oldAggregateTime != m_AggregateTime)
@@ -211,9 +218,7 @@ namespace UnityAnalyticsHeatmap
             {
                 m_Time = 1f;
             }
-            
 
-            
             bool oldAggregateAngle = m_AggregateAngle;
             m_AggregateAngle = EditorGUILayout.Toggle(new GUIContent("Direction", "Units of space will aggregate, but different angles won't"), m_AggregateAngle);
             if (oldAggregateAngle != m_AggregateAngle)
@@ -233,20 +238,34 @@ namespace UnityAnalyticsHeatmap
             {
                 m_Angle = 1f;
             }
-            
 
             bool oldAggregateDevices = m_AggregateDevices;
-            m_AggregateDevices = EditorGUILayout.Toggle(new GUIContent("Devices", "Takes no account of unque device IDs. NOTE: Disaggregating device IDs can be slow!"), m_AggregateDevices);
+            m_AggregateDevices = EditorGUILayout.Toggle(new GUIContent("Unique Devices", "Separate each device into its own list. NOTE: Disaggregating device IDs can be slow!"), m_AggregateDevices);
             if (oldAggregateDevices != m_AggregateDevices)
             {
                 EditorPrefs.SetBool(k_AggregateDevicesKey, m_AggregateDevices);
             }
             EditorGUILayout.EndVertical();
 
+
+
+            bool oldRemapColor = m_RemapColor;
+            m_RemapColor = EditorGUILayout.Toggle(new GUIContent("Remap color to field", "By default, heatmap color is determined by event density. Checking this box allows you to remap to a specific field (e.g., use to identify fps drops.)"), m_RemapColor);
+            if (oldRemapColor != m_RemapColor)
+            {
+                EditorPrefs.SetBool(k_RemapColorKey, m_RemapColor);
+            }
+            if (m_RemapColor)
+            {
+                string oldRemapField = m_RemapColorField;
+                m_RemapColorField = EditorGUILayout.TextField(new GUIContent("Remap to","Name the field to remap"), m_RemapColorField);
+                if (oldRemapField != m_RemapColorField)
+                {
+                    EditorPrefs.SetString(k_RemapColorFieldKey, m_RemapColorField);
+                }
+            }
+
             string oldArbitraryFieldsString = string.Join("|", m_ArbitraryFields.ToArray());
-
-
-
             if (GUILayout.Button(new GUIContent("Separate on Field", "Specify arbitrary fields with which to bucket data.")))
             {
                 m_ArbitraryFields.Add("Field name");
@@ -312,11 +331,15 @@ namespace UnityAnalyticsHeatmap
                 }
                 try
                 {
-                    end = DateTime.Parse(m_EndDate).ToUniversalTime();
+                    end = DateTime.Parse(m_EndDate).ToUniversalTime().Add(new TimeSpan(24,0,0));
                 }
                 catch
                 {
                     end = DateTime.UtcNow;
+                }
+                if (m_RemapColor && string.IsNullOrEmpty(m_RemapColorField))
+                {
+                    Debug.LogWarning("You have selected 'Remap color to field' but haven't specified a field name. No remapping can occur.");
                 }
 
                 var aggregateOn = new List<string>(){ "x", "y", "z", "t", "rx", "ry", "rz", "dx", "dy", "dz", "z" };
@@ -343,6 +366,8 @@ namespace UnityAnalyticsHeatmap
                     smoothOn.Add("rz", m_Angle);
                 }
 
+                string remapToField = m_RemapColor ? m_RemapColorField : "";
+
                 // Specify groupings
                 // Always group on eventName
                 var groupOn = new List<string>(){ "eventName" };
@@ -359,7 +384,7 @@ namespace UnityAnalyticsHeatmap
                     groupOn.AddRange(m_ArbitraryFields);
                 }
 
-                m_Aggregator.Process(aggregationHandler, fileList, start, end,
+                m_Aggregator.Process(aggregationHandler, fileList, start, end, remapToField,
                     aggregateOn, smoothOn, groupOn, m_Events);
             }
         }

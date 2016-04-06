@@ -13,9 +13,6 @@ namespace UnityAnalyticsHeatmap
 {
     public class HeatmapRendererInspector
     {
-        const string k_RemapColorKey = "UnityAnalyticsHeatmapRemapColorKey";
-        const string k_RemapColorFieldKey = "UnityAnalyticsHeatmapRemapColorFieldKey";
-
         const string k_HighColorDensityKey = "UnityAnalyticsHeatmapHighDensityColor";
         const string k_MediumColorDensityKey = "UnityAnalyticsHeatmapMediumDensityColor";
         const string k_LowColorDensityKey = "UnityAnalyticsHeatmapLowDensityColor";
@@ -32,9 +29,6 @@ namespace UnityAnalyticsHeatmap
         const string k_ParticleDirectionKey = "UnityAnalyticsHeatmapParticleDirection";
 
         Heatmapper m_Heatmapper;
-
-
-        bool m_RemapColor;
 
         Color m_HighDensityColor = new Color(1f, 0, 0, .1f);
         Color m_MediumDensityColor = new Color(1f, 1f, 0, .1f);
@@ -122,10 +116,7 @@ namespace UnityAnalyticsHeatmap
             {
                 EditorPrefs.SetFloat(k_HighThresholdKey, m_HighThreshold);
             }
-
-            m_RemapColor = EditorGUILayout.Toggle(new GUIContent("Remap color to field", "Do stuff"), m_RemapColor);
             EditorGUILayout.EndVertical();
-
 
             // TIME WINDOW
             EditorGUILayout.BeginVertical("box");

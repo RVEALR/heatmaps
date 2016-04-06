@@ -46,12 +46,14 @@ namespace UnityAnalyticsHeatmap
         /// <param name="inputFiles">A list of one or more raw data text files.</param>
         /// <param name="startDate">Any timestamp prior to this ISO 8601 date will be trimmed.</param>
         /// <param name="endDate">Any timestamp after to this ISO 8601 date will be trimmed.</param>
+        /// <param name="remapDensityToField">If not blank, remaps density (aka color) to the value of the field.</param> 
         /// <param name="aggregateOn">A list of properties on which to specify point uniqueness.</param>
         /// <param name="smoothOn">A dictionary of properties that are smoothable, along with their smoothing values. <b>Must be a subset of aggregateOn.</b></param>
         /// <param name="groupOn">A list of properties on which to group resulting lists (supports arbitrary data, plus 'eventName' and 'deviceID').</param>
         /// <param name="events">A list of events to explicitly include.</param>
         public void Process(CompletionHandler completionHandler,
             List<string> inputFiles, DateTime startDate, DateTime endDate,
+            string remapDensityToField,
             List<string> aggregateOn,
             Dictionary<string, float> smoothOn,
             List<string> groupOn,
@@ -70,7 +72,7 @@ namespace UnityAnalyticsHeatmap
             foreach (string file in inputFiles)
             {
                 m_ReportFiles++;
-                LoadStream(outputData, file, startDate, endDate,
+                LoadStream(outputData, file, startDate, endDate, remapDensityToField,
                     aggregateOn, smoothOn, groupOn,
                     events, outputFileName);
             }
@@ -109,6 +111,7 @@ namespace UnityAnalyticsHeatmap
         internal void LoadStream(Dictionary<Tuplish, List<Dictionary<string, float>>> outputData,
             string path, 
             DateTime startDate, DateTime endDate,
+            string remapDensityToField,
             List<string> aggregateOn,
             Dictionary<string, float> smoothOn,
             List<string> groupOn,
@@ -116,6 +119,11 @@ namespace UnityAnalyticsHeatmap
         {
             // Every point contains at least x/y and potentially these others
             var pointProperties = new string[]{ "x", "y", "z", "t", "rx", "ry", "rz", "dx", "dy", "dz" };
+            bool doRemap = !string.IsNullOrEmpty(remapDensityToField);
+            if (doRemap)
+            {
+                aggregateOn.Add(remapDensityToField);
+            }
 
             var reader = new StreamReader(path);
             using (reader)
@@ -127,7 +135,6 @@ namespace UnityAnalyticsHeatmap
                 for (int a = 0; a < rows.Length; a++)
                 {
                     string[] rowData = rows[a].Split('\t');
-
                     if (string.IsNullOrEmpty(rowData[0]) || string.IsNullOrEmpty(rowData[2]) || string.IsNullOrEmpty(rowData[3]))
                     {
                         // Re-enable this log if you want to see empty lines
@@ -194,9 +201,15 @@ namespace UnityAnalyticsHeatmap
                         tupleList.Add(arbitraryValue);
                         if (pointProperties.Contains(ag))
                         {
-                            Debug.Log(ag);
                             point[ag] = floatValue;
                         }
+                    }
+
+                    bool remappable = false;
+                    float remapValue = 0f;
+                    if (doRemap && datum.ContainsKey(remapDensityToField)) {
+                        remappable = true;
+                        float.TryParse( (string)datum[remapDensityToField], out remapValue);
                     }
 
                     // Tuple-like key to determine if this point is unique, or needs to be merged with another
@@ -205,13 +218,11 @@ namespace UnityAnalyticsHeatmap
                     {
                         // Use existing point if it exists
                         point = m_PointDict[tuple];
-                        // TODO
-                        // This is where we need to look to remap density
-                        point["d"] = point["d"] + 1;
+                        point["d"] = remappable ? remapValue : point["d"] + 1;
                     }
                     else
                     {
-                        point["d"] = 1;
+                        point["d"] = remappable ? remapValue : 1;
                         m_PointDict[tuple] = point;
 
                         // Group
