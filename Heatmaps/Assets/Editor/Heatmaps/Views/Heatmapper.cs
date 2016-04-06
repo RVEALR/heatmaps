@@ -13,7 +13,7 @@ using UnityEngine;
 public class Heatmapper : EditorWindow
 {
 
-    [MenuItem("Window/Heatmapper #%h")]
+    [MenuItem("Window/Unity Analytics/Heatmapper #%h")]
     static void HeatmapperMenuOption()
     {
         EditorWindow.GetWindow(typeof(Heatmapper));
@@ -44,8 +44,11 @@ public class Heatmapper : EditorWindow
     Dictionary<string, object> m_PointData;
     string m_DataPath = "";
 
+    Vector2 m_ScrollPosition;
+
     void OnGUI()
     {
+        m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
         GUILayout.BeginVertical("box");
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Reset"))
@@ -113,6 +116,8 @@ public class Heatmapper : EditorWindow
             AttemptReconnectWithHeatmapInstance();
         }
         GUILayout.EndVertical();
+
+        EditorGUILayout.EndScrollView();
     }
 
     void Update()
