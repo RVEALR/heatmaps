@@ -125,30 +125,28 @@ namespace UnityAnalyticsHeatmap
         public void Fetch(AggregationHandler handler, bool localOnly)
         {
             m_AggregationHandler = handler;
-            if (!string.IsNullOrEmpty(m_RawDataPath))
-            {
-                EditorPrefs.SetString(k_UrlKey, m_RawDataPath);
-                DateTime start, end;
-                try
-                {
-                    start = DateTime.Parse(m_StartDate).ToUniversalTime();
-                }
-                catch
-                {
-                    throw new Exception("The start date is not properly formatted. Correct format is YYYY-MM-DD.");
-                }
-                try
-                {
-                    // Add one day to include the whole of that day
-                    end = DateTime.Parse(m_EndDate).ToUniversalTime().Add(new TimeSpan(24, 0, 0));
-                }
-                catch
-                {
-                    throw new Exception("The end date is not properly formatted. Correct format is YYYY-MM-DD.");
-                }
 
-                m_RawEventClient.Fetch(m_RawDataPath, localOnly, new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end, rawFetchHandler);
+            EditorPrefs.SetString(k_UrlKey, m_RawDataPath);
+            DateTime start, end;
+            try
+            {
+                start = DateTime.Parse(m_StartDate).ToUniversalTime();
             }
+            catch
+            {
+                throw new Exception("The start date is not properly formatted. Correct format is YYYY-MM-DD.");
+            }
+            try
+            {
+                // Add one day to include the whole of that day
+                end = DateTime.Parse(m_EndDate).ToUniversalTime().Add(new TimeSpan(24, 0, 0));
+            }
+            catch
+            {
+                throw new Exception("The end date is not properly formatted. Correct format is YYYY-MM-DD.");
+            }
+
+            m_RawEventClient.Fetch(m_RawDataPath, localOnly, new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end, rawFetchHandler);
         }
 
         public void OnGUI()
