@@ -2,6 +2,7 @@
 using System;
 using UnityEngine;
 using UnityEditor;
+using UnityAnalyticsHeatmap;
 using System.Collections.Generic;
 
 public class RawDataGenerator : EditorWindow
@@ -62,15 +63,41 @@ public class RawDataGenerator : EditorWindow
     private static float defaultMaxFPS = 99f;
 
     
-    [MenuItem("Window/RawDataGenerator #%r")]
+    [MenuItem("Window/Unity Analytics/RawDataGenerator #%r")]
     static void RawDataGeneratorMenuOption()
     {
         EditorWindow.GetWindow(typeof(RawDataGenerator));
     }
 
     string m_DataPath = "";
+
     int m_EventCount = defaultEventCount;
     int m_DeviceCount = defaultDeviceCount;
+
+
+    int m_DataStoryIndex = 0;
+    GUIContent[] m_DataStoryList = new GUIContent[]{ 
+        new GUIContent("Basic Functionality"),
+        new GUIContent("Really Big Game"),
+        new GUIContent("Multilevel Game"),
+        new GUIContent("FPS Dropoff"), 
+        new GUIContent("VR Lookat")
+    };
+    DataStory[] m_DataStories = new DataStory[]{
+        new BasicDataStory(),
+        new ReallyBigDataStory(),
+        new MultiLevelDataStory(),
+        new FPSDropoffDataStory(),
+        new VRLookAtDataStory()
+    };
+
+
+
+
+    int m_DataSource = 0;
+    static int RANDOM = 0;
+    static int DEMO = 1;
+
     List<string> m_Events = new List<string>{ };
 
     bool m_IncludeTime = true;
@@ -114,6 +141,8 @@ public class RawDataGenerator : EditorWindow
     float m_MinFPS = defaultMinFPS;
     float m_MaxFPS = defaultMaxFPS;
 
+    Vector2 m_ScrollPosition;
+
     public RawDataGenerator()
     {
         
@@ -129,12 +158,7 @@ public class RawDataGenerator : EditorWindow
 
     void OnGUI()
     {
-        //output path
-        EditorGUILayout.LabelField("Output path", EditorStyles.boldLabel);
-        m_DataPath = EditorGUILayout.TextField(m_DataPath);
-        if (m_DataPath == "") {
-            m_DataPath = Application.persistentDataPath;
-        }
+        m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
         EditorPrefs.SetString(k_DataPathKey, m_DataPath);
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Reset"))
@@ -157,9 +181,39 @@ public class RawDataGenerator : EditorWindow
         }
         GUILayout.EndHorizontal();
 
+        //output path
+        EditorGUILayout.LabelField("Output path", EditorStyles.boldLabel);
+        m_DataPath = EditorGUILayout.TextField(m_DataPath);
+        if (m_DataPath == "") {
+            m_DataPath = Application.persistentDataPath;
+        }
+
+        m_DataSource = GUILayout.SelectionGrid(m_DataSource, new string[] {"Random Data", "Demo Data"}, 2);
+
+        if (m_DataSource == RANDOM)
+        {
+            CreateRandomData();
+        }
+        else if (m_DataSource == DEMO)
+        {
+            CreateDemoData();
+        }
+
+
+
+        if (GUILayout.Button("Generate"))
+        {
+            GenerateData();
+        }
+        CreateCode();
+        EditorGUILayout.EndScrollView();
+    }
+
+    void CreateRandomData()
+    {
         //time
         IncludeSet(ref m_IncludeTime, "time", k_IncludeTimeKey);
-
+        
         //x
         GUILayout.BeginHorizontal();
         if (IncludeSet(ref m_IncludeX, "x", k_IncludeXKey)) {
@@ -178,10 +232,10 @@ public class RawDataGenerator : EditorWindow
             DrawFloatRange(ref m_MinZ, ref m_MaxZ, k_MinZ, k_MaxZ);
         }
         GUILayout.EndHorizontal();
-
+        
         m_Rotational = GUILayout.SelectionGrid(m_Rotational, new string[] {"None", "Rotation", "Destination"}, 3);
         EditorPrefs.SetInt(k_RotationKey, m_Rotational);
-
+        
         if (m_Rotational == ROTATION) {
             GUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("rx");
@@ -210,21 +264,21 @@ public class RawDataGenerator : EditorWindow
             DrawFloatRange(ref m_MinDZ, ref m_MaxDZ, k_MinDZ, k_MaxDZ);
             GUILayout.EndHorizontal();
         }
-
+        
         //level
         GUILayout.BeginHorizontal();
         if (IncludeSet(ref m_IncludeLevel, "level", k_IncludeLevelKey)) {
             DrawIntRange(ref m_MinLevel, ref m_MaxLevel, k_MinLevel, k_MaxLevel);
         }
         GUILayout.EndHorizontal();
-
+        
         //fps
         GUILayout.BeginHorizontal();
         if (IncludeSet(ref m_IncludeFPS, "fps", k_IncludeFPSKey)) {
             DrawFloatRange(ref m_MinFPS, ref m_MaxFPS, k_MinFPS, k_MaxFPS);
         }
         GUILayout.EndHorizontal();
-
+        
         string oldEventsString = string.Join("|", m_Events.ToArray());
         if (GUILayout.Button(new GUIContent("Add Event Name", "Events to be randomly added into the created data.")))
         {
@@ -242,7 +296,7 @@ public class RawDataGenerator : EditorWindow
             GUILayout.EndHorizontal();
         }
         string currentEventsString = string.Join("|", m_Events.ToArray());
-
+        
         if (oldEventsString != currentEventsString)
         {
             EditorPrefs.SetString(k_EventNamesKey, currentEventsString);
@@ -253,18 +307,26 @@ public class RawDataGenerator : EditorWindow
         m_EventCount = EditorGUILayout.IntField(m_EventCount);
         EditorPrefs.SetInt(k_EventCountKey, m_EventCount);
         GUILayout.EndHorizontal();
-
+        
         GUILayout.BeginHorizontal();
         EditorGUILayout.LabelField("Device count");
         m_DeviceCount = EditorGUILayout.IntField(m_DeviceCount);
         EditorPrefs.SetInt(k_DeviceCountKey, m_DeviceCount);
         GUILayout.EndHorizontal();
+    }
 
-        if (GUILayout.Button("Generate"))
-        {
-            GenerateData();
-        }
-        CreateCode();
+    void CreateDemoData()
+    {
+        m_DataStoryIndex = EditorGUILayout.Popup(new GUIContent("Demo", "Pick a story for some demo data."), m_DataStoryIndex, m_DataStoryList);
+
+        var story = m_DataStories[m_DataStoryIndex];
+        EditorGUILayout.LabelField("Name", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField(story.name);
+        EditorGUILayout.LabelField("Genre", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField(story.genre);
+        EditorGUILayout.TextArea(story.description, EditorStyles.wordWrappedLabel);
+        EditorGUILayout.LabelField("What to try", EditorStyles.boldLabel);
+        EditorGUILayout.TextArea(story.whatToTry, EditorStyles.wordWrappedLabel);
     }
 
     void CreateCode()
@@ -344,6 +406,18 @@ public class RawDataGenerator : EditorWindow
 
     void GenerateData()
     {
+        if (m_DataSource == RANDOM)
+        {
+            GenerateRandomData();
+        }
+        else
+        {
+            GenerateStoryData();
+        }
+    }
+
+    void GenerateRandomData()
+    {
         int linesPerFile = 100;
         int currentFileLines = 0;
         double firstDate = 0d;
@@ -365,7 +439,7 @@ public class RawDataGenerator : EditorWindow
             }
 
             // Device ID & name
-            evt += "device" + UnityEngine.Random.Range(0, m_DeviceCount) + "\t";
+            evt += "device" + UnityEngine.Random.Range(0, m_DeviceCount) + "-XXXX-XXXX\t";
             evt += eventName + "\t";
 
             // Build the JSON
@@ -432,6 +506,19 @@ public class RawDataGenerator : EditorWindow
                 SaveFile(data, firstDate);
                 currentFileLines = 0;
                 data = "";
+            }
+        }
+    }
+
+    void GenerateStoryData()
+    {
+        DataStory story = m_DataStories[m_DataStoryIndex];
+        if (story != null)
+        {
+            Dictionary<double, string> data = story.Generate();
+            foreach(KeyValuePair<double, string> item in data)
+            {
+                SaveFile(item.Value, item.Key);
             }
         }
     }
