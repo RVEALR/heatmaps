@@ -32,6 +32,17 @@ namespace UnityAnalyticsHeatmap
         void UpdateThresholds(float[] thresholds);
 
         /// <summary>
+        /// Updates a mask which trims the rendered points.
+        /// </summary>
+        /// <param name="lowX">The lowest X position to render as a percent from 0-1.</param>
+        /// <param name="highX">The greatest X position to render as a percent from 0-1.</param>
+        /// <param name="lowY">The lowest Y position to render as a percent from 0-1.</param>
+        /// <param name="highY">The highest position to render as a percent from 0-1.</param>
+        /// <param name="lowZ">The lowest Z position to render as a percent from 0-1.</param>
+        /// <param name="highZ">The highest Z position to render as a percent from 0-1.</param>
+        void UpdateRenderMask(float lowX, float highX, float lowY, float highY, float lowZ, float highZ);
+
+        /// <summary>
         /// Updates the time limits.
         /// </summary>
         /// Allows the user to limit the display of data by time within the game.
@@ -50,7 +61,7 @@ namespace UnityAnalyticsHeatmap
         /// Currently, RenderShape includes the options CUBE, SQUARE, and TRI,
         /// and RenderDirection includes YZ, XZ and XY
         /// <param name="style">A RenderShape Enum.</param>
-        /// /// <param name="style">A RenderDirection Enum.</param>
+        /// <param name="style">A RenderDirection Enum.</param>
         void UpdateRenderStyle(RenderShape style, RenderDirection direction);
 
         /// <summary>

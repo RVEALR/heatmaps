@@ -39,6 +39,12 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     // Particle Rendering Data
     HeatPoint[] m_Data;
     float m_MaxDensity = 0f;
+    float m_LowX = 0f;
+    float m_LowY = 0f;
+    float m_LowZ = 0f;
+    float m_HighX = 1f;
+    float m_HighY = 1f;
+    float m_HighZ = 1f;
 
     RenderShape m_RenderStyle = RenderShape.Cube;
     RenderDirection m_RenderDirection = RenderDirection.YZ;
@@ -97,6 +103,40 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             m_HighThreshold = t1;
             m_LowThreshold = t0;
             m_RenderState = k_UpdateMaterials;
+        }
+    }
+
+    public void UpdateRenderMask(float lowX, float highX, float lowY, float highY, float lowZ, float highZ)
+    {
+        if (lowX != m_LowX)
+        {
+            m_LowX = lowX;
+            m_RenderState = k_BeginRenderer;
+        }
+        if (lowY != m_LowY)
+        {
+            m_LowY = lowY;
+            m_RenderState = k_BeginRenderer;
+        }
+        if (lowZ != m_LowZ)
+        {
+            m_LowZ = lowZ;
+            m_RenderState = k_BeginRenderer;
+        }
+        if (highX != m_HighX)
+        {
+            m_HighX = highX;
+            m_RenderState = k_BeginRenderer;
+        }
+        if (highY != m_HighY)
+        {
+            m_HighY = highY;
+            m_RenderState = k_BeginRenderer;
+        }
+        if (highZ != m_HighZ)
+        {
+            m_HighZ = highZ;
+            m_RenderState = k_BeginRenderer;
         }
     }
 
@@ -221,15 +261,19 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
             for (int a = 0; a < m_Data.Length; a++)
             {
-                // FILTER FOR TIME
-                if (m_Data[a].time >= m_StartTime && m_Data[a].time <= m_EndTime)
+                // FILTER FOR TIME & POSITION
+                var pt = m_Data[a];
+                if (pt.time >= m_StartTime && pt.time <= m_EndTime &&
+                    pt.position.x >= m_LowX && pt.position.x <= m_HighX &&
+                    pt.position.y >= m_LowY && pt.position.y <= m_HighY &&
+                    pt.position.z >= m_LowZ && pt.position.z <= m_HighZ)
                 {
                     currentPoints++;
                     if (submaps.Count <= currentSubmap)
                     {
                         submaps.Add(new List<HeatPoint>());
                     }
-                    submaps[currentSubmap].Add(m_Data[a]);
+                    submaps[currentSubmap].Add(pt);
                     currentSubmap = (currentPoints * verticesPerShape) / k_VerticesPerMesh;
                 }
             }
@@ -293,7 +337,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         for (int a = 0; a < submap.Count; a++)
         {
             materials[a] = PickMaterial(submap[a].density / m_MaxDensity);
-
             Vector3 position = submap[a].position;
             Vector3 rotation = submap[a].rotation;
             Vector3 destination = submap[a].destination;
