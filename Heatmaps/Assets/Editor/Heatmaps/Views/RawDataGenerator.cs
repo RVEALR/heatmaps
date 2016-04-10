@@ -6,6 +6,7 @@ using System.Collections.Generic;
 
 public class RawDataGenerator : EditorWindow
 {
+    private static string k_Installed = "UnityAnalyticsRawDataGenInstallKey";
     private static string k_DataPathKey = "UnityAnalyticsRawDataGenDataPath";
     private static string k_DeviceCountKey = "UnityAnalyticsRawDataGenDeviceCount";
     private static string k_EventNamesKey = "UnityAnalyticsRawDataGenEventNames";
@@ -47,6 +48,19 @@ public class RawDataGenerator : EditorWindow
     private static string k_MaxDY = "UnityAnalyticsRawDataGenMaxDY";
     private static string k_MinDZ = "UnityAnalyticsRawDataGenMinDZ";
     private static string k_MaxDZ = "UnityAnalyticsRawDataGenMaxDZ";
+
+    private static int defaultEventCount = 100;
+    private static int defaultDeviceCount = 10;
+    private static float defaultMinAngle = 0f;
+    private static float defaultMaxAngle = 360f;
+    private static float defaultMinSpace = -100f;
+    private static float defaultMaxSpace = 100f;
+    private static int defaultRotational = 0;
+    private static int defaultMinLevel = 1;
+    private static int defaultMaxLevel = 99;
+    private static float defaultMinFPS = 1f;
+    private static float defaultMaxFPS = 99f;
+
     
     [MenuItem("Window/RawDataGenerator #%r")]
     static void RawDataGeneratorMenuOption()
@@ -55,100 +69,62 @@ public class RawDataGenerator : EditorWindow
     }
 
     string m_DataPath = "";
-    int m_EventCount = 100;
-    int m_DeviceCount = 10;
+    int m_EventCount = defaultEventCount;
+    int m_DeviceCount = defaultDeviceCount;
     List<string> m_Events = new List<string>{ };
 
     bool m_IncludeTime = true;
 
     bool m_IncludeX = true;
-    float m_MinX = -100f;
-    float m_MaxX = 100f;
+    float m_MinX = defaultMinSpace;
+    float m_MaxX = defaultMaxSpace;
 
     bool m_IncludeY = true;
-    float m_MinY = -100f;
-    float m_MaxY = 100f;
+    float m_MinY = defaultMinSpace;
+    float m_MaxY = defaultMaxSpace;
 
     bool m_IncludeZ = true;
-    float m_MinZ = -100f;
-    float m_MaxZ = 100f;
+    float m_MinZ = defaultMinSpace;
+    float m_MaxZ = defaultMaxSpace;
 
     // Flag for rotation vs destination
-    int m_Rotational = 0;
+    int m_Rotational = defaultRotational;
     static int ROTATION = 1;
     static int DESTINATION = 2;
 
-    float m_MinRX = 0f;
-    float m_MaxRX = 360f;
-    float m_MinRY = 0f;
-    float m_MaxRY = 360f;
-    float m_MinRZ = 0f;
-    float m_MaxRZ = 360f;
+    float m_MinRX = defaultMinAngle;
+    float m_MaxRX = defaultMaxAngle;
+    float m_MinRY = defaultMinAngle;
+    float m_MaxRY = defaultMaxAngle;
+    float m_MinRZ = defaultMinAngle;
+    float m_MaxRZ = defaultMaxAngle;
 
-    float m_MinDX = -100f;
-    float m_MaxDX = 100f;
-    float m_MinDY = -100f;
-    float m_MaxDY = 100f;
-    float m_MinDZ = -100f;
-    float m_MaxDZ = 100f;
+    float m_MinDX = defaultMinSpace;
+    float m_MaxDX = defaultMaxSpace;
+    float m_MinDY = defaultMinSpace;
+    float m_MaxDY = defaultMaxSpace;
+    float m_MinDZ = defaultMinSpace;
+    float m_MaxDZ = defaultMaxSpace;
 
     bool m_IncludeLevel = false;
-    int m_MinLevel = 1;
-    int m_MaxLevel = 99;
+    int m_MinLevel = defaultMinLevel;
+    int m_MaxLevel = defaultMaxLevel;
 
     bool m_IncludeFPS = false;
-    float m_MinFPS = 1f;
-    float m_MaxFPS = 99f;
+    float m_MinFPS = defaultMinFPS;
+    float m_MaxFPS = defaultMaxFPS;
 
     public RawDataGenerator()
     {
-        m_DataPath = EditorPrefs.GetString(k_DataPathKey);
-        m_IncludeTime = EditorPrefs.GetBool(k_IncludeTimeKey);
-        m_IncludeX = EditorPrefs.GetBool(k_IncludeXKey);
-        m_MinX = EditorPrefs.GetFloat(k_MinX);
-        m_MaxX = EditorPrefs.GetFloat(k_MaxX);
-        m_IncludeY = EditorPrefs.GetBool(k_IncludeYKey);
-        m_MinY = EditorPrefs.GetFloat(k_MinY);
-        m_MaxY = EditorPrefs.GetFloat(k_MaxY);
-        m_IncludeZ = EditorPrefs.GetBool(k_IncludeZKey);
-        m_MinZ = EditorPrefs.GetFloat(k_MinZ);
-        m_MaxZ = EditorPrefs.GetFloat(k_MaxZ);
-
-        m_Rotational = EditorPrefs.GetInt(k_RotationKey);
-        m_MinRX = EditorPrefs.GetFloat(k_MinRX);
-        m_MaxRX = EditorPrefs.GetFloat(k_MaxRX);
-        m_MinRY = EditorPrefs.GetFloat(k_MinRY);
-        m_MaxRY = EditorPrefs.GetFloat(k_MaxRY);
-        m_MinRZ = EditorPrefs.GetFloat(k_MinRZ);
-        m_MaxRZ = EditorPrefs.GetFloat(k_MaxRZ);
-
-        m_MinDX = EditorPrefs.GetFloat(k_MinDX);
-        m_MaxDX = EditorPrefs.GetFloat(k_MaxDX);
-        m_MinDY = EditorPrefs.GetFloat(k_MinDY);
-        m_MaxDY = EditorPrefs.GetFloat(k_MaxDY);
-        m_MinDZ = EditorPrefs.GetFloat(k_MinDZ);
-        m_MaxDZ = EditorPrefs.GetFloat(k_MaxDZ);
         
-        m_IncludeLevel = EditorPrefs.GetBool(k_IncludeLevelKey);
-        m_MinLevel = EditorPrefs.GetInt(k_MinLevel);
-        m_MaxLevel = EditorPrefs.GetInt(k_MaxLevel);
-        
-        m_IncludeFPS = EditorPrefs.GetBool(k_IncludeFPSKey);
-        m_MinFPS = EditorPrefs.GetFloat(k_MinFPS);
-        m_MaxFPS = EditorPrefs.GetFloat(k_MaxFPS);
-
-        m_EventCount = EditorPrefs.GetInt(k_EventCountKey);
-        string loadedEvents = EditorPrefs.GetString(k_EventNamesKey);
-        string[] eventsList;
-        if (string.IsNullOrEmpty(loadedEvents))
+        if (EditorPrefs.GetBool(k_Installed))
         {
-            eventsList = new string[]{ };
+            RestoreValues();
         }
         else
         {
-            eventsList = loadedEvents.Split('|');
+            SetInitValues();
         }
-        m_Events = new List<string>(eventsList);
     }
 
     void OnGUI()
@@ -161,16 +137,23 @@ public class RawDataGenerator : EditorWindow
         }
         EditorPrefs.SetString(k_DataPathKey, m_DataPath);
         GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Reset"))
+        {
+            if (EditorUtility.DisplayDialog("Resetting to factory defaults", "Are you sure?", "Reset", "Cancel"))
+            {
+                SetInitValues();
+            }
+        }
+        if (GUILayout.Button("Open folder"))
+        {
+            EditorUtility.RevealInFinder(m_DataPath);
+        }
         if (GUILayout.Button("Purge"))
         {
             if (EditorUtility.DisplayDialog("Destroy local data?", "You are about to delete your local heatmaps data cache, meaning you'll have to reload from the server (or regenerate from this tool). Are you sure?", "Purge", "Cancel"))
             {
                 PurgeData();
             }
-        }
-        if (GUILayout.Button("Open folder"))
-        {
-            EditorUtility.RevealInFinder(m_DataPath);
         }
         GUILayout.EndHorizontal();
 
@@ -516,6 +499,104 @@ public class RawDataGenerator : EditorWindow
         {
             System.IO.Directory.Delete(savePath, true);
         }
+    }
+
+    protected void SetInitValues()
+    {
+        m_DataPath = "";
+        m_IncludeTime = true;
+        m_IncludeX = m_IncludeY = m_IncludeZ = true;
+        m_IncludeLevel = m_IncludeFPS = false;
+        m_Rotational = defaultRotational;
+        m_MinX = m_MinY = m_MinZ = m_MinDX = m_MinDY = m_MinDZ = defaultMinSpace;
+        m_MaxX = m_MaxY = m_MaxZ = defaultMaxSpace;
+        m_MinRX = m_MinRY = m_MinRZ = defaultMinAngle;
+        m_MaxRX = m_MaxRY = m_MaxRZ = defaultMaxAngle;
+        m_MinLevel = defaultMinLevel;
+        m_MaxLevel = defaultMaxLevel;
+        m_MinFPS = defaultMinFPS;
+        m_MaxFPS = defaultMaxFPS;
+        string[] eventsList = new string[]{ "PlayerPosition" };
+        m_Events = new List<string>(eventsList);
+
+        EditorPrefs.SetFloat(k_MinX, m_MinX);
+        EditorPrefs.SetFloat(k_MinY, m_MinY);
+        EditorPrefs.SetFloat(k_MinZ, m_MinZ);
+        EditorPrefs.SetFloat(k_MinDX, m_MinDX);
+        EditorPrefs.SetFloat(k_MinDY, m_MinDY);
+        EditorPrefs.SetFloat(k_MinDZ, m_MinDZ);
+        EditorPrefs.SetFloat(k_MaxX, m_MaxX);
+        EditorPrefs.SetFloat(k_MaxY, m_MaxY);
+        EditorPrefs.SetFloat(k_MaxZ, m_MaxZ);
+        EditorPrefs.SetFloat(k_MaxDX, m_MaxDX);
+        EditorPrefs.SetFloat(k_MaxDY, m_MaxDY);
+        EditorPrefs.SetFloat(k_MaxDZ, m_MaxDZ);
+
+        EditorPrefs.SetFloat(k_MinRX, m_MinRX);
+        EditorPrefs.SetFloat(k_MinRY, m_MinRY);
+        EditorPrefs.SetFloat(k_MinRZ, m_MinRZ);
+        EditorPrefs.SetFloat(k_MaxRX, m_MaxRX);
+        EditorPrefs.SetFloat(k_MaxRY, m_MaxRY);
+        EditorPrefs.SetFloat(k_MaxRZ, m_MaxRZ);
+
+        EditorPrefs.SetInt(k_MinLevel, m_MinLevel);
+        EditorPrefs.SetInt(k_MaxLevel, m_MaxLevel);
+        EditorPrefs.SetFloat(k_MinFPS, m_MinFPS);
+        EditorPrefs.SetFloat(k_MaxFPS, m_MaxFPS);
+        EditorPrefs.SetString(k_EventNamesKey, eventsList[0]);
+        EditorPrefs.SetInt(k_DeviceCountKey, m_DeviceCount);
+        EditorPrefs.SetBool(k_Installed, true);
+    }
+
+    protected void RestoreValues()
+    {
+        m_DataPath = EditorPrefs.GetString(k_DataPathKey);
+        m_IncludeTime = EditorPrefs.GetBool(k_IncludeTimeKey);
+        m_IncludeX = EditorPrefs.GetBool(k_IncludeXKey);
+        m_MinX = EditorPrefs.GetFloat(k_MinX);
+        m_MaxX = EditorPrefs.GetFloat(k_MaxX);
+        m_IncludeY = EditorPrefs.GetBool(k_IncludeYKey);
+        m_MinY = EditorPrefs.GetFloat(k_MinY);
+        m_MaxY = EditorPrefs.GetFloat(k_MaxY);
+        m_IncludeZ = EditorPrefs.GetBool(k_IncludeZKey);
+        m_MinZ = EditorPrefs.GetFloat(k_MinZ);
+        m_MaxZ = EditorPrefs.GetFloat(k_MaxZ);
+
+        m_Rotational = EditorPrefs.GetInt(k_RotationKey);
+        m_MinRX = EditorPrefs.GetFloat(k_MinRX);
+        m_MaxRX = EditorPrefs.GetFloat(k_MaxRX);
+        m_MinRY = EditorPrefs.GetFloat(k_MinRY);
+        m_MaxRY = EditorPrefs.GetFloat(k_MaxRY);
+        m_MinRZ = EditorPrefs.GetFloat(k_MinRZ);
+        m_MaxRZ = EditorPrefs.GetFloat(k_MaxRZ);
+
+        m_MinDX = EditorPrefs.GetFloat(k_MinDX);
+        m_MaxDX = EditorPrefs.GetFloat(k_MaxDX);
+        m_MinDY = EditorPrefs.GetFloat(k_MinDY);
+        m_MaxDY = EditorPrefs.GetFloat(k_MaxDY);
+        m_MinDZ = EditorPrefs.GetFloat(k_MinDZ);
+        m_MaxDZ = EditorPrefs.GetFloat(k_MaxDZ);
+
+        m_IncludeLevel = EditorPrefs.GetBool(k_IncludeLevelKey);
+        m_MinLevel = EditorPrefs.GetInt(k_MinLevel);
+        m_MaxLevel = EditorPrefs.GetInt(k_MaxLevel);
+
+        m_IncludeFPS = EditorPrefs.GetBool(k_IncludeFPSKey);
+        m_MinFPS = EditorPrefs.GetFloat(k_MinFPS);
+        m_MaxFPS = EditorPrefs.GetFloat(k_MaxFPS);
+
+        m_EventCount = EditorPrefs.GetInt(k_EventCountKey);
+        string loadedEvents = EditorPrefs.GetString(k_EventNamesKey);
+        string[] eventsList;
+        if (string.IsNullOrEmpty(loadedEvents))
+        {
+            eventsList = new string[]{ };
+        }
+        else
+        {
+            eventsList = loadedEvents.Split('|');
+        }
+        m_Events = new List<string>(eventsList);
     }
 }
 
