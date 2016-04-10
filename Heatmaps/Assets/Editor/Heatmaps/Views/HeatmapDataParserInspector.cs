@@ -22,10 +22,14 @@ namespace UnityAnalyticsHeatmap
         Dictionary<string, HeatPoint[]> m_HeatData;
         float m_MaxDensity = 0;
         float m_MaxTime = 0;
+        Vector3 m_LowSpace;
+        Vector3 m_HighSpace;
+
+
         int m_OptionIndex = 0;
         string[] m_OptionKeys;
 
-        public delegate void PointHandler(HeatPoint[] heatData, float maxDensity, float maxTime);
+        public delegate void PointHandler(HeatPoint[] heatData, float maxDensity, float maxTime, Vector3 lowSpace, Vector3 highSpace);
 
         PointHandler m_PointHandler;
 
@@ -45,7 +49,7 @@ namespace UnityAnalyticsHeatmap
 
         void Dispatch()
         {
-            m_PointHandler(m_HeatData[m_OptionKeys[m_OptionIndex]], m_MaxDensity, m_MaxTime);
+            m_PointHandler(m_HeatData[m_OptionKeys[m_OptionIndex]], m_MaxDensity, m_MaxTime, m_LowSpace, m_HighSpace);
         }
 
         public void SetDataPath(string jsonPath)
@@ -73,15 +77,23 @@ namespace UnityAnalyticsHeatmap
             HeatPoint[] points = m_HeatData[m_OptionKeys[m_OptionIndex]];
             m_MaxDensity = 0;
             m_MaxTime = 0;
+            m_LowSpace = new Vector3();
+            m_HighSpace = new Vector3();
+
 
             for (int i = 0; i < points.Length; i++)
             {
+
+                Debug.Log(points[i].position);
+
                 m_MaxDensity = Mathf.Max(m_MaxDensity, points[i].density);
                 m_MaxTime = Mathf.Max(m_MaxTime, points[i].time);
+                m_LowSpace = Vector3.Min(m_LowSpace, points[i].position);
+                m_HighSpace = Vector3.Max(m_HighSpace, points[i].position);
             }
         }
 
-        void ParseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, string[] options)
+        void ParseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, Vector3 lowSpace, Vector3 highSpace, string[] options)
         {
             m_HeatData = heatData;
             if (heatData != null)
@@ -90,6 +102,8 @@ namespace UnityAnalyticsHeatmap
                 m_OptionIndex = 0;
                 m_MaxDensity = maxDensity;
                 m_MaxTime = maxTime;
+                m_LowSpace = lowSpace;
+                m_HighSpace = highSpace;
                 Dispatch();
             }
         }

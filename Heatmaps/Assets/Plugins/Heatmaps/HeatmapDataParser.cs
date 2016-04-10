@@ -24,7 +24,7 @@ namespace UnityAnalyticsHeatmap
 {
     public class HeatmapDataParser
     {
-        public delegate void ParseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, string[] options);
+        public delegate void ParseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, Vector3 lowSpace, Vector3 highSpace, string[] options);
 
         ParseHandler m_ParseHandler;
 
@@ -87,6 +87,8 @@ namespace UnityAnalyticsHeatmap
             var keys = new ArrayList();
             float maxDensity = 0;
             float maxTime = 0;
+            Vector3 lowSpace = Vector3.zero;
+            Vector3 highSpace = Vector3.zero;
 
             Dictionary<string, object> data = Json.Deserialize(text) as Dictionary<string, object>;
             foreach (KeyValuePair<string, object> kv in data)
@@ -149,13 +151,23 @@ namespace UnityAnalyticsHeatmap
                     array[a].time = t;
                     maxDensity = Mathf.Max(d, maxDensity);
                     maxTime = Mathf.Max(array[a].time, maxTime);
+                    if (a == 0)
+                    {
+                        lowSpace = highSpace = array[a].position;
+                    }
+                    else
+                    {
+                        lowSpace = Vector3.Min(array[a].position, lowSpace);
+                        highSpace = Vector3.Max(array[a].position, highSpace);
+                    }
+
                 }
                 heatData[kv.Key] = array;
             }
 
             if (m_ParseHandler != null)
             {
-                m_ParseHandler(heatData, maxDensity, maxTime, keys.ToArray(typeof(string)) as string[]);
+                m_ParseHandler(heatData, maxDensity, maxTime, lowSpace, highSpace, keys.ToArray(typeof(string)) as string[]);
             }
         }
     }
