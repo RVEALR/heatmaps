@@ -59,6 +59,8 @@ namespace UnityAnalyticsHeatmap
         float m_HighY = 1f;
         float m_LowZ = 0f;
         float m_HighZ = 1f;
+        Vector3 m_LowSpace = Vector3.zero;
+        Vector3 m_HighSpace = Vector3.one;
 
         int m_ParticleDirectionIndex = 0;
         GUIContent[] m_ParticleDirectionOptions = new GUIContent[]{ new GUIContent("YZ"), new GUIContent("XZ"), new GUIContent("XY") };
@@ -119,7 +121,7 @@ namespace UnityAnalyticsHeatmap
 
             // THRESHOLDS
             EditorGUILayout.LabelField("Color Thresholds");
-            RenderMinMaxSlider(ref m_LowThreshold, ref m_HighThreshold, k_LowThresholdKey, k_HighThresholdKey);
+            RenderMinMaxSlider(ref m_LowThreshold, ref m_HighThreshold, k_LowThresholdKey, k_HighThresholdKey, 0f, 1f);
             EditorGUILayout.EndVertical();
 
             // TIME WINDOW
@@ -127,22 +129,9 @@ namespace UnityAnalyticsHeatmap
             EditorGUILayout.LabelField("Time", EditorStyles.boldLabel);
             var oldStartTime = m_StartTime;
             var oldEndTime = m_EndTime;
-
-            m_StartTime = EditorGUILayout.FloatField(new GUIContent("Start", "Show only data after this time"), m_StartTime);
-            m_EndTime = EditorGUILayout.FloatField(new GUIContent("End", "Show only data before this time"), m_EndTime);
-
-            m_StartTime = Mathf.Min(m_StartTime, m_EndTime);
-            m_EndTime = Mathf.Max(m_StartTime, m_EndTime);
-
-            EditorGUILayout.MinMaxSlider(ref m_StartTime, ref m_EndTime, 0f, m_MaxTime);
-            if (GUILayout.Button(new GUIContent("Max Time", "Set time to maximum extents")))
-            {
-                m_StartTime = 0;
-                m_EndTime = m_MaxTime;
-            }
+            RenderMinMaxSlider(ref m_StartTime, ref m_EndTime, k_StartTimeKey, k_EndTimeKey, 0, m_MaxTime);
             var oldPlaySpeed = m_PlaySpeed;
             m_PlaySpeed = EditorGUILayout.FloatField(new GUIContent("Play Speed", "Speed at which playback occurs"), m_PlaySpeed);
-
             if (oldPlaySpeed != m_PlaySpeed)
             {
                 EditorPrefs.SetFloat(k_PlaySpeedKey, m_PlaySpeed);
@@ -172,12 +161,10 @@ namespace UnityAnalyticsHeatmap
             if (oldStartTime != m_StartTime)
             {
                 forceTime = true;
-                EditorPrefs.SetFloat(k_StartTimeKey, m_StartTime);
             }
             if (oldEndTime != m_EndTime)
             {
                 forceTime = true;
-                EditorPrefs.SetFloat(k_EndTimeKey, m_EndTime);
             }
 
             Update(forceTime);
@@ -213,9 +200,9 @@ namespace UnityAnalyticsHeatmap
             }
             // Position Masking
             EditorGUILayout.LabelField("Masking");
-            RenderMinMaxSlider(ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey);
-            RenderMinMaxSlider(ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey);
-            RenderMinMaxSlider(ref m_LowZ, ref m_HighZ, k_LowZKey, k_HighZKey);
+            RenderMinMaxSlider(ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey, m_LowSpace.x, m_HighSpace.x);
+            RenderMinMaxSlider(ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey, m_LowSpace.y, m_HighSpace.y);
+            RenderMinMaxSlider(ref m_LowZ, ref m_HighZ, k_LowZKey, k_HighZKey, m_LowSpace.z, m_HighSpace.z);
             EditorGUILayout.EndVertical();
 
             if (m_GameObject != null && m_GameObject.GetComponent<IHeatmapRenderer>() != null)
@@ -233,40 +220,38 @@ namespace UnityAnalyticsHeatmap
                 r.UpdateColors(new Color[]{ m_LowDensityColor, m_MediumDensityColor, m_HighDensityColor });
                 r.UpdateThresholds(new float[]{ m_LowThreshold, m_HighThreshold });
                 r.pointSize = m_ParticleSize;
+                r.UpdateRenderMask(m_LowX, m_HighX, m_LowY, m_HighY, m_LowZ, m_HighZ);
                 r.UpdateRenderStyle(m_ParticleShapeIds[m_ParticleShapeIndex], m_ParticleDirectionIds[m_ParticleDirectionIndex]);
             }
         }
 
-        protected void RenderMinMaxSlider(ref float lowValue, ref float highValue, string lowKey, string highKey)
+        protected void RenderMinMaxSlider(ref float lowValue, ref float highValue, string lowKey, string highKey, float minValue, float maxValue)
         {
-            var oldLow = lowValue;
-            var oldHigh = highValue;
             EditorGUILayout.BeginHorizontal();
-            lowValue = EditorGUILayout.FloatField(lowValue, GUILayout.MaxWidth(50f));
-            highValue = EditorGUILayout.FloatField(highValue, GUILayout.Width(50f));
+            float oldLow = lowValue;
+            float oldHigh = highValue;
+
+            EditorGUILayout.FloatField(lowValue, GUILayout.MaxWidth(50f));
+            EditorGUILayout.FloatField(highValue, GUILayout.Width(50f));
             lowValue = Mathf.Min(lowValue, highValue);
             highValue = Mathf.Max(lowValue, highValue);
-
-
-            EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, 0f, 1f);
-
+            EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, minValue, maxValue);
             if (GUILayout.Button("Max"))
             {
-                lowValue = 0f;
-                highValue = 1f;
+                lowValue = minValue;
+                highValue = maxValue;
             }
-
-            EditorGUILayout.EndHorizontal();
             if (oldLow != lowValue)
             {
                 EditorPrefs.SetFloat(lowKey, lowValue);
-                EditorGUI.FocusTextInControl("");
+                //EditorGUI.FocusTextInControl("");
             }
             if (oldHigh != highValue)
             {
                 EditorPrefs.SetFloat(highKey, highValue);
-                EditorGUI.FocusTextInControl("");
+                //EditorGUI.FocusTextInControl("");
             }
+            EditorGUILayout.EndHorizontal();
         }
 
         public void SystemReset()
@@ -314,6 +299,19 @@ namespace UnityAnalyticsHeatmap
         {
             m_EndTime = m_MaxTime = maxTime;
             m_StartTime = 0f;
+        }
+
+        public void SetSpaceLimits(Vector3 lowSpace, Vector3 highSpace)
+        {
+            m_LowX = lowSpace.x;
+            m_LowY = lowSpace.y;
+            m_LowZ = lowSpace.z;
+            m_HighX = highSpace.x;
+            m_HighY = highSpace.y;
+            m_HighZ = highSpace.z;
+
+            m_LowSpace = lowSpace;
+            m_HighSpace = highSpace;
         }
 
         void Restart()

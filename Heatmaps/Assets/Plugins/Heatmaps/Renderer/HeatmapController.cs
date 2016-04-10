@@ -41,6 +41,8 @@ public class HeatmapController : MonoBehaviour
 
     float m_MaxDensity = 0;
     float m_MaxTime = 0;
+    Vector3 m_LowSpace = Vector3.zero;
+    Vector3 m_HighSpace = Vector3.zero;
 
     void Start()
     {
@@ -64,12 +66,14 @@ public class HeatmapController : MonoBehaviour
     /// <param name="maxDensity">The maximum data density.</param>
     /// <param name="maxTime">The maximum time from the data.</param>
     /// <param name="options">The list of possible options (usually event names).</param>
-    void parseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, string[] options)
+    void parseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, Vector3 lowSpace, Vector3 highSpace, string[] options)
     {
         m_Data = heatData;
         this.options = options;
         m_MaxDensity = maxDensity;
         m_MaxTime = maxTime;
+        m_LowSpace = lowSpace;
+        m_HighSpace = highSpace;
         Render();
     }
 
@@ -86,6 +90,7 @@ public class HeatmapController : MonoBehaviour
         r.UpdateTimeLimits(0, m_MaxTime);
         r.UpdateRenderStyle(RenderShape.Triangle, RenderDirection.YZ);
         r.UpdatePointData(m_Data[options[optionIndex]], m_MaxDensity);
+        r.UpdateRenderMask(m_LowSpace.x, m_HighSpace.x, m_LowSpace.y, m_HighSpace.y, m_LowSpace.z, m_HighSpace.z);
         r.RenderHeatmap();
     }
 }

@@ -141,6 +141,7 @@ public class Heatmapper : EditorWindow
             if (m_RenderView != null)
             {
                 m_RenderView.SetMaxTime((float)m_PointData["maxTime"]);
+                m_RenderView.SetSpaceLimits((Vector3)m_PointData["lowSpace"], (Vector3)m_PointData["highSpace"]);
                 m_RenderView.SetGameObject(m_HeatMapInstance);
                 m_RenderView.Update(true);
             }
@@ -181,13 +182,15 @@ public class Heatmapper : EditorWindow
         m_ParserView.SetDataPath(jsonPath);
     }
 
-    void OnPointData(HeatPoint[] heatData, float maxDensity, float maxTime)
+    void OnPointData(HeatPoint[] heatData, float maxDensity, float maxTime, Vector3 lowSpace, Vector3 highSpace)
     {
         // Creating this data allows the renderer to use it on the next Update pass
         m_PointData = new Dictionary<string, object>();
         m_PointData["heatData"] = heatData;
         m_PointData["maxDensity"] = maxDensity;
         m_PointData["maxTime"] = maxTime;
+        m_PointData["lowSpace"] = lowSpace;
+        m_PointData["highSpace"] = highSpace;
     }
 
     /// <summary>
