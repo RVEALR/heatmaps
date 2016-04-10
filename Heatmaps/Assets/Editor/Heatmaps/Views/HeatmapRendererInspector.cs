@@ -28,6 +28,13 @@ namespace UnityAnalyticsHeatmap
         const string k_ParticleShapeKey = "UnityAnalyticsHeatmapParticleShape";
         const string k_ParticleDirectionKey = "UnityAnalyticsHeatmapParticleDirection";
 
+        const string k_LowXKey = "UnityAnalyticsHeatmapLowX";
+        const string k_HighXKey = "UnityAnalyticsHeatmapHighX";
+        const string k_LowYKey = "UnityAnalyticsHeatmapLowY";
+        const string k_HighYKey = "UnityAnalyticsHeatmapHighY";
+        const string k_LowZKey = "UnityAnalyticsHeatmapLowZ";
+        const string k_HighZKey = "UnityAnalyticsHeatmapHighZ";
+
         Heatmapper m_Heatmapper;
 
         Color m_HighDensityColor = new Color(1f, 0, 0, .1f);
@@ -45,6 +52,13 @@ namespace UnityAnalyticsHeatmap
         int m_ParticleShapeIndex = 0;
         GUIContent[] m_ParticleShapeOptions = new GUIContent[]{ new GUIContent("Cube"), new GUIContent("Arrow"), new GUIContent("Point To Point"), new GUIContent("Square"), new GUIContent("Triangle") };
         RenderShape[] m_ParticleShapeIds = new RenderShape[]{ RenderShape.Cube, RenderShape.Arrow, RenderShape.PointToPoint, RenderShape.Square, RenderShape.Triangle };
+
+        float m_LowX = 0f;
+        float m_HighX = 1f;
+        float m_LowY = 0f;
+        float m_HighY = 1f;
+        float m_LowZ = 0f;
+        float m_HighZ = 1f;
 
         int m_ParticleDirectionIndex = 0;
         GUIContent[] m_ParticleDirectionOptions = new GUIContent[]{ new GUIContent("YZ"), new GUIContent("XZ"), new GUIContent("XY") };
@@ -73,6 +87,15 @@ namespace UnityAnalyticsHeatmap
 
             m_ParticleShapeIndex = EditorPrefs.GetInt(k_ParticleShapeKey, m_ParticleShapeIndex);
             m_ParticleDirectionIndex = EditorPrefs.GetInt(k_ParticleDirectionKey, m_ParticleDirectionIndex);
+
+            m_LowX = EditorPrefs.GetFloat(k_LowXKey, m_LowX);
+            m_LowY = EditorPrefs.GetFloat(k_LowYKey, m_LowY);
+            m_LowZ = EditorPrefs.GetFloat(k_LowZKey, m_LowZ);
+            m_HighX = EditorPrefs.GetFloat(k_HighXKey, m_HighX);
+            m_HighY = EditorPrefs.GetFloat(k_HighXKey, m_HighY);
+            m_HighZ = EditorPrefs.GetFloat(k_HighXKey, m_HighZ);
+
+
         }
 
         public static HeatmapRendererInspector Init(Heatmapper heatmapper)
@@ -95,27 +118,8 @@ namespace UnityAnalyticsHeatmap
             EditorGUILayout.EndHorizontal();
 
             // THRESHOLDS
-
             EditorGUILayout.LabelField("Color Thresholds");
-            var oldLowThreshold = m_LowThreshold;
-            var oldHighThreshold = m_HighThreshold;
-            EditorGUILayout.BeginHorizontal();
-            m_LowThreshold = EditorGUILayout.FloatField(m_LowThreshold);
-            m_HighThreshold = EditorGUILayout.FloatField(m_HighThreshold);
-
-            m_LowThreshold = Mathf.Min(m_LowThreshold, m_HighThreshold);
-            m_HighThreshold = Mathf.Max(m_LowThreshold, m_HighThreshold);
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.MinMaxSlider(ref m_LowThreshold, ref m_HighThreshold, 0f, 1f);
-            if (oldLowThreshold != m_LowThreshold)
-            {
-                EditorPrefs.SetFloat(k_LowThresholdKey, m_LowThreshold);
-            }
-            if (oldHighThreshold != m_HighThreshold)
-            {
-                EditorPrefs.SetFloat(k_HighThresholdKey, m_HighThreshold);
-            }
+            RenderMinMaxSlider(ref m_LowThreshold, ref m_HighThreshold, k_LowThresholdKey, k_HighThresholdKey);
             EditorGUILayout.EndVertical();
 
             // TIME WINDOW
@@ -207,6 +211,11 @@ namespace UnityAnalyticsHeatmap
                     EditorPrefs.SetInt(k_ParticleDirectionKey, m_ParticleDirectionIndex);
                 }
             }
+            // Position Masking
+            EditorGUILayout.LabelField("Masking");
+            RenderMinMaxSlider(ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey);
+            RenderMinMaxSlider(ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey);
+            RenderMinMaxSlider(ref m_LowZ, ref m_HighZ, k_LowZKey, k_HighZKey);
             EditorGUILayout.EndVertical();
 
             if (m_GameObject != null && m_GameObject.GetComponent<IHeatmapRenderer>() != null)
@@ -227,7 +236,39 @@ namespace UnityAnalyticsHeatmap
                 r.UpdateRenderStyle(m_ParticleShapeIds[m_ParticleShapeIndex], m_ParticleDirectionIds[m_ParticleDirectionIndex]);
             }
         }
-        
+
+        protected void RenderMinMaxSlider(ref float lowValue, ref float highValue, string lowKey, string highKey)
+        {
+            var oldLow = lowValue;
+            var oldHigh = highValue;
+            EditorGUILayout.BeginHorizontal();
+            lowValue = EditorGUILayout.FloatField(lowValue, GUILayout.MaxWidth(50f));
+            highValue = EditorGUILayout.FloatField(highValue, GUILayout.Width(50f));
+            lowValue = Mathf.Min(lowValue, highValue);
+            highValue = Mathf.Max(lowValue, highValue);
+
+
+            EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, 0f, 1f);
+
+            if (GUILayout.Button("Max"))
+            {
+                lowValue = 0f;
+                highValue = 1f;
+            }
+
+            EditorGUILayout.EndHorizontal();
+            if (oldLow != lowValue)
+            {
+                EditorPrefs.SetFloat(lowKey, lowValue);
+                EditorGUI.FocusTextInControl("");
+            }
+            if (oldHigh != highValue)
+            {
+                EditorPrefs.SetFloat(highKey, highValue);
+                EditorGUI.FocusTextInControl("");
+            }
+        }
+
         public void SystemReset()
         {
             //TODO
@@ -246,6 +287,7 @@ namespace UnityAnalyticsHeatmap
                     if (r != null)
                     {
                         r.UpdateTimeLimits(m_StartTime, m_EndTime);
+                        EditorGUI.FocusTextInControl("");
                         m_Heatmapper.Repaint();
                     }
                 }
