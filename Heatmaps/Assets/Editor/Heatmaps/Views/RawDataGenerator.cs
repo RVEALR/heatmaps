@@ -81,14 +81,16 @@ public class RawDataGenerator : EditorWindow
         new GUIContent("Really Big Game"),
         new GUIContent("Multilevel Game"),
         new GUIContent("FPS Dropoff"), 
-        new GUIContent("VR Lookat")
+        new GUIContent("VR Lookat"),
+        new GUIContent("Speed Racer")
     };
     DataStory[] m_DataStories = new DataStory[]{
         new BasicDataStory(),
         new ReallyBigDataStory(),
         new MultiLevelDataStory(),
         new FPSDropoffDataStory(),
-        new VRLookAtDataStory()
+        new VRLookAtDataStory(),
+        new SpeedRacerDataStory()
     };
 
 

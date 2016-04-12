@@ -10,11 +10,17 @@ namespace UnityAnalyticsHeatmap
         {
             name = "VR Look At";
             genre = "VR Adventure";
-            description = "Imagine this data as part of a VR game. Your question: as they move through the game, ";
-            description += "are users looking at what I want them to look at?";
+            description = "Imagine this data as part of a VR game. Your question: as they move through my game, ";
+            description += "are users looking where I want them to look?";
             whatToTry = "Generate this data, then click Process in the Heatmapper. In the render setting under 'Shape', ";
             whatToTry += "pick 'Point to Point'. Observe how you can see not just where the user was in the virtual world, ";
-            whatToTry += "but also what they were looking at.";
+            whatToTry += "but also what they were looking at.\n\n";
+            whatToTry += "This is done by sending two Vector3s. The first is the position of the player. The second ";
+            whatToTry += "is the position of a collider to which we raycast. The same technique could be used in a first-person ";
+            whatToTry += "shooter to find the things the player shot.\n\n";
+            whatToTry += "Now look at the 'Masking' subsection. This allows you to trim away data based on its position.";
+            whatToTry += "Note how the Y axis has no handles. This is because all the Y data in this demo is at";
+            whatToTry += "the same ordinate. Try tweaking the X and Z values to isolate out and inspect a single player position.";
         }
 
         DateTime now;
@@ -57,10 +63,9 @@ namespace UnityAnalyticsHeatmap
                 while (b < lookThisManyPlaces)
                 {
                     int numTimesToLook = UnityEngine.Random.Range(lookThisManyTimesMin, lookThisManyTimesMax);
-                    float xAddition=0f, yAddition=0f, zAddition=0f;
-                    xAddition = UnityEngine.Random.Range(-radius, radius);
-                    yAddition = UnityEngine.Random.Range(0, radius/2f);
-                    zAddition = UnityEngine.Random.Range(-radius, radius);
+                    float xAddition = UnityEngine.Random.Range(-radius, radius);
+                    float yAddition = UnityEngine.Random.Range(0, radius/2f);
+                    float zAddition = UnityEngine.Random.Range(-radius, radius);
 
                     for (int c = 0; c < numTimesToLook; c++)
                     {
