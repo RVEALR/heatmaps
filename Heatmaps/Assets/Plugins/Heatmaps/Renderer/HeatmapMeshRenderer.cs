@@ -553,7 +553,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     Vector3[] AddP2PVectorsToMesh(Vector3 fromVector, Vector3 toVector)
     {
         Vector3 relativePos = toVector - fromVector;
-        Quaternion q = Quaternion.LookRotation(relativePos);
+        Quaternion q = (relativePos == Vector3.zero) ? Quaternion.identity : Quaternion.LookRotation(relativePos);
         float distance = Vector3.Distance(fromVector, toVector);
 
         float arrowBaseZ = distance - (m_ParticleSize * 1.5f);
