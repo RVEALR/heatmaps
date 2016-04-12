@@ -231,11 +231,13 @@ namespace UnityAnalyticsHeatmap
             float oldLow = lowValue;
             float oldHigh = highValue;
 
-            EditorGUILayout.FloatField(lowValue, GUILayout.MaxWidth(50f));
-            EditorGUILayout.FloatField(highValue, GUILayout.Width(50f));
+            lowValue = EditorGUILayout.FloatField(lowValue, GUILayout.MaxWidth(50f));
+            highValue = EditorGUILayout.FloatField(highValue, GUILayout.Width(50f));
+            EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, minValue, maxValue);
             lowValue = Mathf.Min(lowValue, highValue);
             highValue = Mathf.Max(lowValue, highValue);
-            EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, minValue, maxValue);
+            // Needed to solve small rounding error in the MinMaxSlider
+            highValue = (Mathf.Abs(oldHigh - highValue) < .0001f) ? oldHigh : highValue;
             if (GUILayout.Button("Max"))
             {
                 lowValue = minValue;
@@ -244,12 +246,10 @@ namespace UnityAnalyticsHeatmap
             if (oldLow != lowValue)
             {
                 EditorPrefs.SetFloat(lowKey, lowValue);
-                //EditorGUI.FocusTextInControl("");
             }
             if (oldHigh != highValue)
             {
                 EditorPrefs.SetFloat(highKey, highValue);
-                //EditorGUI.FocusTextInControl("");
             }
             EditorGUILayout.EndHorizontal();
         }

@@ -83,9 +83,6 @@ namespace UnityAnalyticsHeatmap
 
             for (int i = 0; i < points.Length; i++)
             {
-
-                Debug.Log(points[i].position);
-
                 m_MaxDensity = Mathf.Max(m_MaxDensity, points[i].density);
                 m_MaxTime = Mathf.Max(m_MaxTime, points[i].time);
                 m_LowSpace = Vector3.Min(m_LowSpace, points[i].position);
