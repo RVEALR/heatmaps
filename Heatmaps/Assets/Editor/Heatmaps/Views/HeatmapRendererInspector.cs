@@ -189,7 +189,7 @@ namespace UnityAnalyticsHeatmap
                 EditorPrefs.SetInt(k_ParticleShapeKey, m_ParticleShapeIndex);
             }
 
-            if (m_ParticleShapeIndex > 0)
+            if (m_ParticleShapeIndex > 2)
             {
                 var oldParticleDirectionIndex = m_ParticleDirectionIndex;
                 m_ParticleDirectionIndex = EditorGUILayout.Popup(new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point"), m_ParticleDirectionIndex, m_ParticleDirectionOptions);
