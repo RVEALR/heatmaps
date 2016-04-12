@@ -418,12 +418,19 @@ public class RawDataGenerator : EditorWindow
 
     void GenerateRandomData()
     {
+        if (m_Events.Count < 1)
+        {
+            Debug.LogWarning("You must have at least one event to generate data");
+            return;
+        }
+
         int linesPerFile = 100;
         int currentFileLines = 0;
         double firstDate = 0d;
         DateTime now = DateTime.UtcNow;
         DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
         string data = "";
+        int fileCount = 0;
 
         for (int a = 0; a < m_EventCount; a++)
         {
@@ -506,8 +513,11 @@ public class RawDataGenerator : EditorWindow
                 SaveFile(data, firstDate);
                 currentFileLines = 0;
                 data = "";
+                fileCount++;
             }
         }
+        string files = (fileCount == 1) ? " file." : " files.";
+        Debug.Log("Generated random data: " + m_EventCount + " events " + " in " + fileCount + files);
     }
 
     void GenerateStoryData()
@@ -516,10 +526,14 @@ public class RawDataGenerator : EditorWindow
         if (story != null)
         {
             Dictionary<double, string> data = story.Generate();
+            int fileCount = 0;
             foreach(KeyValuePair<double, string> item in data)
             {
                 SaveFile(item.Value, item.Key);
+                fileCount ++;
             }
+            string files = (fileCount == 1) ? " file." : " files.";
+            Debug.Log("Generated data for " + story.name + " in " + fileCount + files);
         }
     }
 
