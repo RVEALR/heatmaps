@@ -36,7 +36,7 @@ public class HeatmapController : MonoBehaviour
     static Color s_MediumDensityColor = new Color(1f, 1f, 0, .1f);
     static Color s_LowDensityColor = new Color(0, 1f, 1f, .1f);
 
-    Color[] m_Colors = new Color[]{ s_LowDensityColor, s_MediumDensityColor, s_HighDensityColor };
+    Gradient gradient = new Gradient();
     float[] m_Thresholds = new float[]{ .1f, .9f };
 
     float m_MaxDensity = 0;
@@ -46,6 +46,10 @@ public class HeatmapController : MonoBehaviour
 
     void Start()
     {
+        gradient.colorKeys = new GradientColorKey[3];
+        gradient.colorKeys[0] = new GradientColorKey(s_LowDensityColor, 0f);
+        gradient.colorKeys[1] = new GradientColorKey(s_MediumDensityColor, 0.5f);
+        gradient.colorKeys[2] = new GradientColorKey(s_HighDensityColor, 1f);
         // If there's a path, load data
         if (!String.IsNullOrEmpty(dataPath))
         {
@@ -85,7 +89,7 @@ public class HeatmapController : MonoBehaviour
         var r = gameObject.GetComponent<IHeatmapRenderer>();
         r.allowRender = true;
         r.pointSize = pointSize;
-        r.UpdateColors(m_Colors);
+        r.UpdateGradient(gradient);
         r.UpdateThresholds(m_Thresholds);
         r.UpdateTimeLimits(0, m_MaxTime);
         r.UpdateRenderStyle(RenderShape.Triangle, RenderDirection.YZ);

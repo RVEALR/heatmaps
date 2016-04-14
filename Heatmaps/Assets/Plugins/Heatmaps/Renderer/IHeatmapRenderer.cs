@@ -17,12 +17,19 @@ namespace UnityAnalyticsHeatmap
         /// <param name="data">An array of HeatPoints defining the map and its density.</param>
         /// <param name="maxDensity">Density value considered to be 100%.</param>
         void UpdatePointData(HeatPoint[] data, float maxDensity);
-
+        
         /// <summary>
-        /// Defines the colors that draw the heatmap
+        /// [Obsolete] Defines the colors that draw the heatmap
         /// </summary>
         /// <param name="colors">An array of colors with which to display heat density.</param>
+        [Obsolete]
         void UpdateColors(Color[] colors);
+        
+        /// <summary>
+        /// Defines a grradient that colors the heatmap
+        /// </summary>
+        /// <param name="gradient">A gradient with which to compute heat density.</param>
+        void UpdateGradient(Gradient gradient);
 
         /// <summary>
         /// Tweak value thresholds that differentiate colors.

@@ -8,6 +8,7 @@ using System;
 using System.Collections;
 using UnityEditor;
 using UnityEngine;
+using System.Reflection;
 
 namespace UnityAnalyticsHeatmap
 {
@@ -110,18 +111,40 @@ namespace UnityAnalyticsHeatmap
         public void OnGUI()
         {
             EditorGUILayout.BeginVertical("box");
+
+            SerializedProperty colorGradient = null;
+            if (m_GameObject != null)
+            {
+                SerializedObject serializedGradient = new SerializedObject(m_GameObject.GetComponent<GradientContainer>());
+                colorGradient = serializedGradient.FindProperty("ColorGradient");
+                
+                // OnGUI
+                EditorGUI.BeginChangeCheck();
+                EditorGUILayout.PropertyField(colorGradient, false);
+                if(EditorGUI.EndChangeCheck())
+                {
+                    serializedGradient.ApplyModifiedProperties();
+                }
+                
+                // Accessing Later
+                //GradientContainer gradientContainer = (GradientContainer)serializedGradient.targetObject;
+            }
+
+
+
+
             // COLORS
-            EditorGUILayout.LabelField("Colors", EditorStyles.boldLabel);
-            EditorGUILayout.BeginHorizontal();
-            m_LowDensityColor = SetAndSaveColor(new GUIContent("", "Color for low density data"), k_LowColorDensityKey, m_LowDensityColor);
-            m_MediumDensityColor = SetAndSaveColor(new GUIContent("", "Color for medium density data"), k_MediumColorDensityKey, m_MediumDensityColor);
-            m_HighDensityColor = SetAndSaveColor(new GUIContent("", "Color for high density data"), k_HighColorDensityKey, m_HighDensityColor);
-
-            EditorGUILayout.EndHorizontal();
-
-            // THRESHOLDS
-            EditorGUILayout.LabelField("Color Thresholds");
-            RenderMinMaxSlider(ref m_LowThreshold, ref m_HighThreshold, k_LowThresholdKey, k_HighThresholdKey, 0f, 1f);
+//            EditorGUILayout.LabelField("Colors", EditorStyles.boldLabel);
+//            EditorGUILayout.BeginHorizontal();
+//            m_LowDensityColor = SetAndSaveColor(new GUIContent("", "Color for low density data"), k_LowColorDensityKey, m_LowDensityColor);
+//            m_MediumDensityColor = SetAndSaveColor(new GUIContent("", "Color for medium density data"), k_MediumColorDensityKey, m_MediumDensityColor);
+//            m_HighDensityColor = SetAndSaveColor(new GUIContent("", "Color for high density data"), k_HighColorDensityKey, m_HighDensityColor);
+//
+//            EditorGUILayout.EndHorizontal();
+//
+//            // THRESHOLDS
+//            EditorGUILayout.LabelField("Color Thresholds");
+//            RenderMinMaxSlider(ref m_LowThreshold, ref m_HighThreshold, k_LowThresholdKey, k_HighThresholdKey, 0f, 1f);
             EditorGUILayout.EndVertical();
 
             // TIME WINDOW
@@ -129,7 +152,7 @@ namespace UnityAnalyticsHeatmap
             EditorGUILayout.LabelField("Time", EditorStyles.boldLabel);
             var oldStartTime = m_StartTime;
             var oldEndTime = m_EndTime;
-            RenderMinMaxSlider(ref m_StartTime, ref m_EndTime, k_StartTimeKey, k_EndTimeKey, 0, m_MaxTime);
+            RenderMinMaxSlider(ref m_StartTime, ref m_EndTime, k_StartTimeKey, k_EndTimeKey, 0f, m_MaxTime);
             var oldPlaySpeed = m_PlaySpeed;
             m_PlaySpeed = EditorGUILayout.FloatField(new GUIContent("Play Speed", "Speed at which playback occurs"), m_PlaySpeed);
             if (oldPlaySpeed != m_PlaySpeed)
@@ -217,12 +240,31 @@ namespace UnityAnalyticsHeatmap
             if (m_GameObject != null)
             {
                 IHeatmapRenderer r = m_GameObject.GetComponent<IHeatmapRenderer>() as IHeatmapRenderer;
-                r.UpdateColors(new Color[]{ m_LowDensityColor, m_MediumDensityColor, m_HighDensityColor });
+                r.UpdateGradient(SafeGradientValue(colorGradient ));
                 r.UpdateThresholds(new float[]{ m_LowThreshold, m_HighThreshold });
                 r.pointSize = m_ParticleSize;
                 r.UpdateRenderMask(m_LowX, m_HighX, m_LowY, m_HighY, m_LowZ, m_HighZ);
                 r.UpdateRenderStyle(m_ParticleShapeIds[m_ParticleShapeIndex], m_ParticleDirectionIds[m_ParticleDirectionIndex]);
             }
+        }
+
+        /// Access to SerializedProperty's internal gradientValue property getter, in a manner that'll only soft break (returning null) if the property changes or disappears in future Unity revs.
+        static Gradient SafeGradientValue(SerializedProperty sp)
+        {
+            BindingFlags instanceAnyPrivacyBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            PropertyInfo propertyInfo = typeof(SerializedProperty).GetProperty(
+                "gradientValue",
+                instanceAnyPrivacyBindingFlags,
+                null,
+                typeof(Gradient),
+                new Type[0],
+                null
+                );
+            if (propertyInfo == null)
+                return null;
+            
+            Gradient gradientValue = propertyInfo.GetValue(sp, null) as Gradient;
+            return gradientValue;
         }
 
         protected void RenderMinMaxSlider(ref float lowValue, ref float highValue, string lowKey, string highKey, float minValue, float maxValue)
@@ -234,8 +276,11 @@ namespace UnityAnalyticsHeatmap
             lowValue = EditorGUILayout.FloatField(lowValue, GUILayout.MaxWidth(50f));
             highValue = EditorGUILayout.FloatField(highValue, GUILayout.Width(50f));
             EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, minValue, maxValue);
+
+
+            highValue = Mathf.Max(lowValue + .0001f, highValue);
             lowValue = Mathf.Min(lowValue, highValue);
-            highValue = Mathf.Max(lowValue, highValue);
+
             // Needed to solve small rounding error in the MinMaxSlider
             highValue = (Mathf.Abs(oldHigh - highValue) < .0001f) ? oldHigh : highValue;
             if (GUILayout.Button("Max"))

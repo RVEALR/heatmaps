@@ -13,6 +13,7 @@ using System.Linq;
 using UnityAnalyticsHeatmap;
 using UnityEngine;
 
+[RequireComponent(typeof(GradientContainer))]
 public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 {
 
@@ -51,6 +52,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     Shader m_Shader;
     public Material[] m_Materials;
+    Gradient m_Gradient;
 
     int m_RenderState = k_NotRendering;
 
@@ -70,20 +72,22 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     public void UpdateColors(Color[] colors)
     {
+        // No-op
+    }
+
+    public void UpdateGradient(Gradient gradient)
+    {
         if (m_Materials == null || m_Materials.Length == 0)
         {
             m_Shader = Shader.Find("Heatmaps/Particles/AlphaBlend");
-            m_Materials = new Material[colors.Length];
+            m_Materials = new Material[1];
+            m_Materials[0] = new Material(m_Shader);
         }
-        for(int a = 0; a < colors.Length; a++) {
-            if (m_Materials[a] == null) {
-                m_Materials[a] = new Material(m_Shader);
-            }
-            if (m_Materials[a].GetColor("_TintColor") != colors[a]) {
-                Material mat = m_Materials[a];
-                mat.SetColor("_TintColor", colors[a]);
-                m_RenderState = k_UpdateMaterials;
-            }
+        if (gradient == null || !CompareGradients(gradient, m_Gradient))
+        {
+            m_Gradient = gradient;
+            m_RenderState = k_UpdateMaterials;
+            Debug.Log("UpdateGradient");
         }
     }
 
@@ -203,7 +207,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                     if (hasData())
                     {
                         int pt = 0;         // cursor that increments each time we find a point in the time range
-                        int indexPt = 0;    // cursor based on pt, but returns to 0 each time we shift to a new submap
                         int currentSubmap = 0;
                         int oldSubmap = -1;
                         int verticesPerShape = GetVecticesForShape();
@@ -222,18 +225,12 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                                     {
                                         go.GetComponent<Renderer>().materials = materials;
                                     }
-
-                                    indexPt = 0;
                                     go = m_GameObjects[currentSubmap];
                                     materials = go.GetComponent<Renderer>().sharedMaterials;
                                 }
-
-
-                                materials[indexPt] = PickMaterial(m_Data[a].density / m_MaxDensity);
-
+                                materials = m_Materials;
                                 oldSubmap = currentSubmap;
                                 pt++;
-                                indexPt++;
                             }
                         }
                         if (go != null && materials != null)
@@ -241,7 +238,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                             go.GetComponent<Renderer>().materials = materials;
                         }
 
-                        m_RenderState = k_NotRendering;
+                        CreatePoints();
                     }
                     break;
             }
@@ -331,12 +328,13 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     {
         var allTris = new List<int[]>();
         var allVectors = new List<Vector3[]>();
-        Vector3[] vector3;
+        var allColors = new List<Color32[]>();
+        Vector3[] vector3 = null;
         var materials = new Material[submap.Count];
 
         for (int a = 0; a < submap.Count; a++)
         {
-            materials[a] = PickMaterial(submap[a].density / m_MaxDensity);
+            materials[a] = m_Materials[0];//PickMaterial(m_Data[a].density / m_MaxDensity);
             Vector3 position = submap[a].position;
             Vector3 rotation = submap[a].rotation;
             Vector3 destination = submap[a].destination;
@@ -369,11 +367,13 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                     allTris.Add(AddP2PTrisToMesh(a * vector3.Length));
                     break;
             }
+            allColors.Add(AddColorsToMesh(vector3.Length, submap[a]));
         }
-
         Vector3[] combinedVertices = allVectors.SelectMany(x => x).ToArray<Vector3>();
         Mesh mesh = go.GetComponent<MeshFilter>().sharedMesh;
         mesh.vertices = combinedVertices;
+        mesh.colors32 = allColors.SelectMany(x => x).ToArray<Color32>();
+
         for (int j = 0; j < allTris.Count; j++)
         {
             int[] t = allTris[j];
@@ -382,6 +382,18 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         go.GetComponent<Renderer>().materials = materials;
         mesh.Optimize();
 
+    }
+
+    Color32[] AddColorsToMesh(int count, HeatPoint pt)
+    {
+        Color32[] colors = new Color32[count];
+        Color color = PickGradientColor(pt.density / m_MaxDensity);
+        for (int b = 0 ; b < count ; b++)
+        {
+            colors[b] = new Color (color.r, color.g, color.b, color.a) ; 
+        }
+
+        return colors;
     }
 
     Vector3[] AddCubeVectorsToMesh(float x, float y, float z)
@@ -638,19 +650,63 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         return verts;
     }
 
-    Material PickMaterial(float value)
+    Color PickGradientColor(float percent)
     {
-        int i = 1;
-        if (m_Materials == null)
-            return null;
-        if (value > m_HighThreshold)
+        return m_Gradient.Evaluate(percent);
+    }
+
+//    Material PickMaterial(float value)
+//    {
+//        int i = 1;
+//        if (m_Materials == null)
+//            return null;
+//        if (value > m_HighThreshold)
+//        {
+//            i = 2;
+//        }
+//        else if (value < m_LowThreshold)
+//        {
+//            i = 0;
+//        }
+//        return m_Materials[i];
+//    }
+
+    public static bool CompareGradients(Gradient gradient, Gradient otherGradient)
+    {
+        if (gradient == null || otherGradient == null)
         {
-            i = 2;
+            return false;
         }
-        else if (value < m_LowThreshold)
+
+        // Compare the lengths before checking actual colors and alpha components
+        if (gradient.colorKeys.Length != otherGradient.colorKeys.Length || gradient.alphaKeys.Length != otherGradient.alphaKeys.Length) {
+            return false;
+        }
+        
+        // Compare all the colors
+        for (int a = 0; a < gradient.colorKeys.Length; a++)
         {
-            i = 0;
+            // Test if the color and alpha is the same
+            GradientColorKey key = gradient.colorKeys[a];
+            GradientColorKey otherKey = otherGradient.colorKeys[a];
+            if (key.color != otherKey.color || key.time != otherKey.time) {
+                return false;
+            }
         }
-        return m_Materials[i];
+        
+        // Compare all the alphas
+        for (int a = 0; a < gradient.alphaKeys.Length; a++)
+        {
+            // Test if the color and alpha is the same
+            GradientAlphaKey key = gradient.alphaKeys[a];
+            GradientAlphaKey otherKey = otherGradient.alphaKeys[a];
+            if (key.alpha != otherKey.alpha || key.time != otherKey.time)
+            {
+                return false;
+            }
+        }
+        
+        // They're the same
+        return true;
     }
 }
