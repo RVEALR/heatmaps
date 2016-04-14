@@ -87,7 +87,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         {
             m_Gradient = gradient;
             m_RenderState = k_UpdateMaterials;
-            Debug.Log("UpdateGradient");
         }
     }
 

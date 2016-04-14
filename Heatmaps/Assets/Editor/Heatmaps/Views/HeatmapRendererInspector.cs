@@ -14,13 +14,6 @@ namespace UnityAnalyticsHeatmap
 {
     public class HeatmapRendererInspector
     {
-        const string k_HighColorDensityKey = "UnityAnalyticsHeatmapHighDensityColor";
-        const string k_MediumColorDensityKey = "UnityAnalyticsHeatmapMediumDensityColor";
-        const string k_LowColorDensityKey = "UnityAnalyticsHeatmapLowDensityColor";
-
-        const string k_HighThresholdKey = "UnityAnalyticsHeatmapHighThreshold";
-        const string k_LowThresholdKey = "UnityAnalyticsHeatmapLowThreshold";
-
         const string k_StartTimeKey = "UnityAnalyticsHeatmapStartTime";
         const string k_EndTimeKey = "UnityAnalyticsHeatmapEndTime";
         const string k_PlaySpeedKey = "UnityAnalyticsHeatmapPlaySpeed";
@@ -37,13 +30,6 @@ namespace UnityAnalyticsHeatmap
         const string k_HighZKey = "UnityAnalyticsHeatmapHighZ";
 
         Heatmapper m_Heatmapper;
-
-        Color m_HighDensityColor = new Color(1f, 0, 0, .1f);
-        Color m_MediumDensityColor = new Color(1f, 1f, 0, .1f);
-        Color m_LowDensityColor = new Color(0, 1f, 1f, .1f);
-
-        float m_HighThreshold = .9f;
-        float m_LowThreshold = .1f;
 
         float m_StartTime = 0f;
         float m_EndTime = 1f;
@@ -75,13 +61,6 @@ namespace UnityAnalyticsHeatmap
 
         public HeatmapRendererInspector()
         {
-            m_HighDensityColor = GetColorFromString(EditorPrefs.GetString(k_HighColorDensityKey), m_HighDensityColor);
-            m_MediumDensityColor = GetColorFromString(EditorPrefs.GetString(k_MediumColorDensityKey), m_MediumDensityColor);
-            m_LowDensityColor = GetColorFromString(EditorPrefs.GetString(k_LowColorDensityKey), m_LowDensityColor);
-
-            m_HighThreshold = EditorPrefs.GetFloat(k_HighThresholdKey, m_HighThreshold);
-            m_LowThreshold = EditorPrefs.GetFloat(k_LowThresholdKey, m_LowThreshold);
-
             m_StartTime = EditorPrefs.GetFloat(k_StartTimeKey, m_StartTime);
             m_EndTime = EditorPrefs.GetFloat(k_EndTimeKey, m_EndTime);
             m_PlaySpeed = EditorPrefs.GetFloat(k_PlaySpeedKey, m_PlaySpeed);
@@ -97,8 +76,6 @@ namespace UnityAnalyticsHeatmap
             m_HighX = EditorPrefs.GetFloat(k_HighXKey, m_HighX);
             m_HighY = EditorPrefs.GetFloat(k_HighXKey, m_HighY);
             m_HighZ = EditorPrefs.GetFloat(k_HighXKey, m_HighZ);
-
-
         }
 
         public static HeatmapRendererInspector Init(Heatmapper heatmapper)
@@ -111,40 +88,21 @@ namespace UnityAnalyticsHeatmap
         public void OnGUI()
         {
             EditorGUILayout.BeginVertical("box");
-
             SerializedProperty colorGradient = null;
             if (m_GameObject != null)
             {
                 SerializedObject serializedGradient = new SerializedObject(m_GameObject.GetComponent<GradientContainer>());
-                colorGradient = serializedGradient.FindProperty("ColorGradient");
-                
-                // OnGUI
-                EditorGUI.BeginChangeCheck();
-                EditorGUILayout.PropertyField(colorGradient, false);
-                if(EditorGUI.EndChangeCheck())
+                if (serializedGradient != null)
                 {
-                    serializedGradient.ApplyModifiedProperties();
+                    colorGradient = serializedGradient.FindProperty("ColorGradient");
+                    EditorGUI.BeginChangeCheck();
+                    EditorGUILayout.PropertyField(colorGradient, false);
+                    if(EditorGUI.EndChangeCheck())
+                    {
+                        serializedGradient.ApplyModifiedProperties();
+                    }
                 }
-                
-                // Accessing Later
-                //GradientContainer gradientContainer = (GradientContainer)serializedGradient.targetObject;
             }
-
-
-
-
-            // COLORS
-//            EditorGUILayout.LabelField("Colors", EditorStyles.boldLabel);
-//            EditorGUILayout.BeginHorizontal();
-//            m_LowDensityColor = SetAndSaveColor(new GUIContent("", "Color for low density data"), k_LowColorDensityKey, m_LowDensityColor);
-//            m_MediumDensityColor = SetAndSaveColor(new GUIContent("", "Color for medium density data"), k_MediumColorDensityKey, m_MediumDensityColor);
-//            m_HighDensityColor = SetAndSaveColor(new GUIContent("", "Color for high density data"), k_HighColorDensityKey, m_HighDensityColor);
-//
-//            EditorGUILayout.EndHorizontal();
-//
-//            // THRESHOLDS
-//            EditorGUILayout.LabelField("Color Thresholds");
-//            RenderMinMaxSlider(ref m_LowThreshold, ref m_HighThreshold, k_LowThresholdKey, k_HighThresholdKey, 0f, 1f);
             EditorGUILayout.EndVertical();
 
             // TIME WINDOW
@@ -221,7 +179,7 @@ namespace UnityAnalyticsHeatmap
                     EditorPrefs.SetInt(k_ParticleDirectionKey, m_ParticleDirectionIndex);
                 }
             }
-            // Position Masking
+            // POSITION MASKING
             EditorGUILayout.LabelField("Masking");
             RenderMinMaxSlider(ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey, m_LowSpace.x, m_HighSpace.x);
             RenderMinMaxSlider(ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey, m_LowSpace.y, m_HighSpace.y);
@@ -241,14 +199,13 @@ namespace UnityAnalyticsHeatmap
             {
                 IHeatmapRenderer r = m_GameObject.GetComponent<IHeatmapRenderer>() as IHeatmapRenderer;
                 r.UpdateGradient(SafeGradientValue(colorGradient ));
-                r.UpdateThresholds(new float[]{ m_LowThreshold, m_HighThreshold });
                 r.pointSize = m_ParticleSize;
                 r.UpdateRenderMask(m_LowX, m_HighX, m_LowY, m_HighY, m_LowZ, m_HighZ);
                 r.UpdateRenderStyle(m_ParticleShapeIds[m_ParticleShapeIndex], m_ParticleDirectionIds[m_ParticleDirectionIndex]);
             }
         }
 
-        /// Access to SerializedProperty's internal gradientValue property getter, in a manner that'll only soft break (returning null) if the property changes or disappears in future Unity revs.
+        // Access to SerializedProperty's internal gradientValue property getter, in a manner that'll only soft break (returning null) if the property changes or disappears in future Unity revs.
         static Gradient SafeGradientValue(SerializedProperty sp)
         {
             BindingFlags instanceAnyPrivacyBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
@@ -278,7 +235,7 @@ namespace UnityAnalyticsHeatmap
             EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, minValue, maxValue);
 
 
-            highValue = Mathf.Max(lowValue + .0001f, highValue);
+            highValue = Mathf.Max(lowValue, highValue);
             lowValue = Mathf.Min(lowValue, highValue);
 
             // Needed to solve small rounding error in the MinMaxSlider
@@ -369,50 +326,6 @@ namespace UnityAnalyticsHeatmap
         public void SetGameObject(GameObject go)
         {
             m_GameObject = go;
-        }
-
-        string FormatColorToString(Color c)
-        {
-            return c.r + "|" + c.g + "|" + c.b + "|" + c.a;
-        }
-
-        Color GetColorFromString(string s, Color defaultColor)
-        {
-            if (string.IsNullOrEmpty(s))
-            {
-                return defaultColor;
-            }
-
-            string[] cols = s.Split('|');
-
-            float r = 0, g = 0, b = 0, a = 1;
-            try
-            {
-                r = float.Parse(cols[0]);
-                g = float.Parse(cols[1]);
-                b = float.Parse(cols[2]);
-                a = float.Parse(cols[3]);
-            }
-            catch
-            {
-                r = 1f;
-                g = 1f;
-                b = 0f;
-                a = 1f;
-            }
-            return new Color(r, g, b, a);
-        }
-
-        Color SetAndSaveColor(GUIContent content, string key, Color currentColor)
-        {
-            var oldColor = currentColor;
-            Color updatedColor = EditorGUILayout.ColorField(currentColor);
-            if (oldColor != updatedColor)
-            {
-                string colorString = FormatColorToString(updatedColor);
-                EditorPrefs.SetString(key, colorString);
-            }
-            return updatedColor;
         }
     }
 }
