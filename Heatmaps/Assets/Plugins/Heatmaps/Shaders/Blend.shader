@@ -9,7 +9,7 @@ Shader "Heatmaps/Particles/AlphaBlend" {
          Lighting Off 
          Fog { Mode Off }
          ZWrite Off
-         Blend SrcAlpha DstAlpha
+         Blend SrcAlpha OneMinusSrcAlpha
          Pass { } 
      }
  }
