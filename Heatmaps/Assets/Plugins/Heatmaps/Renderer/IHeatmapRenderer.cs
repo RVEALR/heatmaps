@@ -32,10 +32,11 @@ namespace UnityAnalyticsHeatmap
         void UpdateGradient(Gradient gradient);
 
         /// <summary>
-        /// Tweak value thresholds that differentiate colors.
+        /// [Obsolete] Tweak value thresholds that differentiate colors.
         /// </summary>
         /// By default, colors divide evenly. Use thesholds to arrange non-standard splits.
         /// <param name="thresholds">A list of floats (probably one less than the number of colors used in SetColors).</param>
+        [Obsolete]
         void UpdateThresholds(float[] thresholds);
 
         /// <summary>

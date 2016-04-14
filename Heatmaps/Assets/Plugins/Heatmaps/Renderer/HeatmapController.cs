@@ -37,7 +37,6 @@ public class HeatmapController : MonoBehaviour
     static Color s_LowDensityColor = new Color(0, 1f, 1f, .1f);
 
     Gradient gradient = new Gradient();
-    float[] m_Thresholds = new float[]{ .1f, .9f };
 
     float m_MaxDensity = 0;
     float m_MaxTime = 0;
@@ -90,7 +89,6 @@ public class HeatmapController : MonoBehaviour
         r.allowRender = true;
         r.pointSize = pointSize;
         r.UpdateGradient(gradient);
-        r.UpdateThresholds(m_Thresholds);
         r.UpdateTimeLimits(0, m_MaxTime);
         r.UpdateRenderStyle(RenderShape.Triangle, RenderDirection.YZ);
         r.UpdatePointData(m_Data[options[optionIndex]], m_MaxDensity);
