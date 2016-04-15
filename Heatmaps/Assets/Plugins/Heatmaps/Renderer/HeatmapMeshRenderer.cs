@@ -74,6 +74,11 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     {
         // No-op
     }
+    
+    public void UpdateThresholds(float[] threshholds)
+    {
+        //No-op
+    }
 
     public void UpdateGradient(Gradient gradient)
     {
@@ -86,25 +91,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         if (gradient == null || !CompareGradients(gradient, m_Gradient))
         {
             m_Gradient = gradient;
-            m_RenderState = k_UpdateMaterials;
-        }
-    }
-
-    public void UpdateThresholds(float[] threshholds)
-    {
-        float t0 = ( Mathf.Log(1f-threshholds[0]) / -6f) ;
-        float t1 = ( Mathf.Log(1f-threshholds[1]) / -6f) ;
-
-        if (float.IsInfinity(t0)) {
-            t0 = 0;
-        }
-        if (float.IsInfinity(t1)) {
-            t1 = 1;
-        }
-        if (m_HighThreshold != t1 || m_LowThreshold != t0)
-        {
-            m_HighThreshold = t1;
-            m_LowThreshold = t0;
             m_RenderState = k_UpdateMaterials;
         }
     }
@@ -386,12 +372,15 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     Color32[] AddColorsToMesh(int count, HeatPoint pt)
     {
         Color32[] colors = new Color32[count];
-        Color color = PickGradientColor(pt.density / m_MaxDensity);
+        float pct = (pt.density/m_MaxDensity);
+        if (float.IsInfinity(pct)) {
+            pct = 0f;
+        }
+        Color color = PickGradientColor(pct);
         for (int b = 0 ; b < count ; b++)
         {
             colors[b] = new Color (color.r, color.g, color.b, color.a) ; 
         }
-
         return colors;
     }
 
