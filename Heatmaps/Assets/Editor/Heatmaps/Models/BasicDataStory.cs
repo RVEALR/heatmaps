@@ -29,14 +29,8 @@ namespace UnityAnalyticsHeatmap
             int linesPerFile = 500;
             int currentFileLines = 0;
             int deviceCount = 2;
-
-            float radius = 50f;
-            float minx = -radius;
-            float maxx = radius;
-            float miny = -radius;
-            float maxy = radius;
-            float minz = -radius;
-            float maxz = radius;
+            float minRadius = 5f;
+            float radius = 10f;
 
             double firstDate = 0d;
             DateTime now = DateTime.UtcNow;
@@ -61,13 +55,16 @@ namespace UnityAnalyticsHeatmap
                 evt += eventName + "\t";
 
                 // Build the JSON
+
+                float mult = UnityEngine.Random.Range(0f, 1f) > .5f ? -1f : 1f;
+                float distance = UnityEngine.Random.Range(minRadius, radius) * mult;
+                Vector3 rot = new Vector3(UnityEngine.Random.Range(-1f,1f), UnityEngine.Random.Range(-1f,1f), UnityEngine.Random.Range(-1f,1f));
+                Vector3 position = rot.normalized * distance;
+
                 evt += "{";
-                float x = UnityEngine.Random.Range(minx, maxx);
-                evt += "\"x\":\"" + x + "\",";
-                float y = UnityEngine.Random.Range(miny, maxy);
-                evt += "\"y\":\"" + y + "\",";
-                float z = UnityEngine.Random.Range(minz, maxz);
-                evt += "\"z\":\"" + z + "\",";
+                evt += "\"x\":\"" + position.x + "\",";
+                evt += "\"y\":\"" + position.y + "\",";
+                evt += "\"z\":\"" + position.z + "\",";
 
                 evt += "\"unity.name\":" + "\"" + eventName + "\"" + "}\n";
 
