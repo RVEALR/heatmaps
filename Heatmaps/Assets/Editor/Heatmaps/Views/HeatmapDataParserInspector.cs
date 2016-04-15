@@ -95,8 +95,11 @@ namespace UnityAnalyticsHeatmap
             m_HeatData = heatData;
             if (heatData != null)
             {
+                if (m_OptionKeys == null || m_OptionKeys[m_OptionIndex] != options[m_OptionIndex])
+                {
+                    m_OptionIndex = 0;
+                }
                 m_OptionKeys = options;
-                m_OptionIndex = 0;
                 m_MaxDensity = maxDensity;
                 m_MaxTime = maxTime;
                 m_LowSpace = lowSpace;
