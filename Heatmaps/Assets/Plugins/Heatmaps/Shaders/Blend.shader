@@ -8,9 +8,10 @@ Shader "Heatmaps/Particles/AlphaBlend" {
      SubShader { 
          Lighting Off 
          Fog { Mode Off }
-         ZWrite Off
          Blend SrcAlpha OneMinusSrcAlpha
-         Pass { } 
+         Cull Front
+         Tags { Queue = Transparent }
+         Pass { }
      }
  }
 }
