@@ -9,7 +9,7 @@ Shader "Heatmaps/Particles/AlphaBlend" {
          Lighting Off 
          Fog { Mode Off }
          Blend SrcAlpha OneMinusSrcAlpha
-         Cull Front
+         Cull Off
          Tags { Queue = Transparent }
          Pass { }
      }
