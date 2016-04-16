@@ -1,11 +1,15 @@
 ﻿using System;
 using UnityEngine;
+using System.Collections.Generic;
+using UnityAnalyticsHeatmap;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
 [ExecuteInEditMode]
 public class HeatmapSubmap : MonoBehaviour
 {
+
+    public List<HeatPoint> m_PointData;
 
     void Start()
     {

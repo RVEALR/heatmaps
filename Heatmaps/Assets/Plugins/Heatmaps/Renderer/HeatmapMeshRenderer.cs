@@ -277,8 +277,12 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                 {
                     int submapID = currentSubmaps + a;
                     var go = new GameObject("Submap" + submapID);
+                    go.AddComponent<MeshCollider>();
                     go.AddComponent<HeatmapSubmap>();
-                    go.GetComponent<MeshFilter>().sharedMesh = new Mesh();
+
+                    go.GetComponent<MeshFilter>().sharedMesh =  go.GetComponent<MeshCollider>().sharedMesh = new Mesh();
+                    go.GetComponent<MeshCollider>().sharedMesh.MarkDynamic();
+
                     go.transform.parent = gameObject.transform;
                     m_GameObjects.Add(go);
                 }
@@ -365,6 +369,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             mesh.SetTriangles(t, j);
         }
         go.GetComponent<Renderer>().materials = materials;
+        go.GetComponent<HeatmapSubmap>().m_PointData = submap;
         mesh.Optimize();
 
     }
