@@ -14,15 +14,16 @@ namespace UnityAnalyticsHeatmap
             whatToTry = "Generate this data, then open the Heatmapper, ensure that 'Local Only' is checked, and click the Process button. ";
             whatToTry += "First, notice the numbers at the bottom of the Heatmapper ('Points in current set' and ";
             whatToTry += "'Points currently displayed'). These give you an idea of how much data you should expect to see displayed.\n\n";
-            whatToTry += "Notice that the generated heatmap has three colors. Play with the color thresholds to 'tune' the ";
-            whatToTry += "separation between high-, medium- and low-frequency events. Click on a ";
-            whatToTry += "color swatch and play with that color; see how that changes the look of the heatmap. You can even change the alpha.\n\n";
+            whatToTry += "Notice that the generated heatmap has three colors. Click on the color gradient to 'tune' the ";
+            whatToTry += "colors. Play with the gradient and see how that changes the look of the heatmap. You can even change the alphas.\n\n";
             whatToTry += "Now, under 'Particle', change the size and shape settings and again observe how this affects the display.";
         }
 
         #region implemented abstract members of DataStory
         public override Dictionary<double, string> Generate()
         {
+            // Set a seed so set is consistently generated
+            UnityEngine.Random.seed = 42;
             var retv = new Dictionary<double, string>();
 
             int eventCount = 2000;

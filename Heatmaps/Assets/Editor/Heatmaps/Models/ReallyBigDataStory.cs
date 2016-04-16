@@ -19,17 +19,17 @@ namespace UnityAnalyticsHeatmap
             whatToTry += "Notice that this data is a bit sparse because of the scale of the map. ";
             whatToTry += "Under 'Aggregate', change the value of 'Space Smooth' to 500 and re-process. ";
             whatToTry += "Adjust the particle size to 250. Now you can see the general areas where ";
-            whatToTry += "kills have occurred and the map becomes more useful ()you might also want to tweak the Color Thresholds).\n\n";
+            whatToTry += "kills have occurred and the map becomes more useful.\n\n";
 
             whatToTry += "Under Render, Find the 'Option' dropdown. If you click it, you'll see in addition to 'CombatKills' ";
             whatToTry += "there's an option for 'PlayerPosition'. Choose that and instead of seeing kills, you'll see where in this sim ";
-            whatToTry += "your players have gone. While space smooth of 500 was good for kills, it's too coarse for player position. ";
+            whatToTry += "your players have gone. While space smooth of 500 was good for kills, it's likely too coarse for player position. ";
             whatToTry += "Re-adjust space smoothing and particle size to 10. ";
-            whatToTry += "Uncheck the 'Direction' checkbox and Process again, and again select the 'PlayerPosition' option. ";
+            whatToTry += "Uncheck the 'Direction' checkbox and Process again. ";
             whatToTry += "Now, under Particle 'Shape' pick 'Arrow'. What you're now seeing is not simply WHERE the player went, ";
             whatToTry += "but what direction they flew.\n\n";
 
-            whatToTry += "Under 'Aggregate', uncheck 'Time', then Process again, and again select PlayerPosition. ";
+            whatToTry += "Under 'Aggregate', uncheck 'Time', then Process again. ";
             whatToTry += "You might try bringing the particle size up to around 25. In the Render section ";
             whatToTry += "under 'Time' note the start and end values. Change the end value to 1, change 'Play Speed' to 0.1 and ";
             whatToTry += "press the 'Play' button to watch the airplanes fly!";
@@ -38,6 +38,9 @@ namespace UnityAnalyticsHeatmap
         #region implemented abstract members of DataStory
         public override Dictionary<double, string> Generate()
         {
+            // Set a seed so set is consistently generated
+            UnityEngine.Random.seed = 42;
+
             var retv = new Dictionary<double, string>();
 
             int playThroughs = 5;
@@ -98,7 +101,7 @@ namespace UnityAnalyticsHeatmap
                     evt += "\"y\":\"" + position.y + "\",";
                     evt += "\"z\":\"" + position.z + "\",";
 
-                    evt += "\"t\":\"" + b + "\",";
+                    evt += "\"t\":\"" + (2f*b) + "\",";
 
                     evt += "\"rx\":\"" + rotation.x + "\",";
                     evt += "\"ry\":\"" + rotation.y + "\",";
