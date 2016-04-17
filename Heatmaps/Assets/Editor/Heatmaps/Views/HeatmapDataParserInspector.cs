@@ -20,8 +20,6 @@ namespace UnityAnalyticsHeatmap
         string m_Path = "";
 
         Dictionary<string, HeatPoint[]> m_HeatData;
-        float m_MaxDensity = 0;
-        float m_MaxTime = 0;
         Vector3 m_LowSpace;
         Vector3 m_HighSpace;
 
@@ -29,7 +27,7 @@ namespace UnityAnalyticsHeatmap
         int m_OptionIndex = 0;
         string[] m_OptionKeys;
 
-        public delegate void PointHandler(HeatPoint[] heatData, float maxDensity, float maxTime, Vector3 lowSpace, Vector3 highSpace);
+        public delegate void PointHandler(HeatPoint[] heatData);
 
         PointHandler m_PointHandler;
 
@@ -49,7 +47,7 @@ namespace UnityAnalyticsHeatmap
 
         void Dispatch()
         {
-            m_PointHandler(m_HeatData[m_OptionKeys[m_OptionIndex]], m_MaxDensity, m_MaxTime, m_LowSpace, m_HighSpace);
+            m_PointHandler(m_HeatData[m_OptionKeys[m_OptionIndex]]);
         }
 
         public void SetDataPath(string jsonPath)
@@ -66,44 +64,28 @@ namespace UnityAnalyticsHeatmap
                 m_OptionIndex = EditorGUILayout.Popup("Option", m_OptionIndex, m_OptionKeys);
                 if (m_OptionIndex != oldIndex)
                 {
-                    RecalculateMax();
                     Dispatch();
                 }
             }
         }
 
-        void RecalculateMax()
-        {
-            HeatPoint[] points = m_HeatData[m_OptionKeys[m_OptionIndex]];
-            m_MaxDensity = 0;
-            m_MaxTime = 0;
-            m_LowSpace = new Vector3();
-            m_HighSpace = new Vector3();
-
-
-            for (int i = 0; i < points.Length; i++)
-            {
-                m_MaxDensity = Mathf.Max(m_MaxDensity, points[i].density);
-                m_MaxTime = Mathf.Max(m_MaxTime, points[i].time);
-                m_LowSpace = Vector3.Min(m_LowSpace, points[i].position);
-                m_HighSpace = Vector3.Max(m_HighSpace, points[i].position);
-            }
-        }
-
-        void ParseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, Vector3 lowSpace, Vector3 highSpace, string[] options)
+        void ParseHandler(Dictionary<string, HeatPoint[]> heatData, string[] options)
         {
             m_HeatData = heatData;
             if (heatData != null)
             {
-                if (m_OptionKeys == null || m_OptionKeys[m_OptionIndex] != options[m_OptionIndex])
+                if (m_OptionKeys != null)
+                {
+                    string opt = m_OptionIndex > m_OptionKeys.Length ? "" : m_OptionKeys[m_OptionIndex];
+                    ArrayList list = new ArrayList(options);
+                    int idx = list.IndexOf(opt);
+                    m_OptionIndex = idx == -1 ? 0 : idx;
+                }
+                else
                 {
                     m_OptionIndex = 0;
                 }
                 m_OptionKeys = options;
-                m_MaxDensity = maxDensity;
-                m_MaxTime = maxTime;
-                m_LowSpace = lowSpace;
-                m_HighSpace = highSpace;
                 Dispatch();
             }
         }

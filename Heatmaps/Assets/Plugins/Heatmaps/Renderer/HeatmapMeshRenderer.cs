@@ -35,7 +35,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     [Range(0.1f, 100f)]
     float m_ParticleSize = 1.0f;
-    int m_CurrentResolution;
 
     bool m_Tips = false;
 

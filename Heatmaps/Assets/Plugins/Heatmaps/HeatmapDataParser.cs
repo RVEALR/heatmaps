@@ -24,7 +24,7 @@ namespace UnityAnalyticsHeatmap
 {
     public class HeatmapDataParser
     {
-        public delegate void ParseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, Vector3 lowSpace, Vector3 highSpace, string[] options);
+        public delegate void ParseHandler(Dictionary<string, HeatPoint[]> heatData, string[] options);
 
         ParseHandler m_ParseHandler;
 
@@ -167,7 +167,7 @@ namespace UnityAnalyticsHeatmap
 
             if (m_ParseHandler != null)
             {
-                m_ParseHandler(heatData, maxDensity, maxTime, lowSpace, highSpace, keys.ToArray(typeof(string)) as string[]);
+                m_ParseHandler(heatData, keys.ToArray(typeof(string)) as string[]);
             }
         }
     }

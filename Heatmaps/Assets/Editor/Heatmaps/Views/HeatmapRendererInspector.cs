@@ -217,6 +217,30 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
+        public void SetLimits(HeatPoint[] points)
+        {
+            float maxDensity = 0;
+            m_MaxTime = 0;
+            m_LowSpace = new Vector3();
+            m_HighSpace = new Vector3();
+
+            for (int a = 0; a < points.Length; a++)
+            {
+                maxDensity = Mathf.Max(maxDensity, points[a].density);
+                m_MaxTime = Mathf.Max(m_MaxTime, points[a].time);
+                m_LowSpace = Vector3.Min(m_LowSpace, points[a].position);
+                m_HighSpace = Vector3.Max(m_HighSpace, points[a].position);
+            }
+
+            SetSpaceLimits(m_LowSpace, m_HighSpace);
+            SetMaxTime(m_MaxTime);
+
+            if (m_GameObject != null && m_GameObject.GetComponent<IHeatmapRenderer>() != null)
+            {
+                m_GameObject.GetComponent<IHeatmapRenderer>().UpdatePointData(points, maxDensity);
+            }
+        }
+
         // Access to SerializedProperty's internal gradientValue property getter, in a manner that'll only soft break (returning null) if the property changes or disappears in future Unity revs.
         static Gradient SafeGradientValue(SerializedProperty sp)
         {

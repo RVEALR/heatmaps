@@ -69,14 +69,10 @@ public class HeatmapController : MonoBehaviour
     /// <param name="maxDensity">The maximum data density.</param>
     /// <param name="maxTime">The maximum time from the data.</param>
     /// <param name="options">The list of possible options (usually event names).</param>
-    void parseHandler(Dictionary<string, HeatPoint[]> heatData, float maxDensity, float maxTime, Vector3 lowSpace, Vector3 highSpace, string[] options)
+    void parseHandler(Dictionary<string, HeatPoint[]> heatData, string[] options)
     {
         m_Data = heatData;
         this.options = options;
-        m_MaxDensity = maxDensity;
-        m_MaxTime = maxTime;
-        m_LowSpace = lowSpace;
-        m_HighSpace = highSpace;
         Render();
     }
 
