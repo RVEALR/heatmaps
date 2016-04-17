@@ -322,10 +322,9 @@ public class RawDataGenerator : EditorWindow
         m_DataStoryIndex = EditorGUILayout.Popup(new GUIContent("Demo", "Pick a story for some demo data."), m_DataStoryIndex, m_DataStoryList);
 
         var story = m_DataStories[m_DataStoryIndex];
-        EditorGUILayout.LabelField("Name", EditorStyles.boldLabel);
-        EditorGUILayout.LabelField(story.name);
         EditorGUILayout.LabelField("Genre", EditorStyles.boldLabel);
         EditorGUILayout.LabelField(story.genre);
+        EditorGUILayout.LabelField("Description", EditorStyles.boldLabel);
         EditorGUILayout.TextArea(story.description, EditorStyles.wordWrappedLabel);
         EditorGUILayout.LabelField("What to try", EditorStyles.boldLabel);
         EditorGUILayout.TextArea(story.whatToTry, EditorStyles.wordWrappedLabel);
