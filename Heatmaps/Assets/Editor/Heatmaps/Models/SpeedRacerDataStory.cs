@@ -13,7 +13,8 @@ namespace UnityAnalyticsHeatmap
             description = "Imagine that this data comes from a racing game with a classic oval track. ";
             description += "Your questions: how fast do players take the corners? Where do they crash?";
             whatToTry = "Generate this data, then click Process in the Heatmapper. In the render setting under 'Shape', ";
-            whatToTry += "pick 'Point to Point'. Observe how you can see not just where the user was in the virtual world, ";
+            whatToTry += "pick 'Point to Point' and a particle size around 2. Observe how you can see not ";
+            whatToTry += "just where the user was in the virtual world, ";
             whatToTry += "but also how fast they were going. You can see that users have a lot more trouble on one side ";
             whatToTry += "of the track.\n\n";
             whatToTry += "This demo uses the same basic technique as VR Look At (sending two Vector3s), but instead of ";
@@ -33,6 +34,9 @@ namespace UnityAnalyticsHeatmap
         #region implemented abstract members of DataStory
         public override Dictionary<double, string> Generate()
         {
+            // Set a seed so set is consistently generated
+            UnityEngine.Random.seed = 42;
+
             var retv = new Dictionary<double, string>();
             
             int linesPerFile = 500;

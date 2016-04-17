@@ -19,8 +19,8 @@ namespace UnityAnalyticsHeatmap
             whatToTry += "is the position of a collider to which we raycast. The same technique could be used in a first-person ";
             whatToTry += "shooter to find the things the player shot.\n\n";
             whatToTry += "Now look at the 'Masking' subsection. This allows you to trim away data based on its position.";
-            whatToTry += "Note how the Y axis has no handles. This is because all the Y data in this demo is at";
-            whatToTry += "the same ordinate. Try tweaking the X and Z values to isolate out and inspect a single player position.";
+            whatToTry += "Note how the Y axis has no handles. This is because all the Y data in this demo is at ";
+            whatToTry += "the same ordinate. Try tweaking the X and Z values to isolate out and inspect a single source position.";
         }
 
         DateTime now;

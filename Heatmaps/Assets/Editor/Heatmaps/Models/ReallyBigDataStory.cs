@@ -12,10 +12,9 @@ namespace UnityAnalyticsHeatmap
             genre = "3D Flight Combat Sim";
             description = "This demonstrates some important ideas about scale, direction, and time.";
             whatToTry = "Generate this data. Open the Heatmapper and click the Process button, which first shows you combat kills. ";
-            whatToTry += "Zoom out so you can see all the points. ";
-            whatToTry += "By the time you do this, you may find that the individual data points are very hard to see. ";
-            whatToTry += "Adjust the particle size as you did in the 'Basic Functionality' demo ";
-            whatToTry += "until you can see the points clearly. ";
+            whatToTry += "Or does it? You might not see much right away for two reasons. First this demo shows data in a very large ";
+            whatToTry += "area and you're probably zoomed in. Second, check the Particle size. Try setting size to around 25,  ";
+            whatToTry += "then zoom out so you can see all the points. ";
             whatToTry += "Notice that this data is a bit sparse because of the scale of the map. ";
             whatToTry += "Under 'Aggregate', change the value of 'Space Smooth' to 500 and re-process. ";
             whatToTry += "Adjust the particle size to 250. Now you can see the general areas where ";
@@ -32,7 +31,7 @@ namespace UnityAnalyticsHeatmap
             whatToTry += "Under 'Aggregate', uncheck 'Time', then Process again. ";
             whatToTry += "You might try bringing the particle size up to around 25. In the Render section ";
             whatToTry += "under 'Time' note the start and end values. Change the end value to 1, change 'Play Speed' to 0.1 and ";
-            whatToTry += "press the 'Play' button to watch the airplanes fly!";
+            whatToTry += "press the 'Play' button to watch the airplanes fly! With a little practice, you can even scrub the timeline.";
         }
 
         #region implemented abstract members of DataStory

@@ -12,11 +12,14 @@ namespace UnityAnalyticsHeatmap
             genre = "Any";
             description = "This first demo shows off a few key ideas, such as particle shapes, sizes, and colors.";
             whatToTry = "Generate this data, then open the Heatmapper, ensure that 'Local Only' is checked, and click the Process button. ";
-            whatToTry += "First, notice the numbers at the bottom of the Heatmapper ('Points in current set' and ";
-            whatToTry += "'Points currently displayed'). These give you an idea of how much data you should expect to see displayed.\n\n";
+            whatToTry += "First, notice the numbers at the bottom of the Heatmapper ('Points displayed/total') ";
+            whatToTry += "These give you an idea of how much data you should expect to see displayed.\n\n";
             whatToTry += "Notice that the generated heatmap has three colors. Click on the color gradient to 'tune' the ";
             whatToTry += "colors. Play with the gradient and see how that changes the look of the heatmap. You can even change the alphas.\n\n";
-            whatToTry += "Now, under 'Particle', change the size and shape settings and again observe how this affects the display.";
+            whatToTry += "Now, under 'Particle', change the size and shape settings and again observe how this affects the display.\n\n";
+            whatToTry += "Finally, check the box 'Hot tips' at the bottom of the Heatmapper. In the scene, click on any heatmap point. ";
+            whatToTry += "If you roll over that point or any other, you'll now see a tooltip with the data that the point represents. Note that ";
+            whatToTry += "hot tips cost a lot in terms of performance, so uncheck the box except when you need to see the data!";
         }
 
         #region implemented abstract members of DataStory
