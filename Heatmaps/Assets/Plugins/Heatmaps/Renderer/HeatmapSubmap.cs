@@ -10,6 +10,7 @@ public class HeatmapSubmap : MonoBehaviour
 {
 
     public List<HeatPoint> m_PointData;
+    public int m_TrianglesPerShape;
 
     void Start()
     {

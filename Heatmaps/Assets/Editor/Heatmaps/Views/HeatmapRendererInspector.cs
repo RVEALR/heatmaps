@@ -29,6 +29,8 @@ namespace UnityAnalyticsHeatmap
         const string k_LowZKey = "UnityAnalyticsHeatmapLowZ";
         const string k_HighZKey = "UnityAnalyticsHeatmapHighZ";
 
+        const string k_ShowTipsKey = "UnityAnalyticsHeatmapShowRendererTooltips";
+
         Heatmapper m_Heatmapper;
 
         float m_StartTime = 0f;
@@ -56,6 +58,8 @@ namespace UnityAnalyticsHeatmap
         bool m_IsPlaying = false;
         float m_PlaySpeed = 1f;
 
+        bool m_Tips = false;
+
         GameObject m_GameObject;
 
 
@@ -76,6 +80,8 @@ namespace UnityAnalyticsHeatmap
             m_HighX = EditorPrefs.GetFloat(k_HighXKey, m_HighX);
             m_HighY = EditorPrefs.GetFloat(k_HighXKey, m_HighY);
             m_HighZ = EditorPrefs.GetFloat(k_HighXKey, m_HighZ);
+
+            m_Tips = EditorPrefs.GetBool(k_ShowTipsKey, false);
         }
 
         public static HeatmapRendererInspector Init(Heatmapper heatmapper)
@@ -190,8 +196,13 @@ namespace UnityAnalyticsHeatmap
             {
                 int total = m_GameObject.GetComponent<IHeatmapRenderer>().totalPoints;
                 int current = m_GameObject.GetComponent<IHeatmapRenderer>().currentPoints;
-                GUILayout.Label("Points in current set: " + total);
-                GUILayout.Label("Points currently displayed: " + current);
+                GUILayout.Label("Points (displayed/total): " + current + " / " + total);
+                bool oldTips = m_Tips;
+                m_Tips = EditorGUILayout.Toggle(new GUIContent("Hot tips", "When enabled, see individual point information on rollover. Caution: can be costly! Also note, submap must be selected to see hot tips."), m_Tips);
+                if (oldTips != m_Tips)
+                {
+                    EditorPrefs.SetBool(k_ShowTipsKey, m_Tips);
+                }
             }
 
             // PASS VALUES TO RENDERER
@@ -200,6 +211,7 @@ namespace UnityAnalyticsHeatmap
                 IHeatmapRenderer r = m_GameObject.GetComponent<IHeatmapRenderer>() as IHeatmapRenderer;
                 r.UpdateGradient(SafeGradientValue(colorGradient ));
                 r.pointSize = m_ParticleSize;
+                r.activateTips = m_Tips;
                 r.UpdateRenderMask(m_LowX, m_HighX, m_LowY, m_HighY, m_LowZ, m_HighZ);
                 r.UpdateRenderStyle(m_ParticleShapeIds[m_ParticleShapeIndex], m_ParticleDirectionIds[m_ParticleDirectionIndex]);
             }

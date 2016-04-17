@@ -37,6 +37,8 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     float m_ParticleSize = 1.0f;
     int m_CurrentResolution;
 
+    bool m_Tips = false;
+
     // Particle Rendering Data
     HeatPoint[] m_Data;
     float m_MaxDensity = 0f;
@@ -141,6 +143,34 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             {
                 m_ParticleSize = value;
                 m_RenderState = k_BeginRenderer;
+            }
+        }
+    }
+
+    public bool activateTips
+    {
+        get
+        {
+            return m_Tips;
+        }
+        set
+        {
+            if (m_Tips != value)
+            {
+                m_Tips = value;
+                if (m_Tips)
+                {
+                    m_RenderState = k_BeginRenderer;
+                }
+                else
+                {
+                    //Remove colliders
+                    MeshCollider[] children = transform.GetComponentsInChildren<MeshCollider>();
+                    foreach (MeshCollider child in children)
+                    {
+                        DestroyImmediate(child.gameObject.GetComponent<MeshCollider>());
+                    }
+                }
             }
         }
     }
@@ -277,11 +307,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                 {
                     int submapID = currentSubmaps + a;
                     var go = new GameObject("Submap" + submapID);
-                    go.AddComponent<MeshCollider>();
                     go.AddComponent<HeatmapSubmap>();
 
-                    go.GetComponent<MeshFilter>().sharedMesh =  go.GetComponent<MeshCollider>().sharedMesh = new Mesh();
-                    go.GetComponent<MeshCollider>().sharedMesh.MarkDynamic();
+                    go.GetComponent<MeshFilter>().sharedMesh = new Mesh();
 
                     go.transform.parent = gameObject.transform;
                     m_GameObjects.Add(go);
@@ -323,7 +351,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
         for (int a = 0; a < submap.Count; a++)
         {
-            materials[a] = m_Materials[0];//PickMaterial(m_Data[a].density / m_MaxDensity);
+            materials[a] = m_Materials[0];
             Vector3 position = submap[a].position;
             Vector3 rotation = submap[a].rotation;
             Vector3 destination = submap[a].destination;
@@ -370,8 +398,14 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
         go.GetComponent<Renderer>().materials = materials;
         go.GetComponent<HeatmapSubmap>().m_PointData = submap;
+        go.GetComponent<HeatmapSubmap>().m_TrianglesPerShape = GetTrianglesForShape();
         mesh.Optimize();
 
+        if (m_Tips)
+        {
+            go.AddComponent<MeshCollider>();
+            go.GetComponent<MeshCollider>().sharedMesh = mesh;
+        }
     }
 
     Color32[] AddColorsToMesh(int count, HeatPoint pt)
@@ -643,26 +677,35 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         return verts;
     }
 
+    int GetTrianglesForShape()
+    {
+        // Verts is the number of UNIQUE vertices in each shape
+        int verts = 0;
+        switch (m_RenderStyle)
+        {
+            case RenderShape.Cube:
+                verts = 12;
+                break;
+            case RenderShape.Arrow:
+                verts = 3;
+                break;
+            case RenderShape.Square:
+                verts = 2;
+                break;
+            case RenderShape.Triangle:
+                verts = 1;
+                break;
+            case RenderShape.PointToPoint:
+                verts = 7;
+                break;
+        }
+        return verts;
+    }
+
     Color PickGradientColor(float percent)
     {
         return m_Gradient.Evaluate(percent);
     }
-
-//    Material PickMaterial(float value)
-//    {
-//        int i = 1;
-//        if (m_Materials == null)
-//            return null;
-//        if (value > m_HighThreshold)
-//        {
-//            i = 2;
-//        }
-//        else if (value < m_LowThreshold)
-//        {
-//            i = 0;
-//        }
-//        return m_Materials[i];
-//    }
 
     public static bool CompareGradients(Gradient gradient, Gradient otherGradient)
     {

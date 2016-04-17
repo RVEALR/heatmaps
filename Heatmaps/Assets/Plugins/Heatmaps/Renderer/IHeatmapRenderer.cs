@@ -85,6 +85,12 @@ namespace UnityAnalyticsHeatmap
         bool allowRender{ get; set; }
 
         /// <summary>
+        /// If true, activate point-by-point tooltips.
+        /// </summary>
+        /// <value><c>true</c> if activating; otherwise, <c>false</c>.</value>
+        bool activateTips{ get; set; }
+
+        /// <summary>
         /// The number of points currently displayed.
         /// </summary>
         /// <value>Count of currently displayed points</value>
