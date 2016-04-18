@@ -6,6 +6,11 @@ namespace UnityAnalyticsHeatmap
 {
     public class ReallyBigDataStory : DataStory
     {
+        int m_PlayThroughs = 5;
+        int m_EventCount = 500;
+        int m_LinesPerFile = 500;
+
+
         public ReallyBigDataStory()
         {
             name = "Really Big Game";
@@ -42,9 +47,6 @@ namespace UnityAnalyticsHeatmap
 
             var retv = new Dictionary<double, string>();
 
-            int playThroughs = 5;
-            int eventCount = 500;
-            int linesPerFile = 500;
             int currentFileLines = 0;
 
             float randomRange = .25f;
@@ -57,16 +59,16 @@ namespace UnityAnalyticsHeatmap
             string[] eventNames = new string[]{ "Heatmap.CombatKills", "Heatmap.PlayerPosition" };
 
             Vector3 position = Vector3.zero, rotation = Vector3.zero, pointOnCircle = Vector3.zero;
-            for (int a = 0; a < playThroughs; a++)
+            for (int a = 0; a < m_PlayThroughs; a++)
             {
 
-                for (int b = 0; b < eventCount; b++)
+                for (int b = 0; b < m_EventCount; b++)
                 {
 
                     string evt = "";
 
                     // Date
-                    DateTime dt = now.Subtract(new TimeSpan((TimeSpan.TicksPerSecond * (eventCount - b)) + (TimeSpan.TicksPerSecond*(eventCount-a))));
+                    DateTime dt = now.Subtract(new TimeSpan((TimeSpan.TicksPerSecond * (m_EventCount - b)) + (TimeSpan.TicksPerSecond*(m_EventCount-a))));
                     string dts = dt.ToString("yyyy-MM-dd hh:mm:ss.ms");
                     evt += dts + "\t";
                     if (currentFileLines == 0) {
@@ -110,7 +112,7 @@ namespace UnityAnalyticsHeatmap
 
                     data += evt;
                     currentFileLines ++;
-                    if (currentFileLines >= linesPerFile || b == eventCount-1) {
+                    if (currentFileLines >= m_LinesPerFile || b == m_EventCount-1) {
                         retv.Add(firstDate, data);
                         currentFileLines = 0;
                         data = "";

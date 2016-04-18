@@ -79,8 +79,8 @@ public class RawDataGenerator : EditorWindow
     GUIContent[] m_DataStoryList = new GUIContent[]{ 
         new GUIContent("Basic Functionality"),
         new GUIContent("Really Big Game"),
-        new GUIContent("Multilevel Game"),
-        new GUIContent("FPS Dropoff"), 
+        new GUIContent("Maze 1: Multilevel Game"),
+        new GUIContent("Maze 2: FPS Dropoff"), 
         new GUIContent("VR Lookat"),
         new GUIContent("Speed Racer")
     };
@@ -328,6 +328,142 @@ public class RawDataGenerator : EditorWindow
         EditorGUILayout.TextArea(story.description, EditorStyles.wordWrappedLabel);
         EditorGUILayout.LabelField("What to try", EditorStyles.boldLabel);
         EditorGUILayout.TextArea(story.whatToTry, EditorStyles.wordWrappedLabel);
+
+        BuildTarget(story as FPSDropoffDataStory);
+        BuildRoute(story as FPSDropoffDataStory);
+    }
+
+    void BuildRoute(FPSDropoffDataStory story)
+    {
+        if (story == null || story.m_Map == null)
+            return;
+
+        var route = story.m_Route;
+
+        var go = GameObject.Find("UnityAnalytics__Route");
+        if (go == null)
+        {
+            return;
+        }
+        Transform[] children = go.transform.GetComponentsInChildren<Transform>();
+        foreach (Transform child in children)
+        {
+            if (child != null && child.gameObject != go)
+            {
+                child.parent = null;
+                DestroyImmediate(child.gameObject);
+            }
+        }
+
+        for (int a = 0; a < route.Count; a++)
+        {
+            var tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            tile.name = "route_" + a + "___" + route[a][0] + "_" + route[a][1];
+            tile.transform.parent = go.transform;
+            tile.transform.position = new Vector3(route[a][0], route[a][1], 0);
+            tile.transform.localScale = Vector3.one * .1f;
+
+        }
+    }
+
+    void BuildTarget(FPSDropoffDataStory story)
+    {
+        if (story == null || story.m_Map == null)
+            return;
+
+        var map = story.m_Map;
+
+        var go = GameObject.Find("UnityAnalytics__Maze");
+        if (go == null)
+        {
+            return;
+        }
+
+        Transform[] children = go.transform.GetComponentsInChildren<Transform>();
+        foreach (Transform child in children)
+        {
+            if (child != null && child.gameObject != go)
+            {
+                child.parent = null;
+                DestroyImmediate(child.gameObject);
+            }
+        }
+
+        for (int x = 0; x < map.Count; x++)
+        {
+            for (int y = 0; y < map[x].Count; y++)
+            {
+                MazeMapPoint pt = map[x][y];
+                var tile = new GameObject("tile" + pt.x + "_" + pt.y);
+
+                tile.transform.parent = go.transform;
+                tile.transform.position = new Vector3(x, y, 0);
+
+
+
+                if (pt.entrance != null && pt.exit != null)
+                {
+                    GameObject wall1 = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    wall1.transform.parent = tile.transform;
+                    GameObject wall2 = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    wall2.transform.parent = tile.transform;
+
+                    wall1.transform.localScale = new Vector3(1f, .05f, .1f);
+                    wall2.transform.localScale = new Vector3(1f, .05f, .1f);
+
+                    var possibles = new List<string>(){ "N", "S", "E", "W" };
+
+                    int exitIdx = possibles.IndexOf(pt.entrance);
+                    if (exitIdx > -1)
+                        possibles.RemoveAt(exitIdx);
+
+                    int entranceIdx = possibles.IndexOf(pt.exit);
+                    if (entranceIdx > -1)
+                        possibles.RemoveAt(entranceIdx);
+
+                    Vector3 p1 = GetVecPos(possibles[0]);
+                    Vector3 p2 = GetVecPos(possibles[1]);
+                    Quaternion q1 = GetQ(possibles[0]);
+                    Quaternion q2 = GetQ(possibles[1]);
+                    wall1.transform.localPosition = p1;
+                    wall1.transform.rotation = q1;
+                    wall2.transform.localPosition = p2;
+                    wall2.transform.rotation = q2;
+                }
+            }
+        }
+    }
+
+    Vector3 GetVecPos(string dir)
+    {
+        switch(dir)
+        {
+        case "N":
+            return new Vector3(0f, .5f, 0f);
+        case "S":
+            return new Vector3(0f, -.5f, 0f);
+        case "E":
+            return new Vector3(0.5f, 0f, 0f);
+        case "W":
+            return new Vector3(-0.5f, 0f, 0f);
+        }
+        return Vector3.zero;
+    }
+
+    Quaternion GetQ(string dir)
+    {
+        switch(dir)
+        {
+        case "N":
+            return Quaternion.identity;
+        case "S":
+            return Quaternion.identity;
+        case "E":
+            return Quaternion.Euler(0f, 0, 90f);
+        case "W":
+            return Quaternion.Euler(0f, 0, 90f);
+        }
+        return Quaternion.identity;
     }
 
     void CreateCode()
