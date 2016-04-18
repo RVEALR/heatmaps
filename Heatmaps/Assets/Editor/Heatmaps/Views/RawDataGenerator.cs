@@ -421,10 +421,10 @@ public class RawDataGenerator : EditorWindow
                     if (entranceIdx > -1)
                         possibles.RemoveAt(entranceIdx);
 
-                    Vector3 p1 = GetVecPos(possibles[0]);
-                    Vector3 p2 = GetVecPos(possibles[1]);
-                    Quaternion q1 = GetQ(possibles[0]);
-                    Quaternion q2 = GetQ(possibles[1]);
+                    Vector3 p1 = MazeDataStory.GetVecPos(possibles[0]);
+                    Vector3 p2 = MazeDataStory.GetVecPos(possibles[1]);
+                    Quaternion q1 = MazeDataStory.GetQ(possibles[0]);
+                    Quaternion q2 = MazeDataStory.GetQ(possibles[1]);
                     wall1.transform.localPosition = p1;
                     wall1.transform.rotation = q1;
                     wall2.transform.localPosition = p2;
@@ -432,38 +432,6 @@ public class RawDataGenerator : EditorWindow
                 }
             }
         }
-    }
-
-    Vector3 GetVecPos(string dir)
-    {
-        switch(dir)
-        {
-        case "N":
-            return new Vector3(0f, .5f, 0f);
-        case "S":
-            return new Vector3(0f, -.5f, 0f);
-        case "E":
-            return new Vector3(0.5f, 0f, 0f);
-        case "W":
-            return new Vector3(-0.5f, 0f, 0f);
-        }
-        return Vector3.zero;
-    }
-
-    Quaternion GetQ(string dir)
-    {
-        switch(dir)
-        {
-        case "N":
-            return Quaternion.identity;
-        case "S":
-            return Quaternion.identity;
-        case "E":
-            return Quaternion.Euler(0f, 0, 90f);
-        case "W":
-            return Quaternion.Euler(0f, 0, 90f);
-        }
-        return Quaternion.identity;
     }
 
     void CreateCode()
