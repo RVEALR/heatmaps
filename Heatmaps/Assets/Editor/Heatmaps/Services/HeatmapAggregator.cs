@@ -277,17 +277,7 @@ namespace UnityAnalyticsHeatmap
 
         protected float Divide(float value, float divisor)
         {
-            float mod = value % divisor;
-            float rounded = Mathf.Round(value / divisor) * divisor;
-            if (mod > divisor / 2f)
-            {
-                rounded -= divisor / 2f;
-            }
-            else
-            {
-                rounded += divisor / 2f;
-            }
-            return rounded;
+            return Mathf.Round(value / divisor) * divisor;
         }
     }
 
