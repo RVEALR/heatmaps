@@ -21,13 +21,13 @@ namespace UnityAnalyticsHeatmap
             whatToTry += "using a collider to determine the 'destination' position, we simply calculate based on velocity.";
         }
 
-        float radius = 100f;
-        float radiusFlattener = .5f;
+        float m_Radius = 100f;
+        float m_RadiusFlattener = .5f;
         
         private void UpdateOval(ref Vector3 position, float p)
         {
-            position.x = radius * Mathf.Cos(p * Mathf.PI/180f);
-            position.y = radius * Mathf.Sin(p * Mathf.PI/180f) * radiusFlattener;
+            position.x = m_Radius * Mathf.Cos(p * Mathf.PI/180f);
+            position.y = m_Radius * Mathf.Sin(p * Mathf.PI/180f) * m_RadiusFlattener;
             position.z = 0f;
         }
 
@@ -49,25 +49,21 @@ namespace UnityAnalyticsHeatmap
             string eventName1 = "Heatmap.PlayerPosition";
             string eventName2 = "Heatmap.Crash";
             int eventIndex = 0;
-            
+
             double firstDate = 0d;
             DateTime now = DateTime.UtcNow;
-            
+
             string data = "";
-            
-            
-            Vector3 position = Vector3.zero, destination = Vector3.zero;
-            float theta = 1f;
-            UpdateOval(ref position, theta);
 
             for (int a  = 0; a < playThroughs; a++)
             {
-                theta = 1f;
+                Vector3 position = Vector3.zero, destination = Vector3.zero;
+                float theta = 1f;
+                UpdateOval(ref position, theta);
                 for (int b = 0; b < eventCount; b++)
                 {
-                    //
-                    speed = (Mathf.Abs(radius - position.x)/radius) * baseSpeed + UnityEngine.Random.Range(0.1f,5f);
-                    theta = theta + speed;
+                    speed = (Mathf.Abs(m_Radius - position.x)/m_Radius) * baseSpeed + UnityEngine.Random.Range(0.1f,5f);
+                    theta += speed;
                     string eventName = eventName1;
                     if (speed > baseSpeed * 4f && UnityEngine.Random.Range(0f,1f) > .25f) {
                         eventName = eventName2;
@@ -76,7 +72,7 @@ namespace UnityAnalyticsHeatmap
                     Vector3 lastPosition = position;
                     UpdateOval(ref position, theta);
                     string evt = "";
-                    
+
                     // Date
                     var ta = new TimeSpan(TimeSpan.TicksPerSecond * eventIndex);
                     DateTime dt = now.Subtract(ta);
@@ -85,27 +81,27 @@ namespace UnityAnalyticsHeatmap
                     if (currentFileLines == 0) {
                         firstDate = Math.Round((dt - epoch).TotalSeconds);
                     }
-                    
+
                     // Device ID & name
                     evt += "d" + a + "-XXXX-XXXX\t";
                     evt += eventName + "\t";
-                    
+
                     // Position and time
                     evt += "{";
                     evt += "\"x\":\"" + position.x + "\",";
                     evt += "\"y\":\"" + position.y + "\",";
                     evt += "\"z\":\"" + position.z + "\",";
                     evt += "\"t\":\"" + b + "\",";
-                    
+
                     // destination
                     Vector3 diff = position-lastPosition;
                     destination = Vector3.MoveTowards(position, position + (diff*speed), 10000f);
                     evt += "\"dx\":\"" + destination.x + "\",";
                     evt += "\"dy\":\"" + destination.y + "\",";
                     evt += "\"dz\":\"" + destination.z + "\",";
-                    
+
                     evt += "\"unity.name\":" + "\"" + eventName + "\"" + "}\n";
-                    
+
                     data += evt;
                     currentFileLines ++;
                     eventIndex++;
