@@ -48,7 +48,7 @@ public class PointSelector : Editor
 
 
             float xPos = m_LabelPosition.x > Screen.width * .5f ? m_LabelPosition.x - size.x - 10f : m_LabelPosition.x + 10f;
-            float yPos = m_LabelPosition.y > Screen.height * .5f ? m_LabelPosition.y - size.y - 10f : m_LabelPosition.y + 10f;;
+            float yPos = m_LabelPosition.y > Screen.height * .5f ? m_LabelPosition.y - size.y - 10f : m_LabelPosition.y + 10f;
 
 
             GUILayout.BeginArea(new Rect(xPos, yPos, size.x, size.y), m_BgStyle);
