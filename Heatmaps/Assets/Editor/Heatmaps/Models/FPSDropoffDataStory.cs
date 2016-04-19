@@ -25,6 +25,9 @@ namespace UnityAnalyticsHeatmap
 
         override protected Dictionary<double, string> Play()
         {
+            Prefill();
+            Carve(m_Width/2, m_Height/2, m_Directions["N"], null);
+
             var retv = new Dictionary<double, string>();
             m_CurrentFileLines = 0;
             double firstDate = 0d;
@@ -87,6 +90,5 @@ namespace UnityAnalyticsHeatmap
             return retv;
         }
     }
-
 }
 

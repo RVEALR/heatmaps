@@ -329,6 +329,10 @@ public class RawDataGenerator : EditorWindow
         EditorGUILayout.LabelField("What to try", EditorStyles.boldLabel);
         EditorGUILayout.TextArea(story.whatToTry, EditorStyles.wordWrappedLabel);
 
+        // These commented-out lines allow us to actually build a physical maze in the scene.
+        // I created this during debugging and thought it was worth keeping.
+        // If you ever want to see this work, uncomment the two lines below
+        // and generate data using the FPSDropoffDataStory.
         BuildTarget(story as FPSDropoffDataStory);
         BuildRoute(story as FPSDropoffDataStory);
     }
@@ -343,7 +347,7 @@ public class RawDataGenerator : EditorWindow
         var go = GameObject.Find("UnityAnalytics__Route");
         if (go == null)
         {
-            return;
+            go = new GameObject("UnityAnalytics__Route");
         }
         Transform[] children = go.transform.GetComponentsInChildren<Transform>();
         foreach (Transform child in children)
@@ -376,7 +380,7 @@ public class RawDataGenerator : EditorWindow
         var go = GameObject.Find("UnityAnalytics__Maze");
         if (go == null)
         {
-            return;
+            go = new GameObject("UnityAnalytics__Maze");
         }
 
         Transform[] children = go.transform.GetComponentsInChildren<Transform>();

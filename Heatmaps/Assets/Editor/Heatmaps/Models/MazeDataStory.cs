@@ -16,7 +16,7 @@ namespace UnityAnalyticsHeatmap
         protected int m_PlayThroughs = 5;
         protected int m_LinesPerFile = 200;
         protected int m_CurrentFileLines = 0;
-        protected int m_EventCount = 750;
+        protected int m_EventCount = 100;
         protected string m_EventName = "Heatmap.PlayerPosition";
 
         protected Dictionary<string, MazeDirection> m_Directions = new Dictionary<string, MazeDirection> {
@@ -29,8 +29,6 @@ namespace UnityAnalyticsHeatmap
         #region implemented abstract members of DataStory
         public override Dictionary<double, string> Generate()
         {
-            Prefill();
-            Carve(m_Width/2, m_Height/2, m_Directions["N"], null);
             return Play();
         }
         #endregion
@@ -38,7 +36,7 @@ namespace UnityAnalyticsHeatmap
         abstract protected Dictionary<double, string> Play();
 
 
-        void Prefill()
+        protected void Prefill()
         {
             m_Map =  new List<List<MazeMapPoint>>();
             m_Route = new List<int[]>();
@@ -52,7 +50,7 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        void Carve(int x0, int y0, MazeDirection direction, MazeDirection lastDirection)
+        protected void Carve(int x0, int y0, MazeDirection direction, MazeDirection lastDirection)
         {
             int x1 = x0 + direction.dx;
             int y1 = y0 + direction.dy;
