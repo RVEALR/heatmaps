@@ -20,6 +20,8 @@ namespace UnityAnalyticsHeatmap
             whatToTry += "Finally, check the box 'Hot tips' at the bottom of the Heatmapper. In the scene, click on any heatmap point. ";
             whatToTry += "If you roll over that point or any other, you'll now see a tooltip with the data that the point represents. Note that ";
             whatToTry += "hot tips cost a lot in terms of performance, so uncheck the box except when you need to see the data!";
+            sampleCode = "using UnityAnalyticsHeatmap;\n\n";
+            sampleCode += "HeatmapEvent.Send(\"ShotWeapon\",transform.position);";
         }
 
         #region implemented abstract members of DataStory

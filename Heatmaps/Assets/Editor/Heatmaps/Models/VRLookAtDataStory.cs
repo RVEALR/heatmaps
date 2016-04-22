@@ -21,6 +21,11 @@ namespace UnityAnalyticsHeatmap
             whatToTry += "Now look at the 'Masking' subsection. This allows you to trim away data based on its position.";
             whatToTry += "Note how the Y axis has no handles. This is because all the Y data in this demo is at ";
             whatToTry += "the same ordinate. Try tweaking the X and Z values to isolate out and inspect a single source position.";
+
+            sampleCode = "using UnityAnalyticsHeatmap;\n\n";
+            sampleCode += "// The otherGameObject in this case is a GameObject represented by a collider.\n";
+            sampleCode += "// By raycasting from where the player is standing, we can see what they saw.\n";
+            sampleCode += "HeatmapEvent.Send(\"LookAt\",transform.position,otherGameObject.transform.position,Time.timeSinceLevelLoad);";
         }
 
         DateTime now;

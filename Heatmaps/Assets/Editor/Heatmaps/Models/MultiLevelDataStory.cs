@@ -26,6 +26,12 @@ namespace UnityAnalyticsHeatmap
             whatToTry += "Under 'Aggregate', uncheck 'Unique Devices' and click Process. Open the 'Option' list to see how it has changed. ";
             whatToTry += "Not only are the levels separated, so are the individual devices. You can use this to see how individual ";
             whatToTry += "players play.";
+            sampleCode = "using UnityAnalyticsHeatmap;\n";
+            sampleCode += "using System.Collections.Generic;\n\n";
+            sampleCode += "// The level and gameTurn variables are examples.\n";
+            sampleCode += "// You'll need to maintain a level variable and place the result in the dictionary.\n";
+            sampleCode += "// gameTurn points out that the 'time' variable can reflect any numerical value you want.\n";
+            sampleCode += "HeatmapEvent.Send(\"PlayerPosition\",transform.position,gameTurn,new Dictionary<string,object>(){{\"level\", level}});";
         }
 
         override protected Dictionary<double, string> Play()

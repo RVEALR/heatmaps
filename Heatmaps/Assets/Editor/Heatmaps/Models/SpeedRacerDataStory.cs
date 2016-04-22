@@ -19,6 +19,13 @@ namespace UnityAnalyticsHeatmap
             whatToTry += "of the track.\n\n";
             whatToTry += "This demo uses the same basic technique as VR Look At (sending two Vector3s), but instead of ";
             whatToTry += "using a collider to determine the 'destination' position, we simply calculate based on velocity.";
+
+            sampleCode = "using UnityAnalyticsHeatmap;\n\n";
+            sampleCode += "// projectionVector3 in this case is a calculation based on current direction\n";
+            sampleCode += "// and velocity.\n";
+            sampleCode += "HeatmapEvent.Send(\"PlayerPosition\",transform.position,projectionVector3,Time.timeSinceLevelLoad);\n";
+            sampleCode += "// Send this one on crash to figure out where it all went wrong.\n";
+            sampleCode += "HeatmapEvent.Send(\"Crash\",transform.position,projectionVector3,Time.timeSinceLevelLoad);";
         }
 
         float m_Radius = 100f;

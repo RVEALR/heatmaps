@@ -21,6 +21,12 @@ namespace UnityAnalyticsHeatmap
             whatToTry += "Observe how color now represents places with higher and lower FPS. ";
             whatToTry += "Remember that color on the right side of the gradient represents HIGHER density, and since you've re-mapped fps ";
             whatToTry += "the color on the right will display HIGH fps.";
+            sampleCode = "using UnityAnalyticsHeatmap;\n";
+            sampleCode += "using System.Collections.Generic;\n\n";
+            sampleCode += "// The fps and gameTurn variables are examples.\n";
+            sampleCode += "// You'll need to calculate fps and place the result in the dictionary.\n";
+            sampleCode += "// gameTurn points out that the 'time' variable can reflect any numerical value you want.\n";
+            sampleCode += "HeatmapEvent.Send(\"PlayerPosition\",transform.position,gameTurn,new Dictionary<string,object>(){{\"fps\", fps}});";
         }
 
         override protected Dictionary<double, string> Play()

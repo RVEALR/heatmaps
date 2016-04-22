@@ -37,6 +37,15 @@ namespace UnityAnalyticsHeatmap
             whatToTry += "You might try bringing the particle size up to around 25. In the Render section ";
             whatToTry += "under 'Time' note the start and end values. Change the end value to 1, change 'Play Speed' to 0.1 and ";
             whatToTry += "press the 'Play' button to watch the airplanes fly! With a little practice, you can even scrub the timeline.";
+
+            sampleCode = "using UnityAnalyticsHeatmap;\n\n";
+            sampleCode += "// First event reflects kills\n";
+            sampleCode += "// Note how we're also recording the time, and \n// (by sending the entire transform instead of just position)\n";
+            sampleCode += "// the rotation.\n";
+            sampleCode += "HeatmapEvent.Send(\"CombatKills\",transform, Time.timeSinceLevelLoad);\n";
+            sampleCode += "// A second event reflects player's position in space\n";
+            sampleCode += "HeatmapEvent.Send(\"PlayerPosition\",transform, Time.timeSinceLevelLoad);\n";
+            sampleCode += "// Obviously these need to be sent at appropriate times.";
         }
 
         #region implemented abstract members of DataStory

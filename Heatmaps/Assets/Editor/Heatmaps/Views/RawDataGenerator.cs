@@ -195,19 +195,16 @@ public class RawDataGenerator : EditorWindow
         if (m_DataSource == RANDOM)
         {
             CreateRandomData();
+            CreateCode();
         }
         else if (m_DataSource == DEMO)
         {
             CreateDemoData();
         }
-
-
-
         if (GUILayout.Button("Generate"))
         {
             GenerateData();
         }
-        CreateCode();
         EditorGUILayout.EndScrollView();
     }
 
@@ -328,6 +325,11 @@ public class RawDataGenerator : EditorWindow
         EditorGUILayout.TextArea(story.description, EditorStyles.wordWrappedLabel);
         EditorGUILayout.LabelField("What to try", EditorStyles.boldLabel);
         EditorGUILayout.TextArea(story.whatToTry, EditorStyles.wordWrappedLabel);
+
+
+        var g = new GUIStyle(GUI.skin.textArea);
+        g.wordWrap = true;
+        EditorGUILayout.TextArea(story.sampleCode, g);
 
         // These commented-out lines allow us to actually build a physical maze in the scene.
         // I created this during debugging and thought it was worth keeping.
