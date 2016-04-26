@@ -27,6 +27,7 @@ namespace UnityAnalyticsHeatmap
         const string k_EventsKey = "UnityAnalyticsHeatmapAggregationEvents";
 
         const string k_RemapColorKey = "UnityAnalyticsHeatmapRemapColorKey";
+        const string k_RemapOptionIndexKey = "UnityAnalyticsHeatmapRemapOptionIndexKey";
         const string k_RemapColorFieldKey = "UnityAnalyticsHeatmapRemapColorFieldKey";
 
         const float k_DefaultSpace = 10f;
@@ -57,6 +58,9 @@ namespace UnityAnalyticsHeatmap
 
         bool m_RemapColor;
         string m_RemapColorField = "";
+        int m_RemapOptionIndex = 0;
+        GUIContent[] m_RemapOptions = new GUIContent[]{ new GUIContent("Increment"), new GUIContent("Cumulative"), new GUIContent("First Wins"), new GUIContent("Last Wins"), new GUIContent("Min Wins"), new GUIContent("Max Wins") };
+        AggregationMethod[] m_RemapOptionIds = new AggregationMethod[]{ AggregationMethod.Increment, AggregationMethod.Cumulative, AggregationMethod.FirstWins, AggregationMethod.LastWins, AggregationMethod.MinWins, AggregationMethod.MaxWins };
 
         List<string> m_ArbitraryFields = new List<string>{ };
         List<string> m_Events = new List<string>{ };
@@ -84,6 +88,7 @@ namespace UnityAnalyticsHeatmap
             m_AggregateDevices = EditorPrefs.GetBool(k_AggregateDevicesKey);
             m_RemapColor = EditorPrefs.GetBool(k_RemapColorKey);
             m_RemapColorField = EditorPrefs.GetString(k_RemapColorFieldKey);
+            m_RemapOptionIndex = EditorPrefs.GetInt(k_RemapOptionIndexKey);
 
             // Restore list of arbitrary aggregation fields
             string loadedArbitraryFields = EditorPrefs.GetString(k_ArbitraryFieldsKey);
@@ -256,10 +261,16 @@ namespace UnityAnalyticsHeatmap
             if (m_RemapColor)
             {
                 string oldRemapField = m_RemapColorField;
+                int oldOptionIndex = m_RemapOptionIndex;
                 m_RemapColorField = EditorGUILayout.TextField(new GUIContent("Remap to","Name the field to remap"), m_RemapColorField);
+                m_RemapOptionIndex = EditorGUILayout.Popup(new GUIContent("Remap operation", "How should the remapped variable aggregate?"), m_RemapOptionIndex, m_RemapOptions);
                 if (oldRemapField != m_RemapColorField)
                 {
                     EditorPrefs.SetString(k_RemapColorFieldKey, m_RemapColorField);
+                }
+                if (oldOptionIndex != m_RemapOptionIndex)
+                {
+                    EditorPrefs.SetInt(k_RemapOptionIndexKey, m_RemapOptionIndex);
                 }
             }
 
@@ -365,6 +376,7 @@ namespace UnityAnalyticsHeatmap
                 }
 
                 string remapToField = m_RemapColor ? m_RemapColorField : "";
+                int remapOption = m_RemapColor ? m_RemapOptionIndex : 0;
 
                 // Specify groupings
                 // Always group on eventName
@@ -382,8 +394,9 @@ namespace UnityAnalyticsHeatmap
                     groupOn.AddRange(m_ArbitraryFields);
                 }
 
-                m_Aggregator.Process(aggregationHandler, fileList, start, end, remapToField,
-                    aggregateOn, smoothOn, groupOn, m_Events);
+                m_Aggregator.Process(aggregationHandler, fileList, start, end,
+                    aggregateOn, smoothOn, groupOn,
+                    remapToField, m_RemapOptionIds[remapOption], m_Events);
             }
         }
 

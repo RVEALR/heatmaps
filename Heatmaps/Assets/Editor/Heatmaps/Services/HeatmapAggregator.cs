@@ -46,17 +46,19 @@ namespace UnityAnalyticsHeatmap
         /// <param name="inputFiles">A list of one or more raw data text files.</param>
         /// <param name="startDate">Any timestamp prior to this ISO 8601 date will be trimmed.</param>
         /// <param name="endDate">Any timestamp after to this ISO 8601 date will be trimmed.</param>
-        /// <param name="remapDensityToField">If not blank, remaps density (aka color) to the value of the field.</param> 
         /// <param name="aggregateOn">A list of properties on which to specify point uniqueness.</param>
         /// <param name="smoothOn">A dictionary of properties that are smoothable, along with their smoothing values. <b>Must be a subset of aggregateOn.</b></param>
         /// <param name="groupOn">A list of properties on which to group resulting lists (supports arbitrary data, plus 'eventName' and 'deviceID').</param>
+        /// <param name="remapDensityToField">If not blank, remaps density (aka color) to the value of the field.</param>
+        /// <param name="aggregationMethod">Determines the calculation with which multiple points aggregate (default is Increment).</param>
         /// <param name="events">A list of events to explicitly include.</param>
         public void Process(CompletionHandler completionHandler,
             List<string> inputFiles, DateTime startDate, DateTime endDate,
-            string remapDensityToField,
             List<string> aggregateOn,
             Dictionary<string, float> smoothOn,
             List<string> groupOn,
+            string remapDensityToField,
+            AggregationMethod aggregationMethod = AggregationMethod.Increment,
             List<string> events = null)
         {
             m_CompletionHandler = completionHandler;
@@ -72,8 +74,9 @@ namespace UnityAnalyticsHeatmap
             foreach (string file in inputFiles)
             {
                 m_ReportFiles++;
-                LoadStream(outputData, file, startDate, endDate, remapDensityToField,
+                LoadStream(outputData, file, startDate, endDate,
                     aggregateOn, smoothOn, groupOn,
+                    remapDensityToField, aggregationMethod,
                     events, outputFileName);
             }
 
@@ -111,10 +114,11 @@ namespace UnityAnalyticsHeatmap
         internal void LoadStream(Dictionary<Tuplish, List<Dictionary<string, float>>> outputData,
             string path, 
             DateTime startDate, DateTime endDate,
-            string remapDensityToField,
             List<string> aggregateOn,
             Dictionary<string, float> smoothOn,
             List<string> groupOn,
+            string remapDensityToField,
+            AggregationMethod aggregationMethod,
             List<string> eventsWhitelist, string outputFileName)
         {
             // Every point contains at least x/y and potentially these others
@@ -205,10 +209,8 @@ namespace UnityAnalyticsHeatmap
                         }
                     }
 
-                    bool remappable = false;
                     float remapValue = 0f;
                     if (doRemap && datum.ContainsKey(remapDensityToField)) {
-                        remappable = true;
                         float.TryParse( (string)datum[remapDensityToField], out remapValue);
                     }
 
@@ -218,11 +220,11 @@ namespace UnityAnalyticsHeatmap
                     {
                         // Use existing point if it exists
                         point = m_PointDict[tuple];
-                        point["d"] = remappable ? remapValue : point["d"] + 1;
+                        point["d"] = Accrete(point["d"], remapValue, aggregationMethod, false);
                     }
                     else
                     {
-                        point["d"] = remappable ? remapValue : 1;
+                        point["d"] = Accrete(0, remapValue, aggregationMethod, true);
                         m_PointDict[tuple] = point;
 
                         // Group
@@ -257,6 +259,28 @@ namespace UnityAnalyticsHeatmap
                     }
                 }
             }
+        }
+
+        internal float Accrete(float oldValue, float newValue, AggregationMethod aggregatioMethod, bool first)
+        {
+            switch(aggregatioMethod)
+            {
+                case AggregationMethod.Increment:
+                    return oldValue + 1;
+                case AggregationMethod.Cumulative:
+                    return oldValue + newValue;
+                case AggregationMethod.FirstWins:
+                    oldValue = first ? newValue : oldValue;
+                    return oldValue;
+                case AggregationMethod.MaxWins:
+                    return Mathf.Max(oldValue, newValue);
+                case AggregationMethod.LastWins:
+                    return newValue;
+                case AggregationMethod.MinWins:
+                    oldValue = first ? newValue : oldValue;
+                    return Mathf.Min(oldValue, newValue);
+            }
+            return newValue;
         }
 
         internal void SaveFile(string outputFileName, Dictionary<Tuplish, 

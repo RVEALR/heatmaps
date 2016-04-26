@@ -335,8 +335,8 @@ public class RawDataGenerator : EditorWindow
         // I created this during debugging and thought it was worth keeping.
         // If you ever want to see this work, uncomment the two lines below
         // and generate data using the FPSDropoffDataStory.
-        BuildTarget(story as FPSDropoffDataStory);
-        BuildRoute(story as FPSDropoffDataStory);
+//        BuildTarget(story as FPSDropoffDataStory);
+//        BuildRoute(story as FPSDropoffDataStory);
     }
 
     void BuildRoute(FPSDropoffDataStory story)
