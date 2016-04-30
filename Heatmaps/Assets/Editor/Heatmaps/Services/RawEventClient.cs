@@ -233,7 +233,7 @@ namespace UnityAnalyticsHeatmap
 
         string GetSavePath()
         {
-            string savePath = System.IO.Path.Combine(m_DataPath, "HeatmapData");
+            string savePath = System.IO.Path.Combine(m_DataPath, "RawData");
             return savePath;
         }
     }

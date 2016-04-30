@@ -622,11 +622,11 @@ public class RawDataInspector : EditorWindow
 
     void GenerateData()
     {
-        if (m_DataSource == FREEFORM_RANDOM)
+        if (m_GenerateType == FREEFORM_RANDOM)
         {
             GenerateFreeformData();
         }
-        else if (m_DataSource == HEATMAP_RANDOM)
+        else if (m_GenerateType == HEATMAP_RANDOM)
         {
             GenerateHeatmapData();
         }
@@ -879,7 +879,7 @@ public class RawDataInspector : EditorWindow
 
     void SaveFile(string data, double firstDate)
     {
-        string savePath = System.IO.Path.Combine(GetSavePath(), "HeatmapData");
+        string savePath = System.IO.Path.Combine(GetSavePath(), "RawData");
         // Create the save path if necessary
         if (!System.IO.Directory.Exists(savePath))
         {
@@ -897,7 +897,7 @@ public class RawDataInspector : EditorWindow
     
     public void PurgeData()
     {
-        string savePath = System.IO.Path.Combine(GetSavePath(), "HeatmapData");
+        string savePath = System.IO.Path.Combine(GetSavePath(), "RawData");
         if (System.IO.Directory.Exists(savePath))
         {
             System.IO.Directory.Delete(savePath, true);

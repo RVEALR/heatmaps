@@ -286,7 +286,7 @@ namespace UnityAnalyticsHeatmap
         internal void SaveFile(string outputFileName, Dictionary<Tuplish, 
             List<Dictionary<string, float>>> outputData)
         {
-            string savePath = System.IO.Path.Combine(m_DataPath, "HeatmapData");
+            string savePath = System.IO.Path.Combine(m_DataPath, "RawData");
             if (!System.IO.Directory.Exists(savePath))
             {
                 System.IO.Directory.CreateDirectory(savePath);
