@@ -186,7 +186,7 @@ namespace UnityAnalyticsHeatmap
                 }
             }
             // POSITION MASKING
-            EditorGUILayout.LabelField("Masking");
+            EditorGUILayout.LabelField("Masking (x/y/z)");
             RenderMinMaxSlider(ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey, m_LowSpace.x, m_HighSpace.x);
             RenderMinMaxSlider(ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey, m_LowSpace.y, m_HighSpace.y);
             RenderMinMaxSlider(ref m_LowZ, ref m_HighZ, k_LowZKey, k_HighZKey, m_LowSpace.z, m_HighSpace.z);

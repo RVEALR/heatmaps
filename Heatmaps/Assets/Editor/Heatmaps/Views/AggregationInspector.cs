@@ -15,7 +15,7 @@ namespace UnityAnalyticsHeatmap
     {
         const string k_UrlKey = "UnityAnalyticsHeatmapDataExportUrlKey";
         const string k_DataPathKey = "UnityAnalyticsHeatmapDataPathKey";
-        const string k_UsePersistentDataPathKey = "UnityAnalyticsHeatmapUsePersistentDataPathKey";
+        const string k_UseCustomDataPathKey = "UnityAnalyticsHeatmapUsePersistentDataPathKey";
 
         const string k_SpaceKey = "UnityAnalyticsHeatmapAggregationSpace";
         const string k_KeyToTime = "UnityAnalyticsHeatmapAggregationTime";
@@ -36,7 +36,7 @@ namespace UnityAnalyticsHeatmap
 
         string m_RawDataPath = "";
         string m_DataPath = "";
-        bool m_UsePersistentDataPath = true;
+        bool m_UseCustomDataPath = true;
 
         Dictionary<string, HeatPoint[]> m_HeatData;
 
@@ -72,7 +72,7 @@ namespace UnityAnalyticsHeatmap
 
             // Restore cached paths
             m_RawDataPath = EditorPrefs.GetString(k_UrlKey);
-            m_UsePersistentDataPath = EditorPrefs.GetBool(k_UsePersistentDataPathKey);
+            m_UseCustomDataPath = EditorPrefs.GetBool(k_UseCustomDataPathKey);
             m_DataPath = EditorPrefs.GetString(k_DataPathKey);
 
             // Set dates based on today (should this be cached?)
@@ -162,14 +162,14 @@ namespace UnityAnalyticsHeatmap
             {
                 EditorPrefs.SetString(k_UrlKey, m_RawDataPath);
             }
-            bool oldUsePersistentDataPath = m_UsePersistentDataPath;
-            m_UsePersistentDataPath = EditorGUILayout.Toggle(new GUIContent("Use persistent data path", "By default, use Application.persistentDataPath"), m_UsePersistentDataPath);
-            if (oldUsePersistentDataPath != m_UsePersistentDataPath)
+            bool oldUseCustomDataPath = m_UseCustomDataPath;
+            m_UseCustomDataPath = EditorGUILayout.Toggle(new GUIContent("Use custom data path", "By default, will use Application.persistentDataPath"), m_UseCustomDataPath);
+            if (oldUseCustomDataPath != m_UseCustomDataPath)
             {
-                EditorPrefs.SetBool(k_UsePersistentDataPathKey, m_UsePersistentDataPath);
+                EditorPrefs.SetBool(k_UseCustomDataPathKey, m_UseCustomDataPath);
             }
 
-            if (m_UsePersistentDataPath)
+            if (!m_UseCustomDataPath)
             {
                 m_DataPath = Application.persistentDataPath;
             }
