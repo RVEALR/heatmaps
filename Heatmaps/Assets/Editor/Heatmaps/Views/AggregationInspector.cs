@@ -243,7 +243,7 @@ namespace UnityAnalyticsHeatmap
             }
 
             bool oldAggregateDevices = m_AggregateDevices;
-            m_AggregateDevices = EditorGUILayout.Toggle(new GUIContent("Unique Devices", "Separate each device into its own list. NOTE: Disaggregating device IDs can be slow!"), m_AggregateDevices);
+            m_AggregateDevices = EditorGUILayout.Toggle(new GUIContent("Devices", "Separate each device into its own list. NOTE: Disaggregating device IDs can be slow!"), m_AggregateDevices);
             if (oldAggregateDevices != m_AggregateDevices)
             {
                 EditorPrefs.SetBool(k_AggregateDevicesKey, m_AggregateDevices);
