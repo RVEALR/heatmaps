@@ -123,7 +123,9 @@ namespace UnityAnalyticsHeatmap
         /// </summary>
         protected static analyticsResultNamespace.AnalyticsResult Commit(string eventName)
         {
-            return analyticsEventNamespace.CustomEvent("Heatmap." + eventName, s_Dictionary);
+            analyticsResultNamespace.AnalyticsResult result = analyticsEventNamespace.CustomEvent("Heatmap." + eventName, s_Dictionary);
+            s_Dictionary.Clear();
+            return result;
         }
 
         /// <summary>
