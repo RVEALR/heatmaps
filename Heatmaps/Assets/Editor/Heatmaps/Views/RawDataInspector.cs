@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityAnalyticsHeatmap;
 using System.Collections.Generic;
 using System.Collections;
+using UnityAnalytics;
 
 public class RawDataInspector : EditorWindow
 {
@@ -99,9 +100,13 @@ public class RawDataInspector : EditorWindow
         new SpeedRacerDataStory()
     };
 
+    string m_AppId = "";
+    string m_DataKey = "";
     string m_FetchKey = "";
     string m_StartDate = "";
     string m_EndDate = "";
+
+    List<JobRequest> m_Jobs = null;
 
     int m_DataSource = 0;
     static int FETCH = 0;
@@ -157,9 +162,15 @@ public class RawDataInspector : EditorWindow
 
     Vector2 m_ScrollPosition;
 
+    DownloadManager downloadManager = new DownloadManager();
+
     public RawDataInspector()
     {
         titleContent = new GUIContent("Raw Data");
+    }
+
+    void Awake()
+    {
         if (EditorPrefs.GetBool(k_Installed))
         {
             RestoreValues();
@@ -216,37 +227,71 @@ public class RawDataInspector : EditorWindow
             {
                 HeatmapRandomDataView();
                 CreateCode();
+                if (GUILayout.Button("Generate"))
+                {
+                    GenerateData();
+                }
             }
             else if (m_GenerateType == FREEFORM_RANDOM)
             {
                 FreeformRandomDataView();
                 CreateCode();
+                if (GUILayout.Button("Generate"))
+                {
+                    GenerateData();
+                }
             }
             else if (m_GenerateType == DEMO)
             {
                 CreateDemoData();
+                if (GUILayout.Button("Generate"))
+                {
+                    GenerateData();
+                }
             }
         }
 
-        string btnText = m_DataSource == FETCH ? "Fetch" : "Generate";
-        if (GUILayout.Button(btnText))
-        {
-            GenerateData();
-        }
+
         EditorGUILayout.EndScrollView();
     }
 
     void FetchView()
     {
         string oldPath = m_FetchKey;
-        m_FetchKey = EditorGUILayout.TextField(new GUIContent("App Key", "Copy the key from the 'Editing Project' page of your project dashboard"), m_FetchKey);
+        m_AppId = EditorGUILayout.TextField(new GUIContent("App ID", "Copy the AppID from the 'Editing Project' page of your project dashboard"), m_AppId);
+        m_FetchKey = EditorGUILayout.TextField(new GUIContent("Secret Key", "Copy the key from the 'Editing Project' page of your project dashboard"), m_FetchKey);
+
+        downloadManager.m_AppId = m_AppId;
+        downloadManager.m_DataKey = m_DataKey;
+
+
         if (oldPath != m_FetchKey && !string.IsNullOrEmpty(m_FetchKey))
         {
             EditorPrefs.SetString(k_FetchKey, m_FetchKey);
         }
-
         m_StartDate = EditorGUILayout.TextField(new GUIContent("Start Date (YYYY-MM-DD)", "Start date as ISO-8601 datetime"), m_StartDate);
         m_EndDate = EditorGUILayout.TextField(new GUIContent("End Date (YYYY-MM-DD)", "End date as ISO-8601 datetime"), m_EndDate);
+
+        if (GUILayout.Button("Create New Job"))
+        {
+
+        }
+        GUILayout.Space(20f);
+
+        if (GUILayout.Button("Get Jobs"))
+        {
+            m_Jobs = downloadManager.GetJobs();
+        }
+        if (m_Jobs != null)
+        {
+            for (int a = 0; a < m_Jobs.Count; a++)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(m_Jobs[a].m_DateRange);
+                GUILayout.Label(m_Jobs[a].m_Status.ToString());
+                GUILayout.EndHorizontal();
+            }
+        }
     }
 
     void FreeformRandomDataView()
@@ -1004,10 +1049,6 @@ public class RawDataInspector : EditorWindow
         m_EventNames = new List<string>(eventNamesList);
 
         string loadedCustomEvents = EditorPrefs.GetString(k_CustomEventsKey);
-
-
-        Debug.Log(">?>>> " + loadedCustomEvents);
-
         m_CustomEvents = new List<TestCustomEvent>();
 
         string[] customEventsList;

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace UnityAnalyticsHeatmap
+namespace UnityAnalytics
 {
     // Note variance from C# code standard. We need these to match consts on server.
     public enum UnityAnalyticsEventType

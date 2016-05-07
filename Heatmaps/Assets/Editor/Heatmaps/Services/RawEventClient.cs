@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net;
 using MiniJSON;
 using UnityEngine;
+using UnityAnalytics;
 
 #if UNITY_EDITOR_WIN
 using System.Security.Cryptography.X509Certificates;
