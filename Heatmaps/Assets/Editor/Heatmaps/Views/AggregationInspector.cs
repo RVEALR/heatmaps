@@ -23,7 +23,13 @@ namespace UnityAnalyticsHeatmap
         const string k_AngleKey = "UnityAnalyticsHeatmapAggregationAngle";
         const string k_AggregateTimeKey = "UnityAnalyticsHeatmapAggregationAggregateTime";
         const string k_AggregateAngleKey = "UnityAnalyticsHeatmapAggregationAggregateAngle";
-        const string k_AggregateDevicesKey = "UnityAnalyticsHeatmapAggregationAggregateDeviceIDs";
+
+        const string k_SeparateUsersKey = "UnityAnalyticsHeatmapAggregationAggregateUserIDs";
+        const string k_SeparateSessionKey = "UnityAnalyticsHeatmapAggregationAggregateSessionIDs";
+        const string k_SeparateDebugKey = "UnityAnalyticsHeatmapAggregationAggregateDebug";
+        const string k_SeparatePlatformKey = "UnityAnalyticsHeatmapAggregationAggregatePlatform";
+        const string k_SeparateCustomKey = "UnityAnalyticsHeatmapAggregationAggregateCustom";
+
         const string k_ArbitraryFieldsKey = "UnityAnalyticsHeatmapAggregationArbitraryFields";
         const string k_EventsKey = "UnityAnalyticsHeatmapAggregationEvents";
 
@@ -48,6 +54,10 @@ namespace UnityAnalyticsHeatmap
         RawEventClient m_RawEventClient;
         HeatmapAggregator m_Aggregator;
 
+        Texture2D unionIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/union.png") as Texture2D;
+        Texture2D numberIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/number.png") as Texture2D;
+        Texture2D noneIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/none.png") as Texture2D;
+
         string m_StartDate = "";
         string m_EndDate = "";
         float m_Space = k_DefaultSpace;
@@ -55,13 +65,37 @@ namespace UnityAnalyticsHeatmap
         float m_Angle = k_DefaultAngle;
         bool m_AggregateTime = true;
         bool m_AggregateAngle = true;
-        bool m_AggregateDevices = true;
+
+        bool m_SeparateUsers = false;
+        bool m_SeparateSessions = false;
+        bool m_SeparatePlatform = false;
+        bool m_SeparateDebug = false;
+        bool m_SeparateCustomField = false;
 
         bool m_RemapColor;
         string m_RemapColorField = "";
         int m_RemapOptionIndex = 0;
-        GUIContent[] m_RemapOptions = new GUIContent[]{ new GUIContent("Increment"), new GUIContent("Cumulative"), new GUIContent("First Wins"), new GUIContent("Last Wins"), new GUIContent("Min Wins"), new GUIContent("Max Wins") };
-        AggregationMethod[] m_RemapOptionIds = new AggregationMethod[]{ AggregationMethod.Increment, AggregationMethod.Cumulative, AggregationMethod.FirstWins, AggregationMethod.LastWins, AggregationMethod.MinWins, AggregationMethod.MaxWins };
+        float m_Percentile = 50f;
+        GUIContent[] m_RemapOptions = new GUIContent[]{
+            new GUIContent("Increment"),
+            new GUIContent("Cumulative"),
+            new GUIContent("Average"),
+            new GUIContent("First Wins"),
+            new GUIContent("Last Wins"),
+            new GUIContent("Min Wins"),
+            new GUIContent("Max Wins"),
+            new GUIContent("Percentile")
+        };
+        AggregationMethod[] m_RemapOptionIds = new AggregationMethod[]{
+            AggregationMethod.Increment,
+            AggregationMethod.Cumulative,
+            AggregationMethod.Average,
+            AggregationMethod.FirstWins,
+            AggregationMethod.LastWins,
+            AggregationMethod.MinWins,
+            AggregationMethod.MaxWins,
+            AggregationMethod.Percentile
+        };
 
         List<string> m_ArbitraryFields = new List<string>{ };
         List<string> m_Events = new List<string>{ };
@@ -86,12 +120,12 @@ namespace UnityAnalyticsHeatmap
             m_Angle = EditorPrefs.GetFloat(k_AngleKey) == 0 ? k_DefaultAngle : EditorPrefs.GetFloat(k_AngleKey);
             m_AggregateTime = EditorPrefs.GetBool(k_AggregateTimeKey);
             m_AggregateAngle = EditorPrefs.GetBool(k_AggregateAngleKey);
-            m_AggregateDevices = EditorPrefs.GetBool(k_AggregateDevicesKey);
+            m_SeparateUsers = EditorPrefs.GetBool(k_SeparateUsersKey);
             m_RemapColor = EditorPrefs.GetBool(k_RemapColorKey);
             m_RemapColorField = EditorPrefs.GetString(k_RemapColorFieldKey);
             m_RemapOptionIndex = EditorPrefs.GetInt(k_RemapOptionIndexKey);
 
-            // Restore list of arbitrary aggregation fields
+            // Restore list of arbitrary separation fields
             string loadedArbitraryFields = EditorPrefs.GetString(k_ArbitraryFieldsKey);
             string[] arbitraryFieldsList;
             if (string.IsNullOrEmpty(loadedArbitraryFields))
@@ -103,19 +137,6 @@ namespace UnityAnalyticsHeatmap
                 arbitraryFieldsList = loadedArbitraryFields.Split('|');
             }
             m_ArbitraryFields = new List<string>(arbitraryFieldsList);
-
-            // Restore list of events
-            string loadedEvents = EditorPrefs.GetString(k_EventsKey);
-            string[] eventsList;
-            if (string.IsNullOrEmpty(loadedEvents))
-            {
-                eventsList = new string[]{ };
-            }
-            else
-            {
-                eventsList = loadedEvents.Split('|');
-            }
-            m_Events = new List<string>(eventsList);
         }
 
         public static AggregationInspector Init(RawEventClient client, HeatmapAggregator aggregator)
@@ -155,20 +176,26 @@ namespace UnityAnalyticsHeatmap
             m_RawEventClient.Fetch(m_RawDataPath, localOnly, new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end, rawFetchHandler);
         }
 
+        int m_SpaceToggle = 0;
+        int m_AngleToggle = 0;
+        int m_TimeToggle = 0;
+
         public void OnGUI()
         {
-            string oldPath = m_RawDataPath;
-            m_RawDataPath = EditorGUILayout.TextField(new GUIContent("Data Export URL", "Copy the URL from the 'Editing Project' page of your project dashboard"), m_RawDataPath);
-            if (oldPath != m_RawDataPath && !string.IsNullOrEmpty(m_RawDataPath))
-            {
-                EditorPrefs.SetString(k_UrlKey, m_RawDataPath);
-            }
+            //GUIStyle stretch = new GUIStyle(GUI.skin.box);
+            GUILayout.BeginVertical("box");
+            GUILayout.BeginHorizontal();
             bool oldUseCustomDataPath = m_UseCustomDataPath;
             m_UseCustomDataPath = EditorGUILayout.Toggle(new GUIContent("Use custom data path", "By default, will use Application.persistentDataPath"), m_UseCustomDataPath);
             if (oldUseCustomDataPath != m_UseCustomDataPath)
             {
                 EditorPrefs.SetBool(k_UseCustomDataPathKey, m_UseCustomDataPath);
             }
+            if (GUILayout.Button("Open Folder"))
+            {
+                EditorUtility.RevealInFinder(m_DataPath);
+            }
+            GUILayout.EndHorizontal();
 
             if (!m_UseCustomDataPath)
             {
@@ -187,72 +214,98 @@ namespace UnityAnalyticsHeatmap
                     EditorPrefs.SetString(k_DataPathKey, m_DataPath);
                 }
             }
+
             m_Aggregator.SetDataPath(m_DataPath);
             m_RawEventClient.SetDataPath(m_DataPath);
 
-            m_StartDate = EditorGUILayout.TextField(new GUIContent("Start Date (YYYY-MM-DD)", "Start date as ISO-8601 datetime"), m_StartDate);
-            m_EndDate = EditorGUILayout.TextField(new GUIContent("End Date (YYYY-MM-DD)", "End date as ISO-8601 datetime"), m_EndDate);
+            GUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(new GUIContent("Dates", "ISO-8601 datetimes (YYYY-MM-DD)"), GUILayout.Width(35));
+            m_StartDate = EditorGUILayout.TextField(m_StartDate);
+            EditorGUILayout.LabelField("-", GUILayout.Width(10));
+            m_EndDate = EditorGUILayout.TextField(m_EndDate);
+            GUILayout.EndHorizontal();
 
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Aggregate", EditorStyles.boldLabel);
 
-            float oldSpace = m_Space;
-            m_Space = EditorGUILayout.FloatField(new GUIContent("Space Smooth", "Divider to smooth out x/y/z data"), m_Space);
-            if (oldSpace != m_Space)
-            {
-                EditorPrefs.SetFloat(k_SpaceKey, m_Space);
-            }
+            GUILayout.BeginVertical("box");
+            GUILayout.Label("Smooth", EditorStyles.boldLabel);
+            GUILayout.BeginHorizontal();
 
-            bool oldAggregateTime = m_AggregateTime;
-            m_AggregateTime = EditorGUILayout.Toggle(new GUIContent("Time", "Units of space will aggregate, but units of time won't"), m_AggregateTime);
-            if (oldAggregateTime != m_AggregateTime)
+            // SPACE
+            SmootherControl(ref m_SpaceToggle, ref m_Space, "Space", "Divider to smooth out x/y/z data", k_SpaceKey);
+
+            // ROTATION
+            SmootherControl(ref m_AngleToggle, ref m_Angle, "Rotation", "Divider to smooth out angular data", k_SpaceKey);
+
+
+            // TIME
+            SmootherControl(ref m_TimeToggle, ref m_Time, "Time", "Divider to smooth out passage of game time", k_SpaceKey);
+
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+
+
+            // SEPARATION
+            GUILayout.Label("Separate", EditorStyles.boldLabel);
+            GUILayout.BeginHorizontal();
+            GroupControl(ref m_SeparateUsers,
+                "Users", "Separate each user into their own list. NOTE: Separating user IDs can be quite slow!",
+                k_SeparateUsersKey);
+            GroupControl(ref m_SeparateSessions,
+                "Sessions", "Separate each session into its own list. NOTE: Separating unique sessions can be astonishly slow!",
+                k_SeparateSessionKey);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GroupControl(ref m_SeparateDebug,
+                "Is Debug", "Separate debug devices from non-debug devices",
+                k_SeparateDebugKey);
+            GroupControl(ref m_SeparatePlatform,
+                "Platform", "Separate data based on platform",
+                k_SeparatePlatformKey);
+            GUILayout.EndHorizontal();
+
+
+            GroupControl(ref m_SeparateCustomField,
+                "On Custom Field", "Separate based on one or more parameter fields",
+                k_SeparateCustomKey);
+
+
+            if (m_SeparateCustomField)
             {
-                EditorPrefs.SetBool(k_AggregateTimeKey, m_AggregateTime);
-            }
-            if (!m_AggregateTime)
-            {
-                float oldTime = m_Time;
-                m_Time = EditorGUILayout.FloatField(new GUIContent("Time Smooth", "Divider to smooth out time data"), m_Time);
-                if (oldTime != m_Time)
+                string oldArbitraryFieldsString = string.Join("|", m_ArbitraryFields.ToArray());
+                if (m_ArbitraryFields.Count == 0)
                 {
-                    EditorPrefs.SetFloat(k_KeyToTime, m_Time);
+                    m_ArbitraryFields.Add("Field name");
+                }
+                for (var a = 0; a < m_ArbitraryFields.Count; a++)
+                {
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button("-", GUILayout.MaxWidth(20f)))
+                    {
+                        m_ArbitraryFields.RemoveAt(a);
+                        break;
+                    }
+                    m_ArbitraryFields[a] = EditorGUILayout.TextField(m_ArbitraryFields[a]);
+                    if (a == m_ArbitraryFields.Count-1 && GUILayout.Button(new GUIContent("+", "Add field")))
+                    {
+                        m_ArbitraryFields.Add("Field name");
+                    }
+                    GUILayout.EndHorizontal();
+                }
+
+
+
+
+                string currentArbitraryFieldsString = string.Join("|", m_ArbitraryFields.ToArray());
+
+                if (oldArbitraryFieldsString != currentArbitraryFieldsString)
+                {
+                    EditorPrefs.SetString(k_ArbitraryFieldsKey, currentArbitraryFieldsString);
                 }
             }
-            else
-            {
-                m_Time = 1f;
-            }
+            GUILayout.EndVertical();
 
-            bool oldAggregateAngle = m_AggregateAngle;
-            m_AggregateAngle = EditorGUILayout.Toggle(new GUIContent("Direction", "Units of space will aggregate, but different angles won't"), m_AggregateAngle);
-            if (oldAggregateAngle != m_AggregateAngle)
-            {
-                EditorPrefs.SetBool(k_AggregateAngleKey, m_AggregateAngle);
-            }
-            if (!m_AggregateAngle)
-            {
-                float oldAngle = m_Angle;
-                m_Angle = EditorGUILayout.FloatField(new GUIContent("Angle Smooth", "Divider to smooth out angle data"), m_Angle);
-                if (oldAngle != m_Angle)
-                {
-                    EditorPrefs.SetFloat(k_AngleKey, m_Angle);
-                }
-            }
-            else
-            {
-                m_Angle = 1f;
-            }
-
-            bool oldAggregateDevices = m_AggregateDevices;
-            m_AggregateDevices = EditorGUILayout.Toggle(new GUIContent("Devices", "Separate each device into its own list. NOTE: Disaggregating device IDs can be slow!"), m_AggregateDevices);
-            if (oldAggregateDevices != m_AggregateDevices)
-            {
-                EditorPrefs.SetBool(k_AggregateDevicesKey, m_AggregateDevices);
-            }
-            EditorGUILayout.EndVertical();
-
-
-
+            GUILayout.BeginVertical("Box");
             bool oldRemapColor = m_RemapColor;
             m_RemapColor = EditorGUILayout.Toggle(new GUIContent("Remap color to field", "By default, heatmap color is determined by event density. Checking this box allows you to remap to a specific field (e.g., use to identify fps drops.)"), m_RemapColor);
             if (oldRemapColor != m_RemapColor)
@@ -263,8 +316,13 @@ namespace UnityAnalyticsHeatmap
             {
                 string oldRemapField = m_RemapColorField;
                 int oldOptionIndex = m_RemapOptionIndex;
-                m_RemapColorField = EditorGUILayout.TextField(new GUIContent("Remap to","Name the field to remap"), m_RemapColorField);
+                m_RemapColorField = EditorGUILayout.TextField(new GUIContent("Field","Name the field to remap"), m_RemapColorField);
                 m_RemapOptionIndex = EditorGUILayout.Popup(new GUIContent("Remap operation", "How should the remapped variable aggregate?"), m_RemapOptionIndex, m_RemapOptions);
+
+                if (m_RemapOptionIds[m_RemapOptionIndex] == AggregationMethod.Percentile)
+                {
+                    m_Percentile = EditorGUILayout.FloatField("Percentile", m_Percentile);
+                }
                 if (oldRemapField != m_RemapColorField)
                 {
                     EditorPrefs.SetString(k_RemapColorFieldKey, m_RemapColorField);
@@ -274,51 +332,42 @@ namespace UnityAnalyticsHeatmap
                     EditorPrefs.SetInt(k_RemapOptionIndexKey, m_RemapOptionIndex);
                 }
             }
+            GUILayout.EndVertical();
+        }
 
-            string oldArbitraryFieldsString = string.Join("|", m_ArbitraryFields.ToArray());
-            if (GUILayout.Button(new GUIContent("Separate on Field", "Specify arbitrary fields with which to bucket data.")))
-            {
-                m_ArbitraryFields.Add("Field name");
-            }
-            for (var a = 0; a < m_ArbitraryFields.Count; a++)
-            {
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("-", GUILayout.MaxWidth(20f)))
-                {
-                    m_ArbitraryFields.RemoveAt(a);
-                    break;
-                }
-                m_ArbitraryFields[a] = EditorGUILayout.TextField(m_ArbitraryFields[a]);
-                GUILayout.EndHorizontal();
-            }
-            string currentArbitraryFieldsString = string.Join("|", m_ArbitraryFields.ToArray());
+        void SmootherControl(ref int toggler, ref float value, string label, string tooltip, string key)
+        {
+            GUILayout.BeginVertical();
+            toggler = GUILayout.Toolbar(toggler, new GUIContent[] {
+                new GUIContent(unionIcon, "Union"), 
+                new GUIContent(numberIcon, "Smooth to value"),
+                new GUIContent(noneIcon, "No smoothing")
+            }, GUILayout.MaxWidth(100));
+            float oldValue = value;
 
-            if (oldArbitraryFieldsString != currentArbitraryFieldsString)
-            {
-                EditorPrefs.SetString(k_ArbitraryFieldsKey, currentArbitraryFieldsString);
-            }
 
-            string oldEventsString = string.Join("|", m_Events.ToArray());
-            if (GUILayout.Button(new GUIContent("Add Whitelist Event", "Specify event names to include in the aggregation. By default all events are included.")))
-            {
-                m_Events.Add("Event name");
-            }
-            for (var a = 0; a < m_Events.Count; a++)
-            {
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("-", GUILayout.MaxWidth(20f)))
-                {
-                    m_Events.RemoveAt(a);
-                    break;
-                }
-                m_Events[a] = EditorGUILayout.TextField(m_Events[a]);
-                GUILayout.EndHorizontal();
-            }
-            string currentEventsString = string.Join("|", m_Events.ToArray());
+            float lw = EditorGUIUtility.labelWidth;
+            EditorGUIUtility.labelWidth = 50;
+            float fw = EditorGUIUtility.fieldWidth;
+            EditorGUIUtility.fieldWidth = 20;
+            value = EditorGUILayout.FloatField(new GUIContent(label, tooltip), value);
+            EditorGUIUtility.labelWidth = lw;
+            EditorGUIUtility.fieldWidth = fw;
 
-            if (oldEventsString != currentEventsString)
+            if (oldValue != value)
             {
-                EditorPrefs.SetString(k_EventsKey, currentEventsString);
+                EditorPrefs.SetFloat(key, value);
+            }
+            GUILayout.EndVertical();
+        }
+
+        void GroupControl(ref bool groupParam, string label, string tooltip, string key)
+        {
+            bool oldValue = groupParam;
+            groupParam = EditorGUILayout.Toggle(new GUIContent(label, tooltip), groupParam);
+            if (groupParam != oldValue)
+            {
+                EditorPrefs.SetBool(key, groupParam);
             }
         }
 
@@ -382,14 +431,29 @@ namespace UnityAnalyticsHeatmap
                 // Specify groupings
                 // Always group on eventName
                 var groupOn = new List<string>(){ "eventName" };
-                // deviceID is optional
-                if (!m_AggregateDevices)
+                // userID is optional
+                if (m_SeparateUsers)
                 {
-                    aggregateOn.Add("deviceID");
-                    groupOn.Add("deviceID");
+                    aggregateOn.Add("userID");
+                    groupOn.Add("userID");
+                }
+                if (m_SeparateSessions)
+                {
+                    aggregateOn.Add("sessionID");
+                    groupOn.Add("sessionID");
+                }
+                if (m_SeparateDebug)
+                {
+                    aggregateOn.Add("debug");
+                    groupOn.Add("debug");
+                }
+                if (m_SeparatePlatform)
+                {
+                    aggregateOn.Add("platform");
+                    groupOn.Add("platform");
                 }
                 // Arbitrary Fields are included if specified
-                if (m_ArbitraryFields != null && m_ArbitraryFields.Count > 0)
+                if (m_SeparateCustomField)
                 {
                     aggregateOn.AddRange(m_ArbitraryFields);
                     groupOn.AddRange(m_ArbitraryFields);

@@ -13,6 +13,7 @@ namespace UnityAnalyticsHeatmap
 {
     public class HeatmapAggregator
     {
+        static DateTime epoch = new DateTime(1970,1,1,0,0,0,0,System.DateTimeKind.Utc);
 
         int m_ReportFiles = 0;
         int m_ReportRows = 0;
@@ -48,7 +49,7 @@ namespace UnityAnalyticsHeatmap
         /// <param name="endDate">Any timestamp after to this ISO 8601 date will be trimmed.</param>
         /// <param name="aggregateOn">A list of properties on which to specify point uniqueness.</param>
         /// <param name="smoothOn">A dictionary of properties that are smoothable, along with their smoothing values. <b>Must be a subset of aggregateOn.</b></param>
-        /// <param name="groupOn">A list of properties on which to group resulting lists (supports arbitrary data, plus 'eventName' and 'deviceID').</param>
+        /// <param name="groupOn">A list of properties on which to group resulting lists (supports arbitrary data, plus 'eventName', 'userID', 'sessionID', 'platform', and 'debug').</param>
         /// <param name="remapDensityToField">If not blank, remaps density (aka color) to the value of the field.</param>
         /// <param name="aggregationMethod">Determines the calculation with which multiple points aggregate (default is Increment).</param>
         /// <param name="events">A list of events to explicitly include.</param>
@@ -132,130 +133,189 @@ namespace UnityAnalyticsHeatmap
             var reader = new StreamReader(path);
             using (reader)
             {
+
                 string tsv = reader.ReadToEnd();
                 string[] rows = tsv.Split('\n');
                 m_ReportRows += rows.Length;
 
+                // Define indices
+                int nameIndex = -1;
+                int submitTimeIndex = -1;
+                int paramsIndex = -1;
+                int userIdIndex = -1;
+                int sessionIdIndex = -1;
+                int platformIndex = -1;
+                int isDebugIndex = -1;
+
                 for (int a = 0; a < rows.Length; a++)
                 {
-                    string[] rowData = rows[a].Split('\t');
-                    if (string.IsNullOrEmpty(rowData[0]) || string.IsNullOrEmpty(rowData[2]) || string.IsNullOrEmpty(rowData[3]))
+                    List<string> rowData = new List<string>(rows[a].Split('\t'));
+                    if (a == 0)
                     {
-                        // Re-enable this log if you want to see empty lines
-                        //Debug.Log ("Empty Line...skipping");
-                        continue;
-                    }
-
-                    DateTime rowDate = DateTime.Parse(rowData[0]);
-                    string deviceID = rowData[1];
-                    string eventName = rowData[2];
-
-                    // Pass on rows outside any date trimming
-                    if (rowDate < startDate || rowDate > endDate)
-                    {
-                        continue;
-                    }
-
-                    // If we're filtering events, pass if not in list
-                    if (eventsWhitelist.Count > 0 && eventsWhitelist.IndexOf(eventName) == -1)
-                    {
-                        continue;
-                    }
-
-                    Dictionary<string, object> datum = MiniJSON.Json.Deserialize(rowData[3]) as Dictionary<string, object>;
-                    // If no x/y, this isn't a Heatmap Event. Pass.
-                    if (!datum.ContainsKey("x") || !datum.ContainsKey("y"))
-                    {
-                        // Re-enable this log line if you want to be see events that aren't valid for heatmapping
-                        //Debug.Log ("Unable to find x/y in: " + datum.ToString () + ". Skipping...");
-                        continue;
-                    }
-
-                    // Passed all checks. Consider as legal point
-                    m_ReportLegalPoints++;
-
-                    // Construct both the list of elements that signify a unique item...
-                    var tupleList = new List<object>{ eventName };
-                    // ...and the point that represents that item
-                    var point = new Dictionary<string, float>();
-                    foreach (var ag in aggregateOn)
-                    {
-                        float floatValue = 0f;
-                        object arbitraryValue = 0f;
-                        // Special case for DeviceIDs, which aren't in the JSON
-                        if (ag == "deviceID")
-                        {
-                            arbitraryValue = deviceID;
-                        }
-                        else if (datum.ContainsKey(ag))
-                        {
-                            // parse and divide all in smoothing list
-                            float.TryParse((string)datum[ag], out floatValue);
-                            if (smoothOn.ContainsKey(ag))
-                            {
-                                floatValue = Divide(floatValue, smoothOn[ag]);
-                            }
-                            else
-                            {
-                                floatValue = 0;
-                            }
-                            arbitraryValue = floatValue;
-                        }
-
-                        tupleList.Add(arbitraryValue);
-                        if (pointProperties.Contains(ag))
-                        {
-                            point[ag] = floatValue;
-                        }
-                    }
-
-                    float remapValue = 0f;
-                    if (doRemap && datum.ContainsKey(remapDensityToField)) {
-                        float.TryParse( (string)datum[remapDensityToField], out remapValue);
-                    }
-
-                    // Tuple-like key to determine if this point is unique, or needs to be merged with another
-                    var tuple = new Tuplish(tupleList.ToArray());
-                    if (m_PointDict.ContainsKey(tuple))
-                    {
-                        // Use existing point if it exists
-                        point = m_PointDict[tuple];
-                        point["d"] = Accrete(point["d"], remapValue, aggregationMethod, false);
+                        // Establish indices on row 0
+                        nameIndex = rowData.IndexOf("name");
+                        submitTimeIndex = rowData.IndexOf("submit_time");
+                        paramsIndex = rowData.IndexOf("custom_params");
+                        userIdIndex = rowData.IndexOf("userid");
+                        sessionIdIndex = rowData.IndexOf("sessionid");
+                        platformIndex = rowData.IndexOf("platform");
+                        isDebugIndex = rowData.IndexOf("debug_device");
                     }
                     else
                     {
-                        point["d"] = Accrete(0, remapValue, aggregationMethod, true);
-                        m_PointDict[tuple] = point;
-
-                        // Group
-                        var listTupleKeyList = new List<object>();
-                        foreach (var field in groupOn)
+                    
+                        if (nameIndex == -1 || submitTimeIndex == -1 || paramsIndex == -1 ||rowData.Count < submitTimeIndex)
                         {
-                            // Special case for eventName
-                            if (field == "eventName")
+                            // Re-enable this log if you want to see empty lines
+                            //Debug.Log ("Empty Line...skipping");
+                            continue;
+                        }
+
+                        double unixTimeStamp = double.Parse(rowData[submitTimeIndex]);
+                        DateTime rowDate = epoch.AddSeconds(unixTimeStamp);
+
+                        Debug.Log(rowData[userIdIndex]);
+
+                        string userId = rowData[userIdIndex];
+                        string sessionId = rowData[sessionIdIndex];
+                        string platform = rowData[platformIndex];
+                        string eventName = rowData[nameIndex];
+                        bool isDebug = bool.Parse(rowData[isDebugIndex]);
+
+                        // Pass on rows outside any date trimming
+                        if (rowDate < startDate || rowDate > endDate)
+                        {
+                            continue;
+                        }
+
+                        // If we're filtering events, pass if not in list
+                        if (eventsWhitelist.Count > 0 && eventsWhitelist.IndexOf(eventName) == -1)
+                        {
+                            continue;
+                        }
+
+                        Dictionary<string, object> datum = MiniJSON.Json.Deserialize(rowData[paramsIndex]) as Dictionary<string, object>;
+                        // If no x/y, this isn't a Heatmap Event. Pass.
+                        if (!datum.ContainsKey("x") || !datum.ContainsKey("y"))
+                        {
+                            // Re-enable this log line if you want to be see events that aren't valid for heatmapping
+                            //Debug.Log ("Unable to find x/y in: " + datum.ToString () + ". Skipping...");
+                            continue;
+                        }
+
+                        // Passed all checks. Consider as legal point
+                        m_ReportLegalPoints++;
+
+                        // Construct both the list of elements that signify a unique item...
+                        var tupleList = new List<object>{ eventName };
+                        // ...and the point that represents that item
+                        var point = new Dictionary<string, float>();
+                        foreach (var ag in aggregateOn)
+                        {
+                            float floatValue = 0f;
+                            object arbitraryValue = 0f;
+                            // Special cases for userIDs, sessionIDs, platform, and debug, which aren't in the JSON
+                            if (ag == "userID")
                             {
-                                listTupleKeyList.Add(eventName);
+                                arbitraryValue = userId;
                             }
-                            // Special case for deviceID
-                            else if (field == "deviceID")
+                            else if (ag == "sessionID")
                             {
-                                listTupleKeyList.Add("device:" + deviceID);
+                                arbitraryValue = sessionId;
                             }
-                            // Everything else just added to key
-                            else if (datum.ContainsKey(field))
+                            else if (ag == "platform")
                             {
-                                listTupleKeyList.Add(field + ":" + datum[field]);
+                                arbitraryValue = platform;
+                            }
+                            else if (ag == "debug")
+                            {
+                                arbitraryValue = isDebug;
+                            }
+                            else if (datum.ContainsKey(ag))
+                            {
+                                // parse and divide all in smoothing list
+                                float.TryParse((string)datum[ag], out floatValue);
+                                if (smoothOn.ContainsKey(ag))
+                                {
+                                    floatValue = Divide(floatValue, smoothOn[ag]);
+                                }
+                                else
+                                {
+                                    floatValue = 0;
+                                }
+                                arbitraryValue = floatValue;
+                            }
+
+                            tupleList.Add(arbitraryValue);
+                            if (pointProperties.Contains(ag))
+                            {
+                                point[ag] = floatValue;
                             }
                         }
-                        var listTupleKey = new Tuplish(listTupleKeyList.ToArray());
 
-                        // Create the event list if the key doesn't exist
-                        if (!outputData.ContainsKey(listTupleKey))
-                        {
-                            outputData.Add(listTupleKey, new List<Dictionary<string, float>>());
+                        float remapValue = 0f;
+                        if (doRemap && datum.ContainsKey(remapDensityToField)) {
+                            float.TryParse( (string)datum[remapDensityToField], out remapValue);
                         }
-                        // Add the new point to the list
-                        outputData[listTupleKey].Add(point);
+
+                        // Tuple-like key to determine if this point is unique, or needs to be merged with another
+                        var tuple = new Tuplish(tupleList.ToArray());
+                        if (m_PointDict.ContainsKey(tuple))
+                        {
+                            // Use existing point if it exists
+                            point = m_PointDict[tuple];
+                            point["d"] = Accrete(point["d"], remapValue, aggregationMethod, false);
+                        }
+                        else
+                        {
+                            point["d"] = Accrete(0, remapValue, aggregationMethod, true);
+                            m_PointDict[tuple] = point;
+
+                            // Group
+                            var listTupleKeyList = new List<object>();
+                            foreach (var field in groupOn)
+                            {
+                                // Special case for eventName
+                                if (field == "eventName")
+                                {
+                                    listTupleKeyList.Add(eventName);
+                                }
+                                // Special cases for... userID
+                                else if (field == "userID")
+                                {
+                                    listTupleKeyList.Add("user: " + userId);
+                                }
+                                // ... sessionID ...
+                                else if (field == "sessionID")
+                                {
+                                    listTupleKeyList.Add("session: " + sessionId);
+                                }
+                                // ... debug ...
+                                else if (field == "debug")
+                                {
+                                    listTupleKeyList.Add("debug: " + isDebug);
+                                }
+                                // ... platform
+                                else if (field == "platform")
+                                {
+                                    listTupleKeyList.Add("platform: " + platform);
+                                }
+                                // Everything else just added to key
+                                else if (datum.ContainsKey(field))
+                                {
+                                    listTupleKeyList.Add(field + ": " + datum[field]);
+                                }
+                            }
+                            var listTupleKey = new Tuplish(listTupleKeyList.ToArray());
+
+                            // Create the event list if the key doesn't exist
+                            if (!outputData.ContainsKey(listTupleKey))
+                            {
+                                outputData.Add(listTupleKey, new List<Dictionary<string, float>>());
+                            }
+                            // Add the new point to the list
+                            outputData[listTupleKey].Add(point);
+                        }
                     }
                 }
             }
@@ -336,9 +396,9 @@ namespace UnityAnalyticsHeatmap
             string s = "";
             foreach (var o in objects)
             {
-                s += o.ToString() + ":";
+                s += o.ToString() + "~";
             }
-            if (s.LastIndexOf(':') == s.Length - 1)
+            if (s.LastIndexOf('~') == s.Length - 1)
             {
                 s = s.Substring(0, s.Length - 1);
             }

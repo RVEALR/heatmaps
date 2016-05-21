@@ -27,6 +27,9 @@ namespace UnityAnalyticsHeatmap
         int m_OptionIndex = 0;
         string[] m_OptionKeys;
 
+        List<List<string>> m_SeparatedLists;
+        List<int> m_Options;
+
         public delegate void PointHandler(HeatPoint[] heatData);
 
         PointHandler m_PointHandler;
@@ -47,7 +50,8 @@ namespace UnityAnalyticsHeatmap
 
         void Dispatch()
         {
-            m_PointHandler(m_HeatData[m_OptionKeys[m_OptionIndex]]);
+            string key = BuildKey();
+            m_PointHandler(m_HeatData[key]);
         }
 
         public void SetDataPath(string jsonPath)
@@ -60,9 +64,14 @@ namespace UnityAnalyticsHeatmap
         {
             if (m_HeatData != null && m_OptionKeys != null && m_OptionIndex > -1 && m_OptionIndex < m_OptionKeys.Length && m_HeatData.ContainsKey(m_OptionKeys[m_OptionIndex]))
             {
-                int oldIndex = m_OptionIndex;
-                m_OptionIndex = EditorGUILayout.Popup("Option", m_OptionIndex, m_OptionKeys);
-                if (m_OptionIndex != oldIndex)
+                string oldKey = BuildKey();
+
+                for(int a = 0; a < m_SeparatedLists.Count; a++)
+                {
+                    var listArray = m_SeparatedLists[a].ToArray();
+                    m_Options[a] = EditorGUILayout.Popup(m_Options[a], listArray);
+                }
+                if (BuildKey() != oldKey)
                 {
                     Dispatch();
                 }
@@ -85,9 +94,51 @@ namespace UnityAnalyticsHeatmap
                 {
                     m_OptionIndex = 0;
                 }
+                ParseOptionList(options);
                 m_OptionKeys = options;
                 Dispatch();
             }
+        }
+
+        void ParseOptionList(string[] options)
+        {
+            m_SeparatedLists = new List<List<string>>();
+            m_Options = new List<int>();
+
+            foreach(string opt in options)
+            {
+                string[] parts = opt.Split('~');
+
+                for (int a = 0; a < parts.Length; a++)
+                {
+                    if (m_SeparatedLists.Count <= a)
+                    {
+                        m_SeparatedLists.Add(new List<string>());
+                    }
+                    if (m_SeparatedLists[a].IndexOf(parts[a]) == -1)
+                    {
+                        m_SeparatedLists[a].Add(parts[a]);
+                    }
+                }
+            }
+            for (int a = 0; a < m_SeparatedLists.Count; a++)
+            {
+                m_Options.Add(0);
+            }
+        }
+
+        string BuildKey()
+        {
+            string retv = "";
+            for (int a = 0; a < m_SeparatedLists.Count; a++)
+            {
+                retv += m_SeparatedLists[a][m_Options[a]];
+                if (a < m_SeparatedLists.Count - 1)
+                {
+                    retv += "~";
+                }
+            }
+            return retv;
         }
     }
 }

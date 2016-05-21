@@ -68,6 +68,8 @@ public class RawDataInspector : EditorWindow
     private static float defaultMinFPS = 1f;
     private static float defaultMaxFPS = 99f;
 
+    public const string headers = "ts\tappid\ttype\tuserid\tsessionid\tremote_ip\tplatform\tsdk_ver\tdebug_device\tuser_agent\tsubmit_time\tname\tcustom_params\n";
+    private static DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
     
     [MenuItem("Window/Unity Analytics/Raw Data #%r")]
     static void RawDataInspectorMenuOption()
@@ -80,6 +82,10 @@ public class RawDataInspector : EditorWindow
     int m_EventCount = defaultEventCount;
     int m_DeviceCount = defaultDeviceCount;
     int m_SessionCount = defaultSessionCount;
+
+    bool m_SendIos = true;
+    bool m_SendAndroid = true;
+    bool m_SendWeb = true;
 
 
     int m_DataStoryIndex = 0;
@@ -169,7 +175,7 @@ public class RawDataInspector : EditorWindow
         titleContent = new GUIContent("Raw Data");
     }
 
-    void Awake()
+    void OnFocus()
     {
         if (EditorPrefs.GetBool(k_Installed))
         {
@@ -193,7 +199,7 @@ public class RawDataInspector : EditorWindow
                 SetInitValues();
             }
         }
-        if (GUILayout.Button("Open folder"))
+        if (GUILayout.Button("Open Folder"))
         {
             EditorUtility.RevealInFinder(m_DataPath);
         }
@@ -379,13 +385,13 @@ public class RawDataInspector : EditorWindow
         
         //x
         GUILayout.BeginHorizontal();
-        if (IncludeSet(ref m_IncludeX, "x", k_IncludeXKey)) {
+        if (IncludeSet(ref m_IncludeX, "x", k_IncludeXKey, true)) {
             DrawFloatRange(ref m_MinX, ref m_MaxX, k_MinX, k_MaxX);
         }
         GUILayout.EndHorizontal();
         //y
         GUILayout.BeginHorizontal();
-        if (IncludeSet(ref m_IncludeY, "y", k_IncludeYKey)) {
+        if (IncludeSet(ref m_IncludeY, "y", k_IncludeYKey, true)) {
             DrawFloatRange(ref m_MinY, ref m_MaxY, k_MinY, k_MaxY);
         }
         GUILayout.EndHorizontal();
@@ -447,23 +453,23 @@ public class RawDataInspector : EditorWindow
 
     void CommonEventView()
     {
-        GUILayout.BeginHorizontal();
-        EditorGUILayout.LabelField("Event count");
-        m_EventCount = EditorGUILayout.IntField(m_EventCount);
-        EditorPrefs.SetInt(k_EventCountKey, m_EventCount);
-        GUILayout.EndHorizontal();
+        GUILayout.Space(20f);
 
-        GUILayout.BeginHorizontal();
-        EditorGUILayout.LabelField("Device count");
-        m_DeviceCount = EditorGUILayout.IntField(m_DeviceCount);
+        m_DeviceCount = EditorGUILayout.IntField(new GUIContent("Device count", "The number of unique devices you want to simulate"), m_DeviceCount);
         EditorPrefs.SetInt(k_DeviceCountKey, m_DeviceCount);
-        GUILayout.EndHorizontal();
 
-        GUILayout.BeginHorizontal();
-        EditorGUILayout.LabelField("Session count");
-        m_SessionCount = EditorGUILayout.IntField(m_SessionCount);
+        m_SessionCount = EditorGUILayout.IntField(new GUIContent("Session count", "The number of sessions you want to simulate per device"), m_SessionCount);
         EditorPrefs.SetInt(k_SessionCountKey, m_SessionCount);
-        GUILayout.EndHorizontal();
+
+        m_EventCount = EditorGUILayout.IntField(new GUIContent("Event count", "The total number of events you want to simulate per session"), m_EventCount);
+        EditorPrefs.SetInt(k_EventCountKey, m_EventCount);
+
+        GUILayout.BeginVertical("box");
+        GUILayout.Label("Platforms");
+        m_SendIos = EditorGUILayout.Toggle(new GUIContent("iOS", "Send as if from iOS"), m_SendIos);
+        m_SendAndroid = EditorGUILayout.Toggle(new GUIContent("Android", "Send as if from Android"), m_SendAndroid);
+        m_SendWeb = EditorGUILayout.Toggle(new GUIContent("WebGL", "Send as if from WebGL"), m_SendWeb);
+        GUILayout.EndVertical();
     }
 
     void CreateDemoData()
@@ -683,188 +689,216 @@ public class RawDataInspector : EditorWindow
 
     void GenerateFreeformData()
     {
-        if (m_CustomEvents.Count < 1)
+        
+        List<string> platforms = new List<string>();
+        if (m_SendIos)
+            platforms.Add("ios");
+        if (m_SendAndroid)
+            platforms.Add("android");
+        if (m_SendWeb)
+            platforms.Add("webgl");
+
+        List<string> problems = new List<string>();
+
+        if (m_DeviceCount < 1) problems.Add("device");
+        if (m_SessionCount < 1) problems.Add("session");
+        if (m_CustomEvents.Count < 1) problems.Add("event type");
+        if (m_EventCount < 1) problems.Add("event");
+        if (platforms.Count < 1) problems.Add("platform");
+
+        // If we can't generate, report problems
+        if (problems.Count > 0)
         {
-            Debug.LogWarning("You must have at least one event to generate data");
+            string missing = "";
+            for(int p = 0; p < problems.Count; p++)
+            {
+                missing += problems[p];
+                if (problems.Count > 1 && p != problems.Count - 1)
+                {
+                    missing += ", ";
+                    if (p == problems.Count - 2)
+                    {
+                        missing += "and ";
+                    }
+                }
+            }
+            Debug.LogWarningFormat("You must have at least one {0} to generate data.", missing);
             return;
         }
 
         int linesPerFile = 100;
         int currentFileLines = 0;
-        double firstDate = 0d;
         DateTime now = DateTime.UtcNow;
-        DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
-        string data = "";
+
+        string data = headers;
         int fileCount = 0;
 
-        for (int a = 0; a < m_EventCount; a++)
+        int totalSeconds = m_DeviceCount * m_EventCount * m_SessionCount;
+        double endSeconds = Math.Round((now - epoch).TotalSeconds);
+        double startSeconds = endSeconds - totalSeconds;
+        double currentSeconds = startSeconds;
+        double firstDate = currentSeconds;
+
+        for (int a = 0; a < m_DeviceCount; a++)
         {
-            TestCustomEvent customEvent = m_CustomEvents[UnityEngine.Random.Range(0, m_CustomEvents.Count)];
-            string evt = "";
-
-            // Date
-            DateTime dt = now.Subtract(new TimeSpan(TimeSpan.TicksPerSecond * (m_EventCount - a)));
-            string dts = dt.ToString("yyyy-MM-dd hh:mm:ss.ms");
-            evt += dts + "\t";
-            if (currentFileLines == 0) {
-                firstDate = Math.Round((dt - epoch).TotalSeconds);
-            }
-
-            // Devices, sessions & name
-            evt += "device" + UnityEngine.Random.Range(0, m_DeviceCount) + "-XXXX-XXXX\t";
-            // FOR T2: evt += "session" + UnityEngine.Random.Range(0, m_SessionCount) + "-XXXX-XXXX\t";
-            evt += customEvent.name + "\t";
-
-            // Build the JSON
-            evt += "{";
-
-            for (int b = 0; b < customEvent.Count; b++)
+            string platform = platforms[UnityEngine.Random.Range(0, platforms.Count)];
+            for (int b = 0; b < m_SessionCount; b++)
             {
-                TestEventParam param = customEvent[b];
-                evt += Quotify(param.name) + ":";
-                switch (param.type)
+                for (int c = 0; c < m_EventCount; c++)
                 {
-                    case TestEventParam.Str:
-                        evt += Quotify(param.strValue);
-                        break;
-                    case TestEventParam.Num:
-                        float num = UnityEngine.Random.Range(param.min, param.max);
-                        evt += Quotify(num.ToString());
-                        break;
-                    case TestEventParam.Bool:
-                        bool boolean = UnityEngine.Random.Range(0f, 1f) > .5f;
-                        evt += Quotify(boolean.ToString());
-                        break;
-                }
-                if (b < customEvent.Count - 1)
-                {
-                    evt += ",";
-                }
-            }
-            evt += Quotify("unity.name") + ":" + Quotify(customEvent.name) + "}\n";
+                    TestCustomEvent customEvent = m_CustomEvents[UnityEngine.Random.Range(0, m_CustomEvents.Count)];
+                    currentSeconds ++;
+                    string evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
+                    data += evt;
+                    currentFileLines ++;
 
-            data += evt;
-            currentFileLines ++;
-
-            if (currentFileLines >= linesPerFile || a == m_EventCount-1) {
-                SaveFile(data, firstDate);
-                currentFileLines = 0;
-                data = "";
-                fileCount++;
+                    if (currentFileLines >= linesPerFile || a == m_EventCount-1) {
+                        SaveFile(data, firstDate);
+                        firstDate = currentSeconds;
+                        currentFileLines = 0;
+                        data = "";
+                        fileCount++;
+                    }
+                }
             }
         }
         string files = (fileCount == 1) ? " file." : " files.";
-        Debug.Log("Generated random data: " + m_EventCount + " events " + " in " + fileCount + files);
-    }
-
-    string Quotify(string value)
-    {
-        return "\"" + value +         "\"";
+        Debug.Log("Generated random data: " + totalSeconds + " events " + " in " + fileCount + files);
     }
 
     void GenerateHeatmapData()
     {
-        if (m_EventNames.Count < 1)
+        List<string> platforms = new List<string>();
+        if (m_SendIos)
+            platforms.Add("ios");
+        if (m_SendAndroid)
+            platforms.Add("android");
+        if (m_SendWeb)
+            platforms.Add("webgl");
+
+        List<string> problems = new List<string>();
+
+        if (m_DeviceCount < 1) problems.Add("device");
+        if (m_SessionCount < 1) problems.Add("session");
+        if (m_CustomEvents.Count < 1) problems.Add("event type");
+        if (m_EventNames.Count < 1) problems.Add("event name");
+        if (platforms.Count < 1) problems.Add("platform");
+
+        // If we can't generate, report problems
+        if (problems.Count > 0)
         {
-            Debug.LogWarning("You must have at least one event to generate data");
+            string missing = "";
+            for(int p = 0; p < problems.Count; p++)
+            {
+                missing += problems[p];
+                if (problems.Count > 1 && p != problems.Count - 1)
+                {
+                    missing += ", ";
+                    if (p == problems.Count - 2)
+                    {
+                        missing += "and ";
+                    }
+                }
+            }
+            Debug.LogWarningFormat("You must have at least one {0} to generate data.", missing);
             return;
+        }
+
+        List<TestCustomEvent> events = new List<TestCustomEvent>();
+        for (int a = 0; a < m_EventNames.Count; a++)
+        {
+            TestCustomEvent customEvent = new TestCustomEvent();
+            customEvent.name = m_EventNames[a];
+            var x = new TestEventParam("x", TestEventParam.Num, m_MinX, m_MaxX);
+            customEvent.Add(x);
+            var y = new TestEventParam("y", TestEventParam.Num, m_MinY, m_MaxY);
+            customEvent.Add(y);
+            if (m_IncludeZ)
+            {
+                var z = new TestEventParam("z", TestEventParam.Num, m_MinZ, m_MaxZ);
+                customEvent.Add(z);
+            }
+            if (m_IncludeLevel)
+            {
+                var level = new TestEventParam("level", TestEventParam.Num, m_MinLevel, m_MaxLevel);
+                customEvent.Add(level);
+            }
+            if (m_IncludeFPS)
+            {
+                var fps = new TestEventParam("fps", TestEventParam.Num, m_MinFPS, m_MaxFPS);
+                customEvent.Add(fps);
+            }
+            if (m_IncludeTime)
+            {
+                // Time needs special-case
+                var time = new TestEventParam("t", TestEventParam.Str, "");
+                customEvent.Add(time);
+            }
+            if (m_Rotational == ROTATION)
+            {
+                var rx = new TestEventParam("rx", TestEventParam.Num, m_MinRX, m_MaxRX);
+                customEvent.Add(rx);
+                var ry = new TestEventParam("ry", TestEventParam.Num, m_MinRY, m_MaxRZ);
+                customEvent.Add(ry);
+                var rz = new TestEventParam("rz", TestEventParam.Num, m_MinRZ, m_MaxRZ);
+                customEvent.Add(rz);
+            }
+            else if (m_Rotational == DESTINATION)
+            {
+                var dx = new TestEventParam("dx", TestEventParam.Num, m_MinDX, m_MaxDX);
+                customEvent.Add(dx);
+                var dy = new TestEventParam("dy", TestEventParam.Num, m_MinDY, m_MaxDZ);
+                customEvent.Add(dy);
+                var dz = new TestEventParam("dz", TestEventParam.Num, m_MinDZ, m_MaxDZ);
+                customEvent.Add(dz);
+            }
+            events.Add(customEvent);
         }
 
         int linesPerFile = 100;
         int currentFileLines = 0;
-        double firstDate = 0d;
         DateTime now = DateTime.UtcNow;
-        DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
-        string data = "";
+
+        string data = headers;
         int fileCount = 0;
 
-        for (int a = 0; a < m_EventCount; a++)
+        int totalSeconds = m_DeviceCount * m_EventCount * m_SessionCount;
+        double endSeconds = Math.Round((now - epoch).TotalSeconds);
+        double startSeconds = endSeconds - totalSeconds;
+        double currentSeconds = startSeconds;
+        double firstDate = currentSeconds;
+
+        for (int a = 0; a < m_DeviceCount; a++)
         {
-            string eventName = "Heatmap." + m_EventNames[UnityEngine.Random.Range(0, m_EventNames.Count)];
-            string evt = "";
-
-            // Date
-            DateTime dt = now.Subtract(new TimeSpan(TimeSpan.TicksPerSecond * (m_EventCount - a)));
-            string dts = dt.ToString("yyyy-MM-dd hh:mm:ss.ms");
-            evt += dts + "\t";
-            if (currentFileLines == 0) {
-                firstDate = Math.Round((dt - epoch).TotalSeconds);
-            }
-
-            // Devices, sessions & name
-            evt += "device" + UnityEngine.Random.Range(0, m_DeviceCount) + "-XXXX-XXXX\t";
-            // FOR T2: evt += "session" + UnityEngine.Random.Range(0, m_SessionCount) + "-XXXX-XXXX\t";
-            evt += eventName + "\t";
-
-            // Build the JSON
-            evt += "{";
-
-            if (m_IncludeTime)
+            string platform = platforms[UnityEngine.Random.Range(0, platforms.Count)];
+            for (int b = 0; b < m_SessionCount; b++)
             {
-                float t = UnityEngine.Random.Range(0, 300f);
-                evt += "\"t\":\"" + t + "\",";
-            }
+                for (int c = 0; c < m_EventCount; c++)
+                {
+                    currentSeconds ++;
+                    TestCustomEvent customEvent = events[UnityEngine.Random.Range(0, events.Count)];
+                    customEvent.SetParam("t", currentSeconds - startSeconds);
+                    if (m_IncludeLevel)
+                    {
+                        int level = (int)(UnityEngine.Random.Range(m_MinLevel, m_MaxLevel));
+                        customEvent.SetParam("level", (float)level, (float)level);
+                    }
+                    string evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
+                    data += evt;
+                    currentFileLines ++;
 
-            if (m_IncludeX)
-            {
-                float x = UnityEngine.Random.Range(m_MinX, m_MaxX);
-                evt += "\"x\":\"" + x + "\",";
-            }
-
-            if (m_IncludeY)
-            {
-                float y = UnityEngine.Random.Range(m_MinY, m_MaxY);
-                evt += "\"y\":\"" + y + "\",";
-            }
-
-            if (m_IncludeZ)
-            {
-                float z = UnityEngine.Random.Range(m_MinZ, m_MaxZ);
-                evt += "\"z\":\"" + z + "\",";
-            }
-
-            if (m_Rotational == ROTATION)
-            {
-                float rx = UnityEngine.Random.Range(m_MinRX, m_MaxRX);
-                evt += "\"rx\":\"" + rx + "\",";
-                float ry = UnityEngine.Random.Range(m_MinRY, m_MaxRY);
-                evt += "\"ry\":\"" + ry + "\",";
-                float rz = UnityEngine.Random.Range(m_MinRZ, m_MaxRZ);
-                evt += "\"rz\":\"" + rz + "\",";
-            }
-
-            if (m_Rotational == DESTINATION)
-            {
-                float dx = UnityEngine.Random.Range(m_MinDX, m_MaxDX);
-                evt += "\"dx\":\"" + dx + "\",";
-                float dy = UnityEngine.Random.Range(m_MinDY, m_MaxDY);
-                evt += "\"dy\":\"" + dy + "\",";
-                float dz = UnityEngine.Random.Range(m_MinDZ, m_MaxDZ);
-                evt += "\"dz\":\"" + dz + "\",";
-            }
-
-            if (m_IncludeLevel) {
-                int level =  UnityEngine.Random.Range(m_MinLevel, m_MaxLevel);
-                evt += "\"level\":\"" + level + "\",";
-            }
-
-            if (m_IncludeFPS) {
-                float fps =  UnityEngine.Random.Range(m_MinFPS, m_MaxFPS);
-                evt += "\"fps\":\"" + fps + "\",";
-            }
-            evt += "\"unity.name\":" + "\"" + eventName + "\"" + "}\n";
-
-            data += evt;
-            currentFileLines ++;
-            if (currentFileLines >= linesPerFile || a == m_EventCount-1) {
-                SaveFile(data, firstDate);
-                currentFileLines = 0;
-                data = "";
-                fileCount++;
+                    if (currentFileLines >= linesPerFile || a == m_EventCount-1) {
+                        SaveFile(data, firstDate);
+                        firstDate = currentSeconds;
+                        currentFileLines = 0;
+                        data = "";
+                        fileCount++;
+                    }
+                }
             }
         }
         string files = (fileCount == 1) ? " file." : " files.";
-        Debug.Log("Generated random data: " + m_EventCount + " events " + " in " + fileCount + files);
+        Debug.Log("Generated heatmap data: " + totalSeconds + " events " + " in " + fileCount + files);
     }
 
     void GenerateStoryData()
@@ -884,8 +918,12 @@ public class RawDataInspector : EditorWindow
         }
     }
 
-    bool IncludeSet(ref bool value, string label, string key) {
-        value = EditorGUILayout.Toggle(label, value);
+    bool IncludeSet(ref bool value, string label, string key, bool force=false) {
+        string tooltip = force ? label + " must be included" : null;
+        var content = new GUIContent(label, tooltip);
+        EditorGUI.BeginDisabledGroup(force);
+        value = EditorGUILayout.Toggle(content, value);
+        EditorGUI.EndDisabledGroup();
         EditorPrefs.SetBool(key, value);
         return value;
     }
@@ -993,6 +1031,7 @@ public class RawDataInspector : EditorWindow
         EditorPrefs.SetFloat(k_MinFPS, m_MinFPS);
         EditorPrefs.SetFloat(k_MaxFPS, m_MaxFPS);
         EditorPrefs.SetString(k_EventNamesKey, eventsList[0]);
+        EditorPrefs.SetString(k_CustomEventsKey, eventsList[0]);
         EditorPrefs.SetInt(k_DeviceCountKey, m_DeviceCount);
         EditorPrefs.SetInt(k_SessionCountKey, m_SessionCount);
         EditorPrefs.SetBool(k_Installed, true);
@@ -1061,13 +1100,12 @@ public class RawDataInspector : EditorWindow
                 m_CustomEvents.Add(evt);
             }
         }
-
     }
 
     void ViewEventNames()
     {
         string oldEventsString = string.Join("|", m_EventNames.ToArray());
-        if (GUILayout.Button(new GUIContent("Add Event Name", "Events to be randomly added into the created data.")))
+        if (GUILayout.Button(new GUIContent("+ Event Name", "Events to be randomly added into the created data.")))
         {
             m_EventNames.Add("Event name");
         }
@@ -1087,128 +1125,6 @@ public class RawDataInspector : EditorWindow
         if (oldEventsString != currentEventsString)
         {
             EditorPrefs.SetString(k_EventNamesKey, currentEventsString);
-        }
-    }
-
-    class TestCustomEvent : List<TestEventParam> {
-        public string name = "Enter an event name";
-        private const string separator = "|z|";
-
-        override public string ToString()
-        {
-            string retv = name;
-            if (Count > 0)
-            {
-                retv += separator;
-            }
-            for (int a = 0; a < Count; a++)
-            {
-                var param = this[a];
-                retv += param.ToString();
-                if (a < Count-1)
-                {
-                    retv += separator;
-                }
-            }
-            return retv;
-        }
-
-        public static TestCustomEvent Parse(string inputString)
-        {
-            string[] stringSeparators = new string[] {separator};
-            var retv = new TestCustomEvent();
-            var inputList = inputString.Split(stringSeparators, StringSplitOptions.RemoveEmptyEntries);
-            retv.name = inputList[0];
-
-            for (var a = 1; a < inputList.Length; a++)
-            {
-                string paramLine = inputList[a];
-                Debug.Log("||| " + paramLine);
-               
-                if (!string.IsNullOrEmpty(paramLine))
-                {
-                    retv.Add(TestEventParam.Parse(paramLine));
-                }
-            }
-            return retv;
-        }
-
-        public static string StringifyList(List<TestCustomEvent> list)
-        {
-            string retv = "";
-            for (int a = 0; a < list.Count; a++)
-            {
-                retv += list[a].ToString() + "\n";
-            }
-            return retv;
-        }
-    }
-    class TestEventParam {
-        public const int Bool = 2;
-        public const int Str = 0;
-        public const int Num = 1;
-
-        public const string separator = "|x|";
-
-        public string name = "Enter a param name";
-        public int type = 0;
-        public float min;
-        public float max;
-        public string strValue = "Enter a string value";
-        public bool boolValue = false;
-
-        public TestEventParam()
-        {
-        }
-
-        public TestEventParam(string name, int type, string value)
-        {
-            this.name = name;
-            this.type = type;
-            this.strValue = value;
-        }
-
-        public TestEventParam(string name, int type, float min, float max)
-        {
-            this.name = name;
-            this.type = type;
-            this.min = min;
-            this.max = max;
-        }
-
-        override public string ToString()
-        {
-            string value = (type == Str) ? strValue : min + separator + max;
-            string retv = name + separator + type + separator + value;
-            return retv;
-        }
-
-        public static TestEventParam Parse(string inputString)
-        {
-            string[] stringSeparators = new string[] {separator};
-
-            string name = "Enter a param name";
-            int type =  Str;
-            string strValue = "Enter a string value";
-            float minValue = 0;
-            float maxValue = 0;
-            var inputList = inputString.Split(stringSeparators, StringSplitOptions.RemoveEmptyEntries);
-            if (inputList.Length > 2)
-            {
-                name = inputList[0];
-                type = int.Parse(inputList[1]);
-                strValue = inputList[2];
-                if (type == Num && inputList.Length > 3)
-                {
-                    float.TryParse(inputList[2], out minValue);
-                    float.TryParse(inputList[3], out maxValue);
-                }
-            }
-            if (type == Str)
-            {
-                return new TestEventParam(name, type, strValue);
-            }
-            return new TestEventParam(name, type, minValue, maxValue);
         }
     }
 }

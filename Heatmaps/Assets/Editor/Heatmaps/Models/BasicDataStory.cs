@@ -29,57 +29,69 @@ namespace UnityAnalyticsHeatmap
         {
             // Set a seed so set is consistently generated
             UnityEngine.Random.seed = 42;
+
+            List<string> eventNames = new List<string>(){"Heatmap.ShotWeapon"};
+
+            List<TestCustomEvent> events = new List<TestCustomEvent>();
+            for (int a = 0; a < eventNames.Count; a++)
+            {
+                TestCustomEvent customEvent = new TestCustomEvent();
+                customEvent.name = eventNames[UnityEngine.Random.Range(0, eventNames.Count)];
+                var x = new TestEventParam("x", TestEventParam.Num, 0, 0);
+                customEvent.Add(x);
+                var y = new TestEventParam("y", TestEventParam.Num, 0, 0);
+                customEvent.Add(y);
+                var z = new TestEventParam("z", TestEventParam.Num, 0, 0);
+                customEvent.Add(z);
+                events.Add(customEvent);
+            }
+
             var retv = new Dictionary<double, string>();
 
-            int eventCount = 2000;
-            int linesPerFile = 500;
-            int currentFileLines = 0;
-            int deviceCount = 2;
+            string data = RawDataInspector.headers;
+            int fileCount = 0;
+            int eventCount = 500;
+            int deviceCount = 5;
+            int sessionCount = 1;
+
+            // Custom to this lesson
             float minRadius = 5f;
             float radius = 10f;
 
-            double firstDate = 0d;
             DateTime now = DateTime.UtcNow;
-            DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
-            string data = "";
-            string eventName = "Heatmap.ShotWeapon";
+            int totalSeconds = deviceCount * eventCount * sessionCount;
+            double endSeconds = Math.Round((now - epoch).TotalSeconds);
+            double startSeconds = endSeconds - totalSeconds;
+            double currentSeconds = startSeconds;
+            double firstDate = currentSeconds;
 
-            for (int a = 0; a < eventCount; a++)
+            for (int a = 0; a < deviceCount; a++)
             {
-                string evt = "";
+                string platform = "ios";
+                for (int b = 0; b < sessionCount; b++)
+                {
+                    for (int c = 0; c < eventCount; c++)
+                    {
+                        currentSeconds ++;
+                        TestCustomEvent customEvent = events[UnityEngine.Random.Range(0, events.Count)];
+                        customEvent.SetParam("t", currentSeconds - startSeconds);
 
-                // Date
-                DateTime dt = now.Subtract(new TimeSpan(TimeSpan.TicksPerSecond * (eventCount - a)));
-                string dts = dt.ToString("yyyy-MM-dd hh:mm:ss.ms");
-                evt += dts + "\t";
-                if (currentFileLines == 0) {
-                    firstDate = Math.Round((dt - epoch).TotalSeconds);
-                }
+                        float mult = UnityEngine.Random.Range(0f, 1f) > .5f ? -1f : 1f;
+                        float distance = UnityEngine.Random.Range(minRadius, radius) * mult;
+                        Vector3 rot = new Vector3(UnityEngine.Random.Range(-1f,1f), UnityEngine.Random.Range(-1f,1f), UnityEngine.Random.Range(-1f,1f));
+                        Vector3 position = rot.normalized * distance;
+                        customEvent.SetParam("x", position.x, position.x);
+                        customEvent.SetParam("y", position.y, position.y);
+                        customEvent.SetParam("z", position.z, position.z);
 
-                // Device ID & name
-                evt += "d" + UnityEngine.Random.Range(0, deviceCount) + "-XXXX-XXXX\t";
-                evt += eventName + "\t";
+                        string evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
+                        data += evt;
 
-                // Build the JSON
-
-                float mult = UnityEngine.Random.Range(0f, 1f) > .5f ? -1f : 1f;
-                float distance = UnityEngine.Random.Range(minRadius, radius) * mult;
-                Vector3 rot = new Vector3(UnityEngine.Random.Range(-1f,1f), UnityEngine.Random.Range(-1f,1f), UnityEngine.Random.Range(-1f,1f));
-                Vector3 position = rot.normalized * distance;
-
-                evt += "{";
-                evt += "\"x\":\"" + position.x + "\",";
-                evt += "\"y\":\"" + position.y + "\",";
-                evt += "\"z\":\"" + position.z + "\",";
-
-                evt += "\"unity.name\":" + "\"" + eventName + "\"" + "}\n";
-
-                data += evt;
-                currentFileLines ++;
-                if (currentFileLines >= linesPerFile || a == eventCount-1) {
-                    retv.Add(firstDate, data);
-                    currentFileLines = 0;
-                    data = "";
+                        if (a == deviceCount-1 && b == sessionCount-1 && c == eventCount-1) {
+                            retv.Add(firstDate, data);
+                            fileCount++;
+                        }
+                    }
                 }
             }
             return retv;

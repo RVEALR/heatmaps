@@ -221,7 +221,7 @@ namespace UnityAnalytics
             string responsebody =  client.DownloadString(DownloadManager.GetJobsPath + "/" + m_AppId);
             //string responsebody = Encoding.UTF8.GetString(responsebytes);
 
-
+           // https://analytics.cloud.unity3d.com/api/v1/batches?appid=e102ba43-6f40-4a68-bdce-253c3683844b&hash=c2b3471733f85967191897a4f3390117f9ef7b5b
             Debug.Log(responsebody);
 
             var report = MiniJSON.Json.Deserialize(responsebody) as Dictionary<string, object>;
