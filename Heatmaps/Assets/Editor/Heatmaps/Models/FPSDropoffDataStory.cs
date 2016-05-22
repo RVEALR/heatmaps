@@ -18,7 +18,7 @@ namespace UnityAnalyticsHeatmap
             description += "We're sending the same PlayerPosition event, but this time " ;
             description += "we're sending 'fps' as a parameter. We can chart it and get an idea of where the game might be slowing down.";
             whatToTry = "Generate this data. In the Heatmapper, process it. In the 'Render' section, check that your shape is 'Cube' or 'Square'. ";
-            whatToTry += "It's like other heatmaps you've seen it before. Now check 'Remap color to field'. In the textfield ";
+            whatToTry += "Now check 'Remap color to field'. In the textfield ";
             whatToTry += "that appears, enter the value 'fps'. Set 'Remap Operation' to 'Lowest Wins'. Now process again.\n\n";
             whatToTry += "Observe how color now represents places with higher and lower FPS. ";
             whatToTry += "Remember that color on the right side of the gradient represents HIGHER density, and since you've re-mapped fps ";
