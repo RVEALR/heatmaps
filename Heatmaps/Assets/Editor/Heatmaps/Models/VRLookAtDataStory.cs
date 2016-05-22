@@ -28,101 +28,106 @@ namespace UnityAnalyticsHeatmap
             sampleCode += "HeatmapEvent.Send(\"LookAt\",transform.position,otherGameObject.transform.position,Time.timeSinceLevelLoad);";
         }
 
-        DateTime now;
-
         #region implemented abstract members of DataStory
         public override Dictionary<double, string> Generate()
         {
+            // Set a seed so set is consistently generated
+            UnityEngine.Random.seed = 42;
+
+            List<string> eventNames = new List<string>(){"Heatmap.LookAt"};
+
+            List<TestCustomEvent> events = new List<TestCustomEvent>();
+            for (int a = 0; a < eventNames.Count; a++)
+            {
+                TestCustomEvent customEvent = new TestCustomEvent();
+                customEvent.name = eventNames[a];
+                var x = new TestEventParam("x", TestEventParam.Str, "");
+                customEvent.Add(x);
+                var y = new TestEventParam("y", TestEventParam.Str, "");
+                customEvent.Add(y);
+                var z = new TestEventParam("z", TestEventParam.Str, "");
+                customEvent.Add(z);
+                var t = new TestEventParam("t", TestEventParam.Str, "");
+                customEvent.Add(t);
+                var dx = new TestEventParam("dx", TestEventParam.Str, "");
+                customEvent.Add(dx);
+                var dy = new TestEventParam("dy", TestEventParam.Str, "");
+                customEvent.Add(dy);
+                var dz = new TestEventParam("dz", TestEventParam.Str, "");
+                customEvent.Add(dz);
+                events.Add(customEvent);
+            }
+
             var retv = new Dictionary<double, string>();
 
-            int linesPerFile = 500;
-            int currentFileLines = 0;
-            int positions = 30;
+            string data = RawDataInspector.headers;
+            int fileCount = 0;
+            int eventCount = 60;
+            int deviceCount = 5;
+            int sessionCount = 1;
+
+            // Custom to this lesson
             int lookThisManyPlaces = 3;
             int lookThisManyTimesMin = 5;
             int lookThisManyTimesMax = 20;
-            string eventName = "Heatmap.LookAt";
-            int eventIndex = 0;
-
             float randomRange = .25f;
             float radius = 1000f;
 
-            double firstDate = 0d;
-            now = DateTime.UtcNow;
-
-            string data = "";
-
+            DateTime now = DateTime.UtcNow;
+            int totalSeconds = deviceCount * eventCount * sessionCount;
+            double endSeconds = Math.Round((now - epoch).TotalSeconds);
+            double startSeconds = endSeconds - totalSeconds;
+            double currentSeconds = startSeconds;
+            double firstDate = currentSeconds;
 
             Vector3 position = Vector3.zero, destination = Vector3.zero, pointOnCircle = Vector3.zero;
-            int a=0, b=0;
-            while (a < positions)
+
+            for (int a = 0; a < deviceCount; a++)
             {
-                position = Vector3.zero;
-                destination = Vector3.zero;
-                pointOnCircle = new Vector3(UnityEngine.Random.Range(-radius, radius),
-                    0f,
-                    UnityEngine.Random.Range(-radius, radius));
-                position = UpdatePosition(ref position, ref pointOnCircle, radius, randomRange);
-                position.y = 0f;
-
-                while (b < lookThisManyPlaces)
+                string platform = "ios";
+                for (int b = 0; b < sessionCount; b++)
                 {
-                    int numTimesToLook = UnityEngine.Random.Range(lookThisManyTimesMin, lookThisManyTimesMax);
-                    float xAddition = UnityEngine.Random.Range(-radius, radius);
-                    float yAddition = UnityEngine.Random.Range(0, radius/2f);
-                    float zAddition = UnityEngine.Random.Range(-radius, radius);
-
-                    for (int c = 0; c < numTimesToLook; c++)
+                    for (int c = 0; c < eventCount; c++)
                     {
-                        string evt = "";
+                        pointOnCircle = new Vector3(UnityEngine.Random.Range(-radius, radius),
+                            0f,
+                            UnityEngine.Random.Range(-radius, radius));
+                        position = UpdatePosition(ref position, ref pointOnCircle, radius, randomRange);
+                        position.y = 0f;
 
-                        // Date
-                        var ta = new TimeSpan(TimeSpan.TicksPerSecond * eventIndex);
-                        DateTime dt = now.Subtract(ta);
-                        string dts = dt.ToString("yyyy-MM-dd hh:mm:ss.ms");
-                        evt += dts + "\t";
-                        if (currentFileLines == 0) {
-                            firstDate = Math.Round((dt - epoch).TotalSeconds);
+                        for (int e = 0; e < lookThisManyPlaces; e++)
+                        {
+                            int numTimesToLook = UnityEngine.Random.Range(lookThisManyTimesMin, lookThisManyTimesMax);
+                            float xAddition = UnityEngine.Random.Range(-radius, radius);
+                            float yAddition = UnityEngine.Random.Range(0, radius/2f);
+                            float zAddition = UnityEngine.Random.Range(-radius, radius);
+
+                            while (numTimesToLook > 0)
+                            {
+                                numTimesToLook --;
+                                currentSeconds ++;
+                                TestCustomEvent customEvent = events[0];
+                                customEvent.SetParam("t", c.ToString());
+
+                                destination = new Vector3(position.x + xAddition, position.y + yAddition, position.z + zAddition);
+
+                                customEvent.SetParam("x", position.x.ToString());
+                                customEvent.SetParam("y", position.y.ToString());
+                                customEvent.SetParam("z", position.z.ToString());
+                                customEvent.SetParam("dx", destination.x.ToString());
+                                customEvent.SetParam("dy", destination.y.ToString());
+                                customEvent.SetParam("dz", destination.z.ToString());
+
+                                string evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
+                                data += evt;
+                            }
                         }
 
-                        // Device ID & name
-                        evt += "d0-XXXX-XXXX\t";
-                        evt += eventName + "\t";
-
-                        // Position and time
-                        evt += "{";
-                        evt += "\"x\":\"" + position.x + "\",";
-                        evt += "\"y\":\"" + position.y + "\",";
-                        evt += "\"z\":\"" + position.z + "\",";
-                        evt += "\"t\":\"" + b + "\",";
-
-                        // destination
-                        destination = new Vector3(position.x + xAddition, position.y + yAddition, position.z + zAddition);
-                        evt += "\"dx\":\"" + destination.x + "\",";
-                        evt += "\"dy\":\"" + destination.y + "\",";
-                        evt += "\"dz\":\"" + destination.z + "\",";
-
-                        evt += "\"unity.name\":" + "\"" + eventName + "\"" + "}\n";
-
-                        data += evt;
-                        currentFileLines ++;
-                        eventIndex++;
-                        if (currentFileLines >= linesPerFile || (a == positions-1 && b == lookThisManyPlaces-1 && c == numTimesToLook-1)) {
-                            retv.Add(firstDate, data);
-                            currentFileLines = 0;
-                            data = "";
-                        }
                     }
-
-                    if (UnityEngine.Random.Range(0f, 1f) > .5f) {
-                        b++;
-                    }
-                }
-                b=0;
-                if (UnityEngine.Random.Range(0f, 1f) > .5f) {
-                    a++;
                 }
             }
+            retv.Add(firstDate, data);
+            fileCount++;
             return retv;
         }
         #endregion

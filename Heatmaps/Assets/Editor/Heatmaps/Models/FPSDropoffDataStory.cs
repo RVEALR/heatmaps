@@ -8,6 +8,8 @@ namespace UnityAnalyticsHeatmap
 {
     public class FPSDropoffDataStory : MazeDataStory
     {
+        int m_Levels = 5;
+
         public FPSDropoffDataStory()
         {
             name = "Maze 2: FPS Dropoff";
@@ -41,65 +43,90 @@ namespace UnityAnalyticsHeatmap
 
         override protected Dictionary<double, string> Play()
         {
-            Prefill();
-            Carve(m_Width/2, m_Height/2, m_Directions["N"], null);
+            // Set a seed so set is consistently generated
+            UnityEngine.Random.seed = 42;
+
+            List<string> eventNames = new List<string>(){m_EventName};
+
+            List<TestCustomEvent> events = new List<TestCustomEvent>();
+            for (int a = 0; a < eventNames.Count; a++)
+            {
+                TestCustomEvent customEvent = new TestCustomEvent();
+                customEvent.name = eventNames[a];
+                var x = new TestEventParam("x", TestEventParam.Str, "");
+                customEvent.Add(x);
+                var y = new TestEventParam("y", TestEventParam.Str, "");
+                customEvent.Add(y);
+                var t = new TestEventParam("t", TestEventParam.Str, "");
+                customEvent.Add(t);
+                var fps = new TestEventParam("fps", TestEventParam.Str, "");
+                customEvent.Add(fps);
+                var level = new TestEventParam("level", TestEventParam.Str, "");
+                customEvent.Add(level);
+                events.Add(customEvent);
+            }
 
             var retv = new Dictionary<double, string>();
-            m_CurrentFileLines = 0;
-            double firstDate = 0d;
-            DateTime now = DateTime.UtcNow;
-            string data = "";
+
+            string data = RawDataInspector.headers;
+            int fileCount = 0;
+            int eventCount = 100;
+            int deviceCount = 5;
+            int sessionCount = 3;
+
+            // Custom to this lesson
             int[] position = new int[2]{m_Width/2, m_Height/2};
             int[] lastPosition = new int[2]{m_Width/2, m_Height/2};
 
-            for (int a = 0; a < m_PlayThroughs; a++)
+            DateTime now = DateTime.UtcNow;
+            int totalSeconds = deviceCount * eventCount * sessionCount;
+            double endSeconds = Math.Round((now - epoch).TotalSeconds);
+            double startSeconds = endSeconds - totalSeconds;
+            double currentSeconds = startSeconds;
+            double firstDate = currentSeconds;
+
+            for (int a = 0; a < deviceCount; a++)
             {
-                m_Route.Add(position);
-                for (int b = 0; b < m_EventCount; b++)
+                string platform = "ios";
+                for (int b = 0; b < sessionCount; b++)
                 {
-                    string evt = "";
-                    // Date
-                    DateTime dt = now.Subtract(new TimeSpan((TimeSpan.TicksPerSecond * (m_EventCount - b)) + (TimeSpan.TicksPerSecond*(m_EventCount-a))));
-                    string dts = dt.ToString("yyyy-MM-dd hh:mm:ss.ms");
-                    evt += dts + "\t";
-                    if (m_CurrentFileLines == 0) {
-                        firstDate = Math.Round((dt - epoch).TotalSeconds);
-                    }
+                    Prefill();
+                    Carve(m_Width/2, m_Height/2, m_Directions["N"], null);
 
-                    if (b == 0) {
-                        position = new int[2]{m_Width/2, m_Height/2};
-                        lastPosition = new int[2]{m_Width/2, m_Height/2};
-                    }
+                    int level = UnityEngine.Random.Range(1, m_Levels);
 
-                    // Device ID & name
-                    evt += "d" + a + "-XXXX-XXXX\t";
-                    evt += m_EventName + "\t";
 
-                    // Build the JSON
-                    int[] previousPosition = position.Clone() as int[];
-                    position = Move(position, lastPosition);
-                    m_Route.Add(position);
-                    lastPosition = previousPosition;
+                    for (int c = 0; c < eventCount; c++)
+                    {
+                        currentSeconds ++;
+                        TestCustomEvent customEvent = events[0];
+                        customEvent.SetParam("t", c.ToString());
 
-                    evt += "{";
-                    evt += "\"x\":\"" + position[0] + "\",";
-                    evt += "\"y\":\"" + position[1] + "\",";
+                        if (c == 0) {
+                            position = new int[2]{m_Width/2, m_Height/2};
+                            lastPosition = new int[2]{m_Width/2, m_Height/2};
+                        }
 
-                    evt += "\"t\":\"" + b + "\",";
+                        int[] previousPosition = position.Clone() as int[];
+                        position = Move(position, lastPosition);
+                        m_Route.Add(position);
+                        lastPosition = previousPosition;
 
-                    // simulating an fps drop on the right side of the map
-                    float fps = UnityEngine.Random.Range(30f, 90f);
-                    fps -= Mathf.Abs(10-position[0]) * Mathf.Abs(10-position[1]);
+                        float fps = UnityEngine.Random.Range(30f, 90f);
+                        fps -= Mathf.Abs(10-position[0]) * Mathf.Abs(10-position[1]);
 
-                    evt += "\"fps\":\"" + fps + "\",";
-                    evt += "\"unity.name\":" + "\"" + m_EventName + "\"" + "}\n";
+                        customEvent.SetParam("x", position[0].ToString());
+                        customEvent.SetParam("y", position[1].ToString());
+                        customEvent.SetParam("fps", fps.ToString());
+                        customEvent.SetParam("level", level.ToString());
 
-                    data += evt;
-                    m_CurrentFileLines ++;
-                    if (m_CurrentFileLines >= m_LinesPerFile || b == m_EventCount-1) {
-                        retv.Add(firstDate, data);
-                        m_CurrentFileLines = 0;
-                        data = "";
+                        string evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
+                        data += evt;
+
+                        if (a == deviceCount-1 && b == sessionCount-1 && c == eventCount-1) {
+                            retv.Add(firstDate, data);
+                            fileCount++;
+                        }
                     }
                 }
             }

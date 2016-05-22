@@ -11,7 +11,7 @@ namespace UnityAnalyticsHeatmap
             name = "Basic Functionality";
             genre = "Any";
             description = "This first demo shows off a few key ideas, such as particle shapes, sizes, and colors.";
-            whatToTry = "Generate this data, then open the Heatmapper, ensure that 'Local Only' is checked, and click the Process button. ";
+            whatToTry = "Generate this data, then open the Heatmapper and click the Process button. ";
             whatToTry += "First, notice the numbers at the bottom of the Heatmapper ('Points displayed/total') ";
             whatToTry += "These give you an idea of how much data you should expect to see displayed.\n\n";
             whatToTry += "Notice that the generated heatmap has three colors. Click on the color gradient to 'tune' the ";

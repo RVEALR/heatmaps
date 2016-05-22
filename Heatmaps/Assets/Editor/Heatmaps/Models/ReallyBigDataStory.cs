@@ -6,11 +6,6 @@ namespace UnityAnalyticsHeatmap
 {
     public class ReallyBigDataStory : DataStory
     {
-        int m_PlayThroughs = 5;
-        int m_EventCount = 500;
-        int m_LinesPerFile = 500;
-
-
         public ReallyBigDataStory()
         {
             name = "Really Big Game";
@@ -18,7 +13,7 @@ namespace UnityAnalyticsHeatmap
             description = "This demonstrates some important ideas about scale, direction, and time.";
             whatToTry = "Generate this data. Open the Heatmapper and click the Process button, which first shows you combat kills. ";
             whatToTry += "Or does it? You might not see much right away for two reasons. First this demo shows data in a very large ";
-            whatToTry += "area and you're probably zoomed in. Second, check the Particle size. Try setting size to around 25,  ";
+            whatToTry += "area and you're probably zoomed in. Second, check the Particle size. Try setting size to around 25, ";
             whatToTry += "then zoom out so you can see all the points. ";
             whatToTry += "Notice that this data is a bit sparse because of the scale of the map. ";
             whatToTry += "Under 'Aggregate', change the value of 'Space Smooth' to 500 and re-process. ";
@@ -33,7 +28,7 @@ namespace UnityAnalyticsHeatmap
             whatToTry += "Now, under Particle 'Shape' pick 'Arrow'. What you're now seeing is not simply WHERE the player went, ";
             whatToTry += "but what direction they flew.\n\n";
 
-            whatToTry += "Under 'Aggregate', uncheck 'Time', then Process again. ";
+            whatToTry += "Under 'Smooth', select '#' for 'Time', then Process again. ";
             whatToTry += "You might try bringing the particle size up to around 25. In the Render section ";
             whatToTry += "under 'Time' note the start and end values. Change the end value to 1, change 'Play Speed' to 0.1 and ";
             whatToTry += "press the 'Play' button to watch the airplanes fly! With a little practice, you can even scrub the timeline.";
@@ -54,77 +49,81 @@ namespace UnityAnalyticsHeatmap
             // Set a seed so set is consistently generated
             UnityEngine.Random.seed = 42;
 
+            List<string> eventNames = new List<string>(){"Heatmap.CombatKills", "Heatmap.PlayerPosition"};
+
+            List<TestCustomEvent> events = new List<TestCustomEvent>();
+            for (int a = 0; a < eventNames.Count; a++)
+            {
+                TestCustomEvent customEvent = new TestCustomEvent();
+                customEvent.name = eventNames[a];
+                var x = new TestEventParam("x", TestEventParam.Str, "");
+                customEvent.Add(x);
+                var y = new TestEventParam("y", TestEventParam.Str, "");
+                customEvent.Add(y);
+                var z = new TestEventParam("z", TestEventParam.Str, "");
+                customEvent.Add(z);
+                var t = new TestEventParam("t", TestEventParam.Str, "");
+                customEvent.Add(t);
+                var rx = new TestEventParam("rx", TestEventParam.Str, "");
+                customEvent.Add(rx);
+                var ry = new TestEventParam("ry", TestEventParam.Str, "");
+                customEvent.Add(ry);
+                var rz = new TestEventParam("rz", TestEventParam.Str, "");
+                customEvent.Add(rz);
+                events.Add(customEvent);
+            }
+
             var retv = new Dictionary<double, string>();
 
-            int currentFileLines = 0;
+            string data = RawDataInspector.headers;
+            int fileCount = 0;
+            int eventCount = 500;
+            int deviceCount = 5;
+            int sessionCount = 1;
 
+            // Custom to this lesson
             float randomRange = .25f;
             float radius = 1000f;
-
-            double firstDate = 0d;
-            DateTime now = DateTime.UtcNow;
-
-            string data = "";
-            string[] eventNames = new string[]{ "Heatmap.CombatKills", "Heatmap.PlayerPosition" };
-
             Vector3 position = Vector3.zero, rotation = Vector3.zero, pointOnCircle = Vector3.zero;
-            for (int a = 0; a < m_PlayThroughs; a++)
+
+            DateTime now = DateTime.UtcNow;
+            int totalSeconds = deviceCount * eventCount * sessionCount;
+            double endSeconds = Math.Round((now - epoch).TotalSeconds);
+            double startSeconds = endSeconds - totalSeconds;
+            double currentSeconds = startSeconds;
+            double firstDate = currentSeconds;
+
+            for (int a = 0; a < deviceCount; a++)
             {
-
-                for (int b = 0; b < m_EventCount; b++)
+                string platform = "ios";
+                for (int b = 0; b < sessionCount; b++)
                 {
+                    for (int c = 0; c < eventCount; c++)
+                    {
+                        currentSeconds ++;
+                        TestCustomEvent customEvent = (c % 100 == 0) ? events[0] : events[1];
+                        customEvent.SetParam("t", c.ToString());
 
-                    string evt = "";
+                        Vector3 lastPosition = new Vector3(position.x,position.y,position.z);
+                        position = UpdatePosition(ref position, ref pointOnCircle, radius, randomRange);
+                        Vector3 dir = (lastPosition-position).normalized;
+                        rotation = Quaternion.LookRotation(dir).eulerAngles;
 
-                    // Date
-                    DateTime dt = now.Subtract(new TimeSpan((TimeSpan.TicksPerSecond * (m_EventCount - b)) + (TimeSpan.TicksPerSecond*(m_EventCount-a))));
-                    string dts = dt.ToString("yyyy-MM-dd hh:mm:ss.ms");
-                    evt += dts + "\t";
-                    if (currentFileLines == 0) {
-                        firstDate = Math.Round((dt - epoch).TotalSeconds);
-                    }
 
-                    if (b == 0) {
-                        position = Vector3.zero;
-                        rotation = Vector3.zero;
-                        pointOnCircle = new Vector3(UnityEngine.Random.Range(-radius, radius),
-                            UnityEngine.Random.Range(-radius, radius),
-                            UnityEngine.Random.Range(-radius, radius));
-                    }
+                        customEvent.SetParam("x", position.x.ToString());
+                        customEvent.SetParam("y", position.y.ToString());
+                        customEvent.SetParam("z", position.z.ToString());
+                        customEvent.SetParam("rx", rotation.x.ToString());
+                        customEvent.SetParam("ry", rotation.y.ToString());
+                        customEvent.SetParam("rz", rotation.z.ToString());
 
-                    // Device ID & name
-                    evt += "d" + a + "-XXXX-XXXX\t";
-                    string eventName = (b % 100 == 0) ? eventNames[0] : eventNames[1];
-                    evt += eventName + "\t";
+                        string evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
+                        data += evt;
 
-                    // Build the JSON
-                    Vector3 lastPosition = new Vector3(position.x,position.y,position.z);
-
-                    position = UpdatePosition(ref position, ref pointOnCircle, radius, randomRange);
-
-                    //create the rotation to look at the target
-                    Vector3 dir = (lastPosition-position).normalized;
-                    rotation = Quaternion.LookRotation(dir).eulerAngles;
-
-                    evt += "{";
-                    evt += "\"x\":\"" + position.x + "\",";
-                    evt += "\"y\":\"" + position.y + "\",";
-                    evt += "\"z\":\"" + position.z + "\",";
-
-                    evt += "\"t\":\"" + (2f*b) + "\",";
-
-                    evt += "\"rx\":\"" + rotation.x + "\",";
-                    evt += "\"ry\":\"" + rotation.y + "\",";
-                    evt += "\"rz\":\"" + rotation.z + "\",";
-
-                    evt += "\"unity.name\":" + "\"" + eventName + "\"" + "}\n";
-
-                    data += evt;
-                    currentFileLines ++;
-                    if (currentFileLines >= m_LinesPerFile || b == m_EventCount-1) {
-                        retv.Add(firstDate, data);
-                        currentFileLines = 0;
-                        data = "";
+                        if (a == deviceCount-1 && b == sessionCount-1 && c == eventCount-1) {
+                            retv.Add(firstDate, data);
+                            fileCount++;
+                        }
                     }
                 }
             }

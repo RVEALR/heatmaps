@@ -116,10 +116,7 @@ public class TestCustomEvent : List<TestEventParam> {
                     evt += Quotify(boolean.ToString());
                     break;
             }
-            if (b < this.Count - 1)
-            {
-                evt += ",";
-            }
+            evt += ",";
         }
         evt += Quotify("unity.name") + ":" + Quotify(this.name) + "}\n";
         return evt;

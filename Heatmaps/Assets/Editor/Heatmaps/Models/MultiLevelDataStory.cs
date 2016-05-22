@@ -6,7 +6,7 @@ namespace UnityAnalyticsHeatmap
 {
     public class MultiLevelDataStory : MazeDataStory
     {
-        int m_Levels = 25;
+        int m_Levels = 5;
 
         public MultiLevelDataStory()
         {
@@ -36,72 +36,83 @@ namespace UnityAnalyticsHeatmap
 
         override protected Dictionary<double, string> Play()
         {
+            // Set a seed so set is consistently generated
+            UnityEngine.Random.seed = 42;
+
+            List<string> eventNames = new List<string>(){m_EventName};
+
+            List<TestCustomEvent> events = new List<TestCustomEvent>();
+            for (int a = 0; a < eventNames.Count; a++)
+            {
+                TestCustomEvent customEvent = new TestCustomEvent();
+                customEvent.name = eventNames[a];
+                var x = new TestEventParam("x", TestEventParam.Str, "");
+                customEvent.Add(x);
+                var y = new TestEventParam("y", TestEventParam.Str, "");
+                customEvent.Add(y);
+                var t = new TestEventParam("t", TestEventParam.Str, "");
+                customEvent.Add(t);
+                var level = new TestEventParam("level", TestEventParam.Str, "");
+                customEvent.Add(level);
+                events.Add(customEvent);
+            }
+
             var retv = new Dictionary<double, string>();
-            m_CurrentFileLines = 0;
-            double firstDate = 0d;
-            DateTime now = DateTime.UtcNow;
-            string data = "";
+
+            string data = RawDataInspector.headers;
+            int fileCount = 0;
+            int eventCount = 100;
+            int deviceCount = 5;
+            int sessionCount = 3;
+
+            // Custom to this lesson
             int[] position = new int[2]{m_Width/2, m_Height/2};
             int[] lastPosition = new int[2]{m_Width/2, m_Height/2};
 
+            DateTime now = DateTime.UtcNow;
+            int totalSeconds = deviceCount * eventCount * sessionCount;
+            double endSeconds = Math.Round((now - epoch).TotalSeconds);
+            double startSeconds = endSeconds - totalSeconds;
+            double currentSeconds = startSeconds;
+            double firstDate = currentSeconds;
 
-            for (int a = 0; a < m_Levels; a++)
+            for (int a = 0; a < deviceCount; a++)
             {
-                long aSeconds = TimeSpan.TicksPerSecond * m_PlayThroughs * m_EventCount * a;
-                Prefill();
-                Carve(m_Width/2, m_Height/2, m_Directions["N"], null);
-
-                for (int b = 0; b < m_PlayThroughs; b++)
+                string platform = "ios";
+                for (int b = 0; b < sessionCount; b++)
                 {
-                    long bSeconds = TimeSpan.TicksPerSecond * b * m_EventCount;
-                    m_Route.Add(position);
-                    for (int c = 0; c < m_EventCount; c++)
+                    Prefill();
+                    Carve(m_Width/2, m_Height/2, m_Directions["N"], null);
+
+                    int level = UnityEngine.Random.Range(1, m_Levels);
+
+
+                    for (int c = 0; c < eventCount; c++)
                     {
-                        long cSeconds = TimeSpan.TicksPerSecond * c;
-                        string evt = "";
-                        // Date
-                        DateTime dt = now.Subtract(new TimeSpan(aSeconds + bSeconds + cSeconds));
-                        string dts = dt.ToString("yyyy-MM-dd hh:mm:ss.ms");
-                        evt += dts + "\t";
-                        if (m_CurrentFileLines == 0) {
-                            firstDate = Math.Round((dt - epoch).TotalSeconds);
-                        }
+                        currentSeconds ++;
+                        TestCustomEvent customEvent = events[0];
+                        customEvent.SetParam("t", c.ToString());
 
                         if (c == 0) {
                             position = new int[2]{m_Width/2, m_Height/2};
                             lastPosition = new int[2]{m_Width/2, m_Height/2};
                         }
 
-                        // Device ID & name
-                        evt += "d" + b + "-XXXX-XXXX\t";
-                        evt += m_EventName + "\t";
-
-                        // Build the JSON
                         int[] previousPosition = position.Clone() as int[];
                         position = Move(position, lastPosition);
                         m_Route.Add(position);
                         lastPosition = previousPosition;
 
-                        evt += "{";
-                        evt += "\"x\":\"" + position[0] + "\",";
-                        evt += "\"y\":\"" + position[1] + "\",";
+                        customEvent.SetParam("x", position[0].ToString());
+                        customEvent.SetParam("y", position[1].ToString());
+                        customEvent.SetParam("level", level.ToString());
 
-                        evt += "\"t\":\"" + c + "\",";
-
-                        // simulating an fps drop on the right side of the map
-                        float fps = 90f;
-                        fps -= Mathf.Abs(10-position[0]) * Mathf.Abs(10-position[1]);
-
-                        evt += "\"fps\":\"" + fps + "\",";
-                        evt += "\"level\":\"" + a + "\",";
-                        evt += "\"unity.name\":" + "\"" + m_EventName + "\"" + "}\n";
-
+                        string evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
                         data += evt;
-                        m_CurrentFileLines ++;
-                        if (m_CurrentFileLines >= m_LinesPerFile || c == m_EventCount-1) {
+
+                        if (a == deviceCount-1 && b == sessionCount-1 && c == eventCount-1) {
                             retv.Add(firstDate, data);
-                            m_CurrentFileLines = 0;
-                            data = "";
+                            fileCount++;
                         }
                     }
                 }
