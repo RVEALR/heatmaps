@@ -20,9 +20,10 @@ namespace UnityAnalyticsHeatmap
 
         const string k_SpaceKey = "UnityAnalyticsHeatmapAggregationSpace";
         const string k_KeyToTime = "UnityAnalyticsHeatmapAggregationTime";
-        const string k_AngleKey = "UnityAnalyticsHeatmapAggregationAngle";
-        const string k_AggregateTimeKey = "UnityAnalyticsHeatmapAggregationAggregateTime";
-        const string k_AggregateAngleKey = "UnityAnalyticsHeatmapAggregationAggregateAngle";
+        const string k_RotationKey = "UnityAnalyticsHeatmapAggregationRotation";
+        const string k_SmoothSpaceKey = "UnityAnalyticsHeatmapAggregationAggregateSpace";
+        const string k_SmoothTimeKey = "UnityAnalyticsHeatmapAggregationAggregateTime";
+        const string k_SmoothRotationKey = "UnityAnalyticsHeatmapAggregationAggregateRotation";
 
         const string k_SeparateUsersKey = "UnityAnalyticsHeatmapAggregationAggregateUserIDs";
         const string k_SeparateSessionKey = "UnityAnalyticsHeatmapAggregationAggregateSessionIDs";
@@ -39,7 +40,7 @@ namespace UnityAnalyticsHeatmap
 
         const float k_DefaultSpace = 10f;
         const float k_DefaultTime = 10f;
-        const float k_DefaultAngle = 15f;
+        const float k_DefaultRotation = 15f;
 
         string m_RawDataPath = "";
         string m_DataPath = "";
@@ -62,9 +63,16 @@ namespace UnityAnalyticsHeatmap
         string m_EndDate = "";
         float m_Space = k_DefaultSpace;
         float m_Time = k_DefaultTime;
-        float m_Angle = k_DefaultAngle;
-        bool m_AggregateTime = true;
-        bool m_AggregateAngle = true;
+        float m_Rotation = k_DefaultRotation;
+       
+
+        const int SMOOTH_UNION = 0;
+        const int SMOOTH_VALUE = 1;
+        const int SMOOTH_NONE = 2;
+
+        int m_SmoothSpaceToggle = SMOOTH_VALUE;
+        int m_SmoothTimeToggle = SMOOTH_UNION;
+        int m_SmoothRotationToggle = SMOOTH_UNION;
 
         bool m_SeparateUsers = false;
         bool m_SeparateSessions = false;
@@ -117,9 +125,10 @@ namespace UnityAnalyticsHeatmap
             // Restore other options
             m_Space = EditorPrefs.GetFloat(k_SpaceKey) == 0 ? k_DefaultSpace : EditorPrefs.GetFloat(k_SpaceKey);
             m_Time = EditorPrefs.GetFloat(k_KeyToTime) == 0 ? k_DefaultTime : EditorPrefs.GetFloat(k_KeyToTime);
-            m_Angle = EditorPrefs.GetFloat(k_AngleKey) == 0 ? k_DefaultAngle : EditorPrefs.GetFloat(k_AngleKey);
-            m_AggregateTime = EditorPrefs.GetBool(k_AggregateTimeKey);
-            m_AggregateAngle = EditorPrefs.GetBool(k_AggregateAngleKey);
+            m_Rotation = EditorPrefs.GetFloat(k_RotationKey) == 0 ? k_DefaultRotation : EditorPrefs.GetFloat(k_RotationKey);
+            m_SmoothSpaceToggle = EditorPrefs.GetInt(k_SmoothSpaceKey);
+            m_SmoothTimeToggle = EditorPrefs.GetInt(k_SmoothTimeKey);
+            m_SmoothRotationToggle = EditorPrefs.GetInt(k_SmoothRotationKey);
             m_SeparateUsers = EditorPrefs.GetBool(k_SeparateUsersKey);
             m_RemapColor = EditorPrefs.GetBool(k_RemapColorKey);
             m_RemapColorField = EditorPrefs.GetString(k_RemapColorFieldKey);
@@ -176,13 +185,8 @@ namespace UnityAnalyticsHeatmap
             m_RawEventClient.Fetch(m_RawDataPath, localOnly, new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end, rawFetchHandler);
         }
 
-        int m_SpaceToggle = 0;
-        int m_AngleToggle = 0;
-        int m_TimeToggle = 0;
-
         public void OnGUI()
         {
-            //GUIStyle stretch = new GUIStyle(GUI.skin.box);
             GUILayout.BeginVertical("box");
             GUILayout.BeginHorizontal();
             bool oldUseCustomDataPath = m_UseCustomDataPath;
@@ -226,23 +230,18 @@ namespace UnityAnalyticsHeatmap
             GUILayout.EndHorizontal();
 
 
+            // SMOOTHERS (SPACE, ROTATION, TIME)
             GUILayout.BeginVertical("box");
             GUILayout.Label("Smooth", EditorStyles.boldLabel);
             GUILayout.BeginHorizontal();
-
             // SPACE
-            SmootherControl(ref m_SpaceToggle, ref m_Space, "Space", "Divider to smooth out x/y/z data", k_SpaceKey);
-
+            SmootherControl(ref m_SmoothSpaceToggle, ref m_Space, "Space", "Divider to smooth out x/y/z data", k_SmoothSpaceKey, k_SpaceKey);
             // ROTATION
-            SmootherControl(ref m_AngleToggle, ref m_Angle, "Rotation", "Divider to smooth out angular data", k_SpaceKey);
-
-
+            SmootherControl(ref m_SmoothRotationToggle, ref m_Rotation, "Rotation", "Divider to smooth out angular data", k_SmoothRotationKey, k_RotationKey);
             // TIME
-            SmootherControl(ref m_TimeToggle, ref m_Time, "Time", "Divider to smooth out passage of game time", k_SpaceKey);
-
+            SmootherControl(ref m_SmoothTimeToggle, ref m_Time, "Time", "Divider to smooth out passage of game time", k_SmoothTimeKey, k_KeyToTime);
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
-
 
             // SEPARATION
             GUILayout.Label("Separate", EditorStyles.boldLabel);
@@ -292,12 +291,7 @@ namespace UnityAnalyticsHeatmap
                     }
                     GUILayout.EndHorizontal();
                 }
-
-
-
-
                 string currentArbitraryFieldsString = string.Join("|", m_ArbitraryFields.ToArray());
-
                 if (oldArbitraryFieldsString != currentArbitraryFieldsString)
                 {
                     EditorPrefs.SetString(k_ArbitraryFieldsKey, currentArbitraryFieldsString);
@@ -335,16 +329,16 @@ namespace UnityAnalyticsHeatmap
             GUILayout.EndVertical();
         }
 
-        void SmootherControl(ref int toggler, ref float value, string label, string tooltip, string key)
+        void SmootherControl(ref int toggler, ref float value, string label, string tooltip, string toggleKey, string valueKey)
         {
             GUILayout.BeginVertical();
+            int oldToggler = toggler;
             toggler = GUILayout.Toolbar(toggler, new GUIContent[] {
                 new GUIContent(unionIcon, "Union"), 
                 new GUIContent(numberIcon, "Smooth to value"),
                 new GUIContent(noneIcon, "No smoothing")
             }, GUILayout.MaxWidth(100));
             float oldValue = value;
-
 
             float lw = EditorGUIUtility.labelWidth;
             EditorGUIUtility.labelWidth = 50;
@@ -354,9 +348,10 @@ namespace UnityAnalyticsHeatmap
             EditorGUIUtility.labelWidth = lw;
             EditorGUIUtility.fieldWidth = fw;
 
-            if (oldValue != value)
+            if (oldValue != value || oldToggler != toggler)
             {
-                EditorPrefs.SetFloat(key, value);
+                EditorPrefs.SetInt(toggleKey, toggler);
+                EditorPrefs.SetFloat(valueKey, value);
             }
             GUILayout.EndVertical();
         }
@@ -401,36 +396,11 @@ namespace UnityAnalyticsHeatmap
                     Debug.LogWarning("You have selected 'Remap color to field' but haven't specified a field name. No remapping can occur.");
                 }
 
+                // When these are the same, points where these values match will be aggregated to the same point
                 var aggregateOn = new List<string>(){ "x", "y", "z", "t", "rx", "ry", "rz", "dx", "dy", "dz", "z" };
-
-                // Specify smoothing properties (must be a subset of aggregateOn)
-                var smoothOn = new Dictionary<string, float>();
-                // Always smooth on space
-                smoothOn.Add("x", m_Space);
-                smoothOn.Add("y", m_Space);
-                smoothOn.Add("z", m_Space);
-                smoothOn.Add("dx", m_Space);
-                smoothOn.Add("dy", m_Space);
-                smoothOn.Add("dz", m_Space);
-                // Time is optional
-                if (!m_AggregateTime)
-                {
-                    smoothOn.Add("t", m_Time);
-                }
-                // Angle is optional
-                if (!m_AggregateAngle)
-                {
-                    smoothOn.Add("rx", m_Angle);
-                    smoothOn.Add("ry", m_Angle);
-                    smoothOn.Add("rz", m_Angle);
-                }
-
-                string remapToField = m_RemapColor ? m_RemapColorField : "";
-                int remapOption = m_RemapColor ? m_RemapOptionIndex : 0;
-
-                // Specify groupings
-                // Always group on eventName
+                // Specify groupings for unique lists
                 var groupOn = new List<string>(){ "eventName" };
+
                 // userID is optional
                 if (m_SeparateUsers)
                 {
@@ -458,6 +428,37 @@ namespace UnityAnalyticsHeatmap
                     aggregateOn.AddRange(m_ArbitraryFields);
                     groupOn.AddRange(m_ArbitraryFields);
                 }
+
+                // Specify smoothing properties (must be a subset of aggregateOn)
+                var smoothOn = new Dictionary<string, float>();
+                // Smooth space
+                if (m_SmoothSpaceToggle == SMOOTH_VALUE || m_SmoothSpaceToggle == SMOOTH_NONE)
+                {
+                    float spaceSmoothValue = (m_SmoothSpaceToggle == SMOOTH_NONE) ? 0f : m_Space;
+                    smoothOn.Add("x", spaceSmoothValue);
+                    smoothOn.Add("y", spaceSmoothValue);
+                    smoothOn.Add("z", spaceSmoothValue);
+                    smoothOn.Add("dx", spaceSmoothValue);
+                    smoothOn.Add("dy", spaceSmoothValue);
+                    smoothOn.Add("dz", spaceSmoothValue);
+                }
+                // Smooth rotation
+                if (m_SmoothRotationToggle == SMOOTH_VALUE || m_SmoothRotationToggle == SMOOTH_NONE)
+                {
+                    float rotationSmoothValue = (m_SmoothRotationToggle == SMOOTH_NONE) ? 0f : m_Rotation;
+                    smoothOn.Add("rx", rotationSmoothValue);
+                    smoothOn.Add("ry", rotationSmoothValue);
+                    smoothOn.Add("rz", rotationSmoothValue);
+                }
+                // Smooth time
+                if (m_SmoothTimeToggle == SMOOTH_VALUE || m_SmoothTimeToggle == SMOOTH_NONE)
+                {
+                    float timeSmoothValue = (m_SmoothTimeToggle == SMOOTH_NONE) ? 0f : m_Time;
+                    smoothOn.Add("t", timeSmoothValue);
+                }
+
+                string remapToField = m_RemapColor ? m_RemapColorField : "";
+                int remapOption = m_RemapColor ? m_RemapOptionIndex : 0;
 
                 m_Aggregator.Process(aggregationHandler, fileList, start, end,
                     aggregateOn, smoothOn, groupOn,

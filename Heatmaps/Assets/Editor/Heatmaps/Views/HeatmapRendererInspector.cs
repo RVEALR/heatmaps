@@ -111,6 +111,40 @@ namespace UnityAnalyticsHeatmap
             }
             EditorGUILayout.EndVertical();
 
+            // PARTICLE SIZE/SHAPE
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Particle", EditorStyles.boldLabel);
+            var oldParticleSize = m_ParticleSize;
+            m_ParticleSize = EditorGUILayout.FloatField(new GUIContent("Size", "The display size of an individual data point"), m_ParticleSize);
+            m_ParticleSize = Mathf.Max(0.05f, m_ParticleSize);
+            if (oldParticleSize != m_ParticleSize)
+            {
+                EditorPrefs.SetFloat(k_ParticleSizeKey, m_ParticleSize);
+            }
+
+            var oldParticleShapeIndex = m_ParticleShapeIndex;
+            m_ParticleShapeIndex = EditorGUILayout.Popup(new GUIContent("Shape", "The display shape of an individual data point"), m_ParticleShapeIndex, m_ParticleShapeOptions);
+            if (oldParticleShapeIndex != m_ParticleShapeIndex)
+            {
+                EditorPrefs.SetInt(k_ParticleShapeKey, m_ParticleShapeIndex);
+            }
+
+            if (m_ParticleShapeIndex > 2)
+            {
+                var oldParticleDirectionIndex = m_ParticleDirectionIndex;
+                m_ParticleDirectionIndex = EditorGUILayout.Popup(new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point"), m_ParticleDirectionIndex, m_ParticleDirectionOptions);
+                if (oldParticleDirectionIndex != m_ParticleDirectionIndex)
+                {
+                    EditorPrefs.SetInt(k_ParticleDirectionKey, m_ParticleDirectionIndex);
+                }
+            }
+            // POSITION MASKING
+            EditorGUILayout.LabelField("Masking (x/y/z)");
+            RenderMinMaxSlider(ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey, m_LowSpace.x, m_HighSpace.x);
+            RenderMinMaxSlider(ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey, m_LowSpace.y, m_HighSpace.y);
+            RenderMinMaxSlider(ref m_LowZ, ref m_HighZ, k_LowZKey, k_HighZKey, m_LowSpace.z, m_HighSpace.z);
+            EditorGUILayout.EndVertical();
+
             // TIME WINDOW
             EditorGUILayout.BeginVertical("box");
             EditorGUILayout.LabelField("Time", EditorStyles.boldLabel);
@@ -153,45 +187,10 @@ namespace UnityAnalyticsHeatmap
             {
                 forceTime = true;
             }
-
             Update(forceTime);
-
             EditorGUILayout.EndVertical();
 
-            // PARTICLE SIZE/SHAPE
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Particle", EditorStyles.boldLabel);
-            var oldParticleSize = m_ParticleSize;
-            m_ParticleSize = EditorGUILayout.FloatField(new GUIContent("Size", "The display size of an individual data point"), m_ParticleSize);
-            m_ParticleSize = Mathf.Max(0.05f, m_ParticleSize);
-            if (oldParticleSize != m_ParticleSize)
-            {
-                EditorPrefs.SetFloat(k_ParticleSizeKey, m_ParticleSize);
-            }
-
-            var oldParticleShapeIndex = m_ParticleShapeIndex;
-            m_ParticleShapeIndex = EditorGUILayout.Popup(new GUIContent("Shape", "The display shape of an individual data point"), m_ParticleShapeIndex, m_ParticleShapeOptions);
-            if (oldParticleShapeIndex != m_ParticleShapeIndex)
-            {
-                EditorPrefs.SetInt(k_ParticleShapeKey, m_ParticleShapeIndex);
-            }
-
-            if (m_ParticleShapeIndex > 2)
-            {
-                var oldParticleDirectionIndex = m_ParticleDirectionIndex;
-                m_ParticleDirectionIndex = EditorGUILayout.Popup(new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point"), m_ParticleDirectionIndex, m_ParticleDirectionOptions);
-                if (oldParticleDirectionIndex != m_ParticleDirectionIndex)
-                {
-                    EditorPrefs.SetInt(k_ParticleDirectionKey, m_ParticleDirectionIndex);
-                }
-            }
-            // POSITION MASKING
-            EditorGUILayout.LabelField("Masking (x/y/z)");
-            RenderMinMaxSlider(ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey, m_LowSpace.x, m_HighSpace.x);
-            RenderMinMaxSlider(ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey, m_LowSpace.y, m_HighSpace.y);
-            RenderMinMaxSlider(ref m_LowZ, ref m_HighZ, k_LowZKey, k_HighZKey, m_LowSpace.z, m_HighSpace.z);
-            EditorGUILayout.EndVertical();
-
+            // REPORTING AND TIPS
             if (m_GameObject != null && m_GameObject.GetComponent<IHeatmapRenderer>() != null)
             {
                 int total = m_GameObject.GetComponent<IHeatmapRenderer>().totalPoints;

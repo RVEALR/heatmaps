@@ -23,7 +23,7 @@ namespace UnityAnalyticsHeatmap
         Vector3 m_LowSpace;
         Vector3 m_HighSpace;
 
-
+        bool m_KeyFound = true;
         int m_OptionIndex = 0;
         string[] m_OptionKeys;
 
@@ -50,8 +50,16 @@ namespace UnityAnalyticsHeatmap
 
         void Dispatch()
         {
+            m_KeyFound = true;
             string key = BuildKey();
-            m_PointHandler(m_HeatData[key]);
+            if (m_HeatData.ContainsKey(key))
+            {
+                m_PointHandler(m_HeatData[key]);
+            }
+            else
+            {
+                m_KeyFound = false;
+            }
         }
 
         public void SetDataPath(string jsonPath)
@@ -75,6 +83,10 @@ namespace UnityAnalyticsHeatmap
                 {
                     Dispatch();
                 }
+            }
+            if (!m_KeyFound)
+            {
+                EditorGUILayout.HelpBox("No matching combination.", MessageType.Warning);
             }
         }
 

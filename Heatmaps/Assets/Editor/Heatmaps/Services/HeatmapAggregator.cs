@@ -1,6 +1,25 @@
 ﻿/// <summary>
 /// Handles aggregation of raw data into heatmap data.
 /// </summary>
+/// 
+/// There are three related fields in Processing that need to be understood:
+/// smoothOn, aggregateOn, and groupOn.
+/// 
+/// smoothOn provides a list of parameters that will get smoothed, and by how much.
+/// If, for example, "x" is in the list, and the "x" value is 1, then every x between
+/// -.5 and .5 will be "smoothed to 0.
+/// smoothOn is always a subset of aggregateOn.
+/// 
+/// aggregateOn provides a list of parameters to meld into a single point if all the
+/// values are the same after smoothing. For example, if aggregateOn contains the list
+/// "x", "y", "z" and "t", then every time we encounter a point where (after smoothing)
+/// x = 25, y = 15, z = 5, and t = 22, we will consider that to be the exact same point,
+/// and aggregation can occur (so the density increases).
+/// 
+/// groupOn allows us to create lists out of the results. A list will ALWAYS be created
+/// out of unique event names, but if groupOn contains "userID" and "platform", then
+/// unique lists will also be created from these fields.
+/// groupOn is always a subset of aggregateOn.
 
 using System;
 using System.Collections.Generic;
@@ -160,26 +179,31 @@ namespace UnityAnalyticsHeatmap
                         sessionIdIndex = rowData.IndexOf("sessionid");
                         platformIndex = rowData.IndexOf("platform");
                         isDebugIndex = rowData.IndexOf("debug_device");
+                        if (nameIndex == -1 || submitTimeIndex == -1 || paramsIndex == -1 ||submitTimeIndex  == -1)
+                        {
+                            // Re-enable this log if you want to see badly structured files
+                            //Debug.Log ("Can't find fields...skipping file");
+                            break;
+                        }
                     }
                     else
                     {
-                    
-                        if (nameIndex == -1 || submitTimeIndex == -1 || paramsIndex == -1 ||rowData.Count < submitTimeIndex)
+                        if (rowData.Count < 6)
                         {
                             // Re-enable this log if you want to see empty lines
-                            //Debug.Log ("Empty Line...skipping");
+                            //Debug.Log ("No data in line...skipping");
                             continue;
                         }
 
+                        string userId = rowData[userIdIndex];
+                        string sessionId = rowData[sessionIdIndex];
+                        string eventName = rowData[nameIndex];
+                        string paramsData = rowData[paramsIndex];
                         double unixTimeStamp = double.Parse(rowData[submitTimeIndex]);
                         DateTime rowDate = epoch.AddSeconds(unixTimeStamp);
 
-                        Debug.Log(rowData[userIdIndex]);
 
-                        string userId = rowData[userIdIndex];
-                        string sessionId = rowData[sessionIdIndex];
                         string platform = rowData[platformIndex];
-                        string eventName = rowData[nameIndex];
                         bool isDebug = bool.Parse(rowData[isDebugIndex]);
 
                         // Pass on rows outside any date trimming
@@ -194,7 +218,7 @@ namespace UnityAnalyticsHeatmap
                             continue;
                         }
 
-                        Dictionary<string, object> datum = MiniJSON.Json.Deserialize(rowData[paramsIndex]) as Dictionary<string, object>;
+                        Dictionary<string, object> datum = MiniJSON.Json.Deserialize(paramsData) as Dictionary<string, object>;
                         // If no x/y, this isn't a Heatmap Event. Pass.
                         if (!datum.ContainsKey("x") || !datum.ContainsKey("y"))
                         {
@@ -238,6 +262,7 @@ namespace UnityAnalyticsHeatmap
                                 if (smoothOn.ContainsKey(ag))
                                 {
                                     floatValue = Divide(floatValue, smoothOn[ag]);
+                                    //point[ag] = floatValue;
                                 }
                                 else
                                 {
@@ -245,6 +270,7 @@ namespace UnityAnalyticsHeatmap
                                 }
                                 arbitraryValue = floatValue;
                             }
+
 
                             tupleList.Add(arbitraryValue);
                             if (pointProperties.Contains(ag))
@@ -258,7 +284,7 @@ namespace UnityAnalyticsHeatmap
                             float.TryParse( (string)datum[remapDensityToField], out remapValue);
                         }
 
-                        // Tuple-like key to determine if this point is unique, or needs to be merged with another
+                        // Tuple key to determine if this point is unique, or needs to be merged with another
                         var tuple = new Tuplish(tupleList.ToArray());
                         if (m_PointDict.ContainsKey(tuple))
                         {
@@ -361,6 +387,10 @@ namespace UnityAnalyticsHeatmap
 
         protected float Divide(float value, float divisor)
         {
+            if (divisor == 0f)
+            {
+                return value;
+            }
             return Mathf.Round(value / divisor) * divisor;
         }
     }
