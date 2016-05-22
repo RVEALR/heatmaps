@@ -203,13 +203,6 @@ public class RawDataInspector : EditorWindow
         {
             EditorUtility.RevealInFinder(m_DataPath);
         }
-        if (GUILayout.Button("Purge"))
-        {
-            if (EditorUtility.DisplayDialog("Destroy local data?", "You are about to delete your local heatmaps data cache, meaning you'll have to reload from the server (or regenerate from this tool). Are you sure?", "Purge", "Cancel"))
-            {
-                PurgeData();
-            }
-        }
         GUILayout.EndHorizontal();
 
         //output path
@@ -228,36 +221,34 @@ public class RawDataInspector : EditorWindow
         else if (m_DataSource == GENERATE) 
         {
             m_GenerateType = EditorGUILayout.Popup(m_GenerateType, new string[] { "Heatmap Random", "Freeform Random" , "Demo Data"});
-
             if (m_GenerateType == HEATMAP_RANDOM)
             {
                 HeatmapRandomDataView();
                 CreateCode();
-                if (GUILayout.Button("Generate"))
-                {
-                    GenerateData();
-                }
             }
             else if (m_GenerateType == FREEFORM_RANDOM)
             {
                 FreeformRandomDataView();
                 CreateCode();
-                if (GUILayout.Button("Generate"))
-                {
-                    GenerateData();
-                }
             }
             else if (m_GenerateType == DEMO)
             {
                 CreateDemoData();
-                if (GUILayout.Button("Generate"))
+            }
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Purge"))
+            {
+                if (EditorUtility.DisplayDialog("Destroy local data?", "You are about to delete your local heatmaps data cache, meaning you'll have to reload from the server (or regenerate from this tool). Are you sure?", "Purge", "Cancel"))
                 {
-                    GenerateData();
+                    PurgeData();
                 }
             }
+            if (GUILayout.Button("Generate"))
+            {
+                GenerateData();
+            }
+            EditorGUILayout.EndHorizontal();
         }
-
-
         EditorGUILayout.EndScrollView();
     }
 
@@ -752,11 +743,11 @@ public class RawDataInspector : EditorWindow
                     data += evt;
                     currentFileLines ++;
 
-                    if (currentFileLines >= linesPerFile || a == m_EventCount-1) {
+                    if (currentFileLines >= linesPerFile || currentSeconds == endSeconds) {
                         SaveFile(data, firstDate);
                         firstDate = currentSeconds;
                         currentFileLines = 0;
-                        data = "";
+                        data = headers;
                         fileCount++;
                     }
                 }
@@ -887,11 +878,11 @@ public class RawDataInspector : EditorWindow
                     data += evt;
                     currentFileLines ++;
 
-                    if (currentFileLines >= linesPerFile || a == m_EventCount-1) {
+                    if (currentFileLines >= linesPerFile || currentSeconds == endSeconds) {
                         SaveFile(data, firstDate);
                         firstDate = currentSeconds;
                         currentFileLines = 0;
-                        data = "";
+                        data = headers;
                         fileCount++;
                     }
                 }
