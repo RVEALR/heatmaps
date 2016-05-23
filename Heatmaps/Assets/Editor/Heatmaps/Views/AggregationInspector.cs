@@ -343,7 +343,10 @@ namespace UnityAnalyticsHeatmap
             EditorGUIUtility.labelWidth = 50;
             float fw = EditorGUIUtility.fieldWidth;
             EditorGUIUtility.fieldWidth = 20;
+            EditorGUI.BeginDisabledGroup(toggler != SMOOTH_VALUE);
             value = EditorGUILayout.FloatField(new GUIContent(label, tooltip), value);
+            value = Mathf.Max(0, value);
+            EditorGUI.EndDisabledGroup();
             EditorGUIUtility.labelWidth = lw;
             EditorGUIUtility.fieldWidth = fw;
 
