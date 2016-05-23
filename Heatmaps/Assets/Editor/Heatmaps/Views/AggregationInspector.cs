@@ -88,25 +88,24 @@ namespace UnityAnalyticsHeatmap
             new GUIContent("Increment"),
             new GUIContent("Cumulative"),
             new GUIContent("Average"),
-            new GUIContent("First Wins"),
-            new GUIContent("Last Wins"),
-            new GUIContent("Min Wins"),
-            new GUIContent("Max Wins"),
+            new GUIContent("Min"),
+            new GUIContent("Max"),
+            new GUIContent("First"),
+            new GUIContent("Last"),
             new GUIContent("Percentile")
         };
         AggregationMethod[] m_RemapOptionIds = new AggregationMethod[]{
             AggregationMethod.Increment,
             AggregationMethod.Cumulative,
             AggregationMethod.Average,
-            AggregationMethod.FirstWins,
-            AggregationMethod.LastWins,
-            AggregationMethod.MinWins,
-            AggregationMethod.MaxWins,
+            AggregationMethod.Min,
+            AggregationMethod.Max,
+            AggregationMethod.First,
+            AggregationMethod.Last,
             AggregationMethod.Percentile
         };
 
         List<string> m_ArbitraryFields = new List<string>{ };
-        List<string> m_Events = new List<string>{ };
 
         public AggregationInspector(RawEventClient client, HeatmapAggregator aggregator)
         {
@@ -462,7 +461,7 @@ namespace UnityAnalyticsHeatmap
 
                 m_Aggregator.Process(aggregationHandler, fileList, start, end,
                     aggregateOn, smoothOn, groupOn,
-                    remapToField, m_RemapOptionIds[remapOption], m_Events);
+                    remapToField, m_RemapOptionIds[remapOption], m_Percentile);
             }
         }
 

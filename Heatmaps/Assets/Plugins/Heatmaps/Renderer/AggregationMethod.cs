@@ -7,10 +7,10 @@ namespace UnityAnalyticsHeatmap
         Increment,
         Cumulative,
         Average,
-        FirstWins,
-        LastWins,
-        MaxWins,
-        MinWins,
+        Max,
+        Min,
+        First,
+        Last,
         Percentile
     }
 }
