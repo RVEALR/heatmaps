@@ -114,6 +114,7 @@ namespace UnityAnalyticsHeatmap
 
         void ParseOptionList(string[] options)
         {
+            string[] oldKey = BuildKey().Split('~');
             m_SeparatedLists = new List<List<string>>();
             m_Options = new List<int>();
 
@@ -135,19 +136,29 @@ namespace UnityAnalyticsHeatmap
             }
             for (int a = 0; a < m_SeparatedLists.Count; a++)
             {
-                m_Options.Add(0);
+                // Restore old indices when possible
+                int index = 0;
+                if (oldKey.Length > a)
+                {
+                    index = m_SeparatedLists[a].IndexOf(oldKey[a]);
+                    index = Math.Max(0, index);
+                }
+                m_Options.Add(index);
             }
         }
 
         string BuildKey()
         {
             string retv = "";
-            for (int a = 0; a < m_SeparatedLists.Count; a++)
+            if (m_SeparatedLists != null)
             {
-                retv += m_SeparatedLists[a][m_Options[a]];
-                if (a < m_SeparatedLists.Count - 1)
+                for (int a = 0; a < m_SeparatedLists.Count; a++)
                 {
-                    retv += "~";
+                    retv += m_SeparatedLists[a][m_Options[a]];
+                    if (a < m_SeparatedLists.Count - 1)
+                    {
+                        retv += "~";
+                    }
                 }
             }
             return retv;
