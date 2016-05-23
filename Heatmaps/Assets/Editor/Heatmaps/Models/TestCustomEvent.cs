@@ -71,13 +71,13 @@ public class TestCustomEvent : List<TestEventParam> {
         evt += "1.1.1.1\t";
 
         // Platform
-        evt += "ios\t";
+        evt += platform + "\t";
 
         // SDK Version
         evt += "5.3.4\t";
 
         // IsDebug
-        evt += "false\t";
+        evt += isDebug + "\t";
 
         // User agent
         evt += "Corridor%20Z/3 CFNetwork/758.2.8 Darwin/15.0.0\t";
