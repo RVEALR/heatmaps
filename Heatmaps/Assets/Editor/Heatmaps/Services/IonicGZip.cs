@@ -6,7 +6,7 @@ using Ionic.Zlib;
 using System.Collections.Generic;
 
 
-public class IonicTest
+public class IonicGZip
 {
 
     public static string[] DecompressFiles(string[] args)
@@ -14,13 +14,17 @@ public class IonicTest
         var results = new List<string>();
         foreach(var fileName in args)
         {
-            byte[] file = File.ReadAllBytes(fileName);
-            byte[] decompressed = Decompress(file);
-            string responsebody = Encoding.UTF8.GetString(decompressed);
-
-            results.Add(responsebody);
+            string response = DecompressFile(fileName);
+            results.Add(response);
         }
         return results.ToArray();
+    }
+
+    public static string DecompressFile(string fileName)
+    {
+        byte[] file = File.ReadAllBytes(fileName);
+        byte[] decompressed = Decompress(file);
+        return Encoding.UTF8.GetString(decompressed);
     }
 
     static byte[] Decompress(byte[] gzip)
@@ -44,6 +48,30 @@ public class IonicTest
                 }
                 while (count > 0);
                 return memory.ToArray();
+            }
+        }
+    }
+
+    public static void CompressAndSave(string savePath, string data)
+    {
+        // Write string to temporary file.
+        string temp = Path.GetTempFileName();
+        File.WriteAllText(temp, data);
+
+        // Read file into byte array buffer.
+        byte[] b;
+        using (FileStream f = new FileStream(temp, FileMode.Open))
+        {
+            b = new byte[f.Length];
+            f.Read(b, 0, (int)f.Length);
+        }
+
+        // Use GZipStream to write compressed bytes to target file.
+        using (FileStream f2 = new FileStream(savePath, FileMode.Create))
+        {
+            using (GZipStream gz = new GZipStream(f2, CompressionMode.Compress, false))
+            {
+                gz.Write(b, 0, b.Length);
             }
         }
     }
