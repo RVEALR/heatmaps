@@ -6,7 +6,7 @@ namespace UnityAnalyticsHeatmap
 {
     public class ReallyBigDataStory : DataStory
     {
-        public ReallyBigDataStory() : base()
+        public ReallyBigDataStory()
         {
             name = "Really Big Game";
             genre = "3D Flight Combat Sim";
@@ -46,7 +46,7 @@ namespace UnityAnalyticsHeatmap
         #region implemented abstract members of DataStory
         public override Dictionary<double, string> Generate()
         {
-            base.Generate();
+            SetRandomSeed();
             List<string> eventNames = new List<string>(){"Heatmap.CombatKills", "Heatmap.PlayerPosition"};
 
             List<TestCustomEvent> events = new List<TestCustomEvent>();

@@ -91,6 +91,14 @@ namespace UnityAnalyticsHeatmap
             return inspector;
         }
 
+        private GUIContent m_ParticleSizeContent = new GUIContent("Size", "The display size of an individual data point");
+        private GUIContent m_ParticleShapeContent = new GUIContent("Shape", "The display shape of an individual data point");
+        private GUIContent m_ParticleDirectionContent = new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point");
+        private GUIContent m_PlaySpeedContent = new GUIContent("Play Speed", "Speed at which playback occurs");
+        private GUIContent m_RestartContent = new GUIContent("<<", "Back to Start");
+        private GUIContent m_PlayContent = new GUIContent(playText, playTip);
+        private GUIContent m_PauseContent = new GUIContent(playText, playTip);
+
         public void OnGUI()
         {
             EditorGUILayout.BeginVertical("box");
@@ -115,7 +123,7 @@ namespace UnityAnalyticsHeatmap
             EditorGUILayout.BeginVertical("box");
             EditorGUILayout.LabelField("Particle", EditorStyles.boldLabel);
             var oldParticleSize = m_ParticleSize;
-            m_ParticleSize = EditorGUILayout.FloatField(new GUIContent("Size", "The display size of an individual data point"), m_ParticleSize);
+            m_ParticleSize = EditorGUILayout.FloatField(m_ParticleSizeContent, m_ParticleSize);
             m_ParticleSize = Mathf.Max(0.05f, m_ParticleSize);
             if (oldParticleSize != m_ParticleSize)
             {
@@ -123,7 +131,7 @@ namespace UnityAnalyticsHeatmap
             }
 
             var oldParticleShapeIndex = m_ParticleShapeIndex;
-            m_ParticleShapeIndex = EditorGUILayout.Popup(new GUIContent("Shape", "The display shape of an individual data point"), m_ParticleShapeIndex, m_ParticleShapeOptions);
+            m_ParticleShapeIndex = EditorGUILayout.Popup(m_ParticleShapeContent, m_ParticleShapeIndex, m_ParticleShapeOptions);
             if (oldParticleShapeIndex != m_ParticleShapeIndex)
             {
                 EditorPrefs.SetInt(k_ParticleShapeKey, m_ParticleShapeIndex);
@@ -132,7 +140,7 @@ namespace UnityAnalyticsHeatmap
             if (m_ParticleShapeIndex > 2)
             {
                 var oldParticleDirectionIndex = m_ParticleDirectionIndex;
-                m_ParticleDirectionIndex = EditorGUILayout.Popup(new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point"), m_ParticleDirectionIndex, m_ParticleDirectionOptions);
+                m_ParticleDirectionIndex = EditorGUILayout.Popup(m_ParticleDirectionContent, m_ParticleDirectionIndex, m_ParticleDirectionOptions);
                 if (oldParticleDirectionIndex != m_ParticleDirectionIndex)
                 {
                     EditorPrefs.SetInt(k_ParticleDirectionKey, m_ParticleDirectionIndex);
@@ -152,13 +160,13 @@ namespace UnityAnalyticsHeatmap
             var oldEndTime = m_EndTime;
             RenderMinMaxSlider(ref m_StartTime, ref m_EndTime, k_StartTimeKey, k_EndTimeKey, 0f, m_MaxTime);
             var oldPlaySpeed = m_PlaySpeed;
-            m_PlaySpeed = EditorGUILayout.FloatField(new GUIContent("Play Speed", "Speed at which playback occurs"), m_PlaySpeed);
+            m_PlaySpeed = EditorGUILayout.FloatField(m_PlaySpeedContent, m_PlaySpeed);
             if (oldPlaySpeed != m_PlaySpeed)
             {
                 EditorPrefs.SetFloat(k_PlaySpeedKey, m_PlaySpeed);
             }
             EditorGUILayout.BeginHorizontal();
-            GUIContent restartContent = new GUIContent("<<", "Back to Start");
+            GUIContent restartContent = m_RestartContent;
             if (GUILayout.Button(restartContent))
             {
                 Restart();

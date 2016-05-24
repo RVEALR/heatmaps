@@ -22,15 +22,16 @@ namespace UnityAnalyticsHeatmap
         public string whatToTry = "";
         public string sampleCode = "";
 
-        public virtual Dictionary<double, string> Generate()
+        public abstract Dictionary<double, string> Generate();
+
+        protected void SetRandomSeed()
         {
             // Set a seed so set is consistently generated
             #if UNITY_5_4_OR_NEWER
             UnityEngine.Random.InitState(42);
-            #elif
+            #else
             UnityEngine.Random.seed = 42;
             #endif
-            return null;
         }
 
         public override string ToString()
