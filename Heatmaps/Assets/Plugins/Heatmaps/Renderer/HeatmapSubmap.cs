@@ -16,7 +16,12 @@ public class HeatmapSubmap : MonoBehaviour
     {
         GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         GetComponent<MeshRenderer>().receiveShadows = false;
+
+        #if UNITY_5_4_OR_NEWER
+        GetComponent<MeshRenderer>().lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+        #elif
         GetComponent<MeshRenderer>().useLightProbes = false;
+        #endif
         GetComponent<MeshRenderer>().reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
     }
 }
