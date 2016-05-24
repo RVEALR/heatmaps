@@ -84,7 +84,7 @@ namespace UnityAnalyticsHeatmap
         {
             m_CompletionHandler = completionHandler;
 
-            string outputFileName = System.IO.Path.GetFileName(inputFiles[0]).Replace(".txt", ".json");
+            string outputFileName = System.IO.Path.GetFileName(inputFiles[0]).Replace(".md.gz", ".json");
 
 
             // Histograms stores all the data
@@ -181,209 +181,206 @@ namespace UnityAnalyticsHeatmap
                 aggregateOn.Add(remapDensityToField);
             }
 
-            var reader = new StreamReader(path);
-            using (reader)
+            string tsv = IonicGZip.DecompressFile(path);
+
+            string[] rows = tsv.Split('\n');
+            m_ReportRows += rows.Length;
+
+            // Define indices
+            int nameIndex = -1;
+            int submitTimeIndex = -1;
+            int paramsIndex = -1;
+            int userIdIndex = -1;
+            int sessionIdIndex = -1;
+            int platformIndex = -1;
+            int isDebugIndex = -1;
+
+            for (int a = 0; a < rows.Length; a++)
             {
-                string tsv = reader.ReadToEnd();
-                string[] rows = tsv.Split('\n');
-                m_ReportRows += rows.Length;
-
-                // Define indices
-                int nameIndex = -1;
-                int submitTimeIndex = -1;
-                int paramsIndex = -1;
-                int userIdIndex = -1;
-                int sessionIdIndex = -1;
-                int platformIndex = -1;
-                int isDebugIndex = -1;
-
-                for (int a = 0; a < rows.Length; a++)
+                List<string> rowData = new List<string>(rows[a].Split('\t'));
+                if (a == 0)
                 {
-                    List<string> rowData = new List<string>(rows[a].Split('\t'));
-                    if (a == 0)
+                    // Establish indices on row 0
+                    nameIndex = rowData.IndexOf("name");
+                    submitTimeIndex = rowData.IndexOf("submit_time");
+                    paramsIndex = rowData.IndexOf("custom_params");
+                    userIdIndex = rowData.IndexOf("userid");
+                    sessionIdIndex = rowData.IndexOf("sessionid");
+                    platformIndex = rowData.IndexOf("platform");
+                    isDebugIndex = rowData.IndexOf("debug_device");
+                    if (nameIndex == -1 || submitTimeIndex == -1 || paramsIndex == -1 ||submitTimeIndex  == -1)
                     {
-                        // Establish indices on row 0
-                        nameIndex = rowData.IndexOf("name");
-                        submitTimeIndex = rowData.IndexOf("submit_time");
-                        paramsIndex = rowData.IndexOf("custom_params");
-                        userIdIndex = rowData.IndexOf("userid");
-                        sessionIdIndex = rowData.IndexOf("sessionid");
-                        platformIndex = rowData.IndexOf("platform");
-                        isDebugIndex = rowData.IndexOf("debug_device");
-                        if (nameIndex == -1 || submitTimeIndex == -1 || paramsIndex == -1 ||submitTimeIndex  == -1)
+                        // Re-enable this log if you want to see badly structured files
+                        //Debug.Log ("Can't find fields...skipping file");
+                        break;
+                    }
+                }
+                else
+                {
+                    if (rowData.Count < 6)
+                    {
+                        // Re-enable this log if you want to see empty lines
+                        //Debug.Log ("No data in line...skipping");
+                        continue;
+                    }
+
+                    string userId = rowData[userIdIndex];
+                    string sessionId = rowData[sessionIdIndex];
+                    string eventName = rowData[nameIndex];
+                    string paramsData = rowData[paramsIndex];
+                    double unixTimeStamp = double.Parse(rowData[submitTimeIndex]);
+                    DateTime rowDate = epoch.AddSeconds(unixTimeStamp);
+
+
+                    string platform = rowData[platformIndex];
+                    bool isDebug = bool.Parse(rowData[isDebugIndex]);
+
+                    // Pass on rows outside any date trimming
+                    if (rowDate < startDate || rowDate > endDate)
+                    {
+                        continue;
+                    }
+
+                    Dictionary<string, object> datum = MiniJSON.Json.Deserialize(paramsData) as Dictionary<string, object>;
+                    // If no x/y, this isn't a Heatmap Event. Pass.
+                    if (!datum.ContainsKey("x") || !datum.ContainsKey("y"))
+                    {
+                        // Re-enable this log line if you want to be see events that aren't valid for heatmapping
+                        //Debug.Log ("Unable to find x/y in: " + datum.ToString () + ". Skipping...");
+                        continue;
+                    }
+
+                    // Passed all checks. Consider as legal point
+                    m_ReportLegalPoints++;
+
+                    // Construct both the list of elements that signify a unique item...
+                    var pointTupleList = new List<object>{ eventName };
+                    // ...and a point to contain the data
+                    HistogramHeatPoint point = new HistogramHeatPoint();
+                    foreach (var ag in aggregateOn)
+                    {
+                        float floatValue = 0f;
+                        object arbitraryValue = 0f;
+                        // Special cases for userIDs, sessionIDs, platform, and debug, which aren't in the JSON
+                        if (ag == "userID")
                         {
-                            // Re-enable this log if you want to see badly structured files
-                            //Debug.Log ("Can't find fields...skipping file");
-                            break;
+                            arbitraryValue = userId;
+                        }
+                        else if (ag == "sessionID")
+                        {
+                            arbitraryValue = sessionId;
+                        }
+                        else if (ag == "platform")
+                        {
+                            arbitraryValue = platform;
+                        }
+                        else if (ag == "debug")
+                        {
+                            arbitraryValue = isDebug;
+                        }
+                        else if (datum.ContainsKey(ag))
+                        {
+                            // parse and divide all in smoothing list
+                            float.TryParse((string)datum[ag], out floatValue);
+                            if (smoothOn.ContainsKey(ag))
+                            {
+                                floatValue = Divide(floatValue, smoothOn[ag]);
+                            }
+                            else
+                            {
+                                floatValue = 0;
+                            }
+                            arbitraryValue = floatValue;
+                        }
+
+                        pointTupleList.Add(arbitraryValue);
+                        // Add values to the point
+                        if (pointProperties.Contains(ag))
+                        {
+                            point[ag] = floatValue;
+                        }
+                    }
+                    // Turn the pointTupleList into a key
+                    var pointTuple = new Tuplish(pointTupleList.ToArray());
+
+                    float remapValue = 1f;
+                    if (doRemap && datum.ContainsKey(remapDensityToField)) {
+                        float.TryParse( (string)datum[remapDensityToField], out remapValue);
+                    }
+
+                    if (m_PointDict.ContainsKey(pointTuple))
+                    {
+                        // Use existing point if it exists...
+                        point = m_PointDict[pointTuple];
+                        point.histogram.Add(remapValue);
+
+                        if (rowDate < point.firstDate)
+                        {
+                            point.first = remapValue;
+                            point.firstDate = rowDate;
+                        }
+                        else if (rowDate > point.lastDate)
+                        {
+                            point.last = remapValue;
+                            point.lastDate = rowDate;
                         }
                     }
                     else
                     {
-                        if (rowData.Count < 6)
+                        // ...or else use the one we've been constructing
+                        point.histogram.Add(remapValue);
+                        point.first = remapValue;
+                        point.last = remapValue;
+                        point.firstDate = rowDate;
+                        point.lastDate = rowDate;
+
+                        // CREATE GROUPING LIST
+                        var groupTupleList = new List<object>();
+                        foreach (var field in groupOn)
                         {
-                            // Re-enable this log if you want to see empty lines
-                            //Debug.Log ("No data in line...skipping");
-                            continue;
+                            // Special case for eventName
+                            if (field == "eventName")
+                            {
+                                groupTupleList.Add(eventName);
+                            }
+                            // Special cases for... userID
+                            else if (field == "userID")
+                            {
+                                groupTupleList.Add("user: " + userId);
+                            }
+                            // ... sessionID ...
+                            else if (field == "sessionID")
+                            {
+                                groupTupleList.Add("session: " + sessionId);
+                            }
+                            // ... debug ...
+                            else if (field == "debug")
+                            {
+                                groupTupleList.Add("debug: " + isDebug);
+                            }
+                            // ... platform
+                            else if (field == "platform")
+                            {
+                                groupTupleList.Add("platform: " + platform);
+                            }
+                            // Everything else just added to key
+                            else if (datum.ContainsKey(field))
+                            {
+                                groupTupleList.Add(field + ": " + datum[field]);
+                            }
                         }
+                        var groupTuple = new Tuplish(groupTupleList.ToArray());
 
-                        string userId = rowData[userIdIndex];
-                        string sessionId = rowData[sessionIdIndex];
-                        string eventName = rowData[nameIndex];
-                        string paramsData = rowData[paramsIndex];
-                        double unixTimeStamp = double.Parse(rowData[submitTimeIndex]);
-                        DateTime rowDate = epoch.AddSeconds(unixTimeStamp);
-
-
-                        string platform = rowData[platformIndex];
-                        bool isDebug = bool.Parse(rowData[isDebugIndex]);
-
-                        // Pass on rows outside any date trimming
-                        if (rowDate < startDate || rowDate > endDate)
+                        // Create the event list if the key doesn't exist
+                        if (!histograms.ContainsKey(groupTuple))
                         {
-                            continue;
+                            histograms.Add(groupTuple, new List<HistogramHeatPoint>());
                         }
 
-                        Dictionary<string, object> datum = MiniJSON.Json.Deserialize(paramsData) as Dictionary<string, object>;
-                        // If no x/y, this isn't a Heatmap Event. Pass.
-                        if (!datum.ContainsKey("x") || !datum.ContainsKey("y"))
-                        {
-                            // Re-enable this log line if you want to be see events that aren't valid for heatmapping
-                            //Debug.Log ("Unable to find x/y in: " + datum.ToString () + ". Skipping...");
-                            continue;
-                        }
-
-                        // Passed all checks. Consider as legal point
-                        m_ReportLegalPoints++;
-
-                        // Construct both the list of elements that signify a unique item...
-                        var pointTupleList = new List<object>{ eventName };
-                        // ...and a point to contain the data
-                        HistogramHeatPoint point = new HistogramHeatPoint();
-                        foreach (var ag in aggregateOn)
-                        {
-                            float floatValue = 0f;
-                            object arbitraryValue = 0f;
-                            // Special cases for userIDs, sessionIDs, platform, and debug, which aren't in the JSON
-                            if (ag == "userID")
-                            {
-                                arbitraryValue = userId;
-                            }
-                            else if (ag == "sessionID")
-                            {
-                                arbitraryValue = sessionId;
-                            }
-                            else if (ag == "platform")
-                            {
-                                arbitraryValue = platform;
-                            }
-                            else if (ag == "debug")
-                            {
-                                arbitraryValue = isDebug;
-                            }
-                            else if (datum.ContainsKey(ag))
-                            {
-                                // parse and divide all in smoothing list
-                                float.TryParse((string)datum[ag], out floatValue);
-                                if (smoothOn.ContainsKey(ag))
-                                {
-                                    floatValue = Divide(floatValue, smoothOn[ag]);
-                                }
-                                else
-                                {
-                                    floatValue = 0;
-                                }
-                                arbitraryValue = floatValue;
-                            }
-
-                            pointTupleList.Add(arbitraryValue);
-                            // Add values to the point
-                            if (pointProperties.Contains(ag))
-                            {
-                                point[ag] = floatValue;
-                            }
-                        }
-                        // Turn the pointTupleList into a key
-                        var pointTuple = new Tuplish(pointTupleList.ToArray());
-
-                        float remapValue = 1f;
-                        if (doRemap && datum.ContainsKey(remapDensityToField)) {
-                            float.TryParse( (string)datum[remapDensityToField], out remapValue);
-                        }
-
-                        if (m_PointDict.ContainsKey(pointTuple))
-                        {
-                            // Use existing point if it exists...
-                            point = m_PointDict[pointTuple];
-                            point.histogram.Add(remapValue);
-
-                            if (rowDate < point.firstDate)
-                            {
-                                point.first = remapValue;
-                                point.firstDate = rowDate;
-                            }
-                            else if (rowDate > point.lastDate)
-                            {
-                                point.last = remapValue;
-                                point.lastDate = rowDate;
-                            }
-                        }
-                        else
-                        {
-                            // ...or else use the one we've been constructing
-                            point.histogram.Add(remapValue);
-                            point.first = remapValue;
-                            point.last = remapValue;
-                            point.firstDate = rowDate;
-                            point.lastDate = rowDate;
-
-                            // CREATE GROUPING LIST
-                            var groupTupleList = new List<object>();
-                            foreach (var field in groupOn)
-                            {
-                                // Special case for eventName
-                                if (field == "eventName")
-                                {
-                                    groupTupleList.Add(eventName);
-                                }
-                                // Special cases for... userID
-                                else if (field == "userID")
-                                {
-                                    groupTupleList.Add("user: " + userId);
-                                }
-                                // ... sessionID ...
-                                else if (field == "sessionID")
-                                {
-                                    groupTupleList.Add("session: " + sessionId);
-                                }
-                                // ... debug ...
-                                else if (field == "debug")
-                                {
-                                    groupTupleList.Add("debug: " + isDebug);
-                                }
-                                // ... platform
-                                else if (field == "platform")
-                                {
-                                    groupTupleList.Add("platform: " + platform);
-                                }
-                                // Everything else just added to key
-                                else if (datum.ContainsKey(field))
-                                {
-                                    groupTupleList.Add(field + ": " + datum[field]);
-                                }
-                            }
-                            var groupTuple = new Tuplish(groupTupleList.ToArray());
-
-                            // Create the event list if the key doesn't exist
-                            if (!histograms.ContainsKey(groupTuple))
-                            {
-                                histograms.Add(groupTuple, new List<HistogramHeatPoint>());
-                            }
-
-                            // FINALLY, ADD THE POINT TO THE CORRECT GROUP...
-                            histograms[groupTuple].Add(point);
-                            // ...AND THE POINT DICT
-                            m_PointDict[pointTuple] = point;
-                        }
+                        // FINALLY, ADD THE POINT TO THE CORRECT GROUP...
+                        histograms[groupTuple].Add(point);
+                        // ...AND THE POINT DICT
+                        m_PointDict[pointTuple] = point;
                     }
                 }
             }

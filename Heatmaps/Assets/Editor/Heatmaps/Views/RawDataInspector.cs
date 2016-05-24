@@ -55,6 +55,8 @@ public class RawDataInspector : EditorWindow
     private static string k_MinDZ = "UnityAnalyticsRawDataGenMinDZ";
     private static string k_MaxDZ = "UnityAnalyticsRawDataGenMaxDZ";
 
+    private GUIContent m_AddEventContent = new GUIContent("+ Event Name", "Events to be randomly added into the created data.");
+
     private static int defaultEventCount = 100;
     private static int defaultDeviceCount = 5;
     private static int defaultSessionCount = 10;
@@ -89,7 +91,7 @@ public class RawDataInspector : EditorWindow
 
 
     int m_DataStoryIndex = 0;
-    GUIContent[] m_DataStoryList = new GUIContent[]{ 
+    GUIContent[] m_DataStoryList = new GUIContent[]{
         new GUIContent("Basic Functionality"),
         new GUIContent("Really Big Game"),
         new GUIContent("Maze 1: Multilevel Game"),
@@ -107,7 +109,6 @@ public class RawDataInspector : EditorWindow
     };
 
     string m_AppId = "";
-    string m_DataKey = "";
     string m_FetchKey = "";
     string m_StartDate = "";
     string m_EndDate = "";
@@ -252,22 +253,26 @@ public class RawDataInspector : EditorWindow
         EditorGUILayout.EndScrollView();
     }
 
+    private GUIContent m_UpidContent = new GUIContent("UPID", "Copy the Unity Project ID from Services > Settings or the 'Editing Project' page of your project dashboard");
+    private GUIContent m_SecretKeyContent = new GUIContent("Secret Key", "Copy the key from the 'Editing Project' page of your project dashboard");
+    private GUIContent m_StartDateContent = new GUIContent("Start Date (YYYY-MM-DD)", "Start date as ISO-8601 datetime");
+    private GUIContent m_EndDateContent = new GUIContent("End Date (YYYY-MM-DD)", "End date as ISO-8601 datetime");
+
     void FetchView()
     {
         string oldPath = m_FetchKey;
-        m_AppId = EditorGUILayout.TextField(new GUIContent("App ID", "Copy the AppID from the 'Editing Project' page of your project dashboard"), m_AppId);
-        m_FetchKey = EditorGUILayout.TextField(new GUIContent("Secret Key", "Copy the key from the 'Editing Project' page of your project dashboard"), m_FetchKey);
+        m_AppId = EditorGUILayout.TextField(m_UpidContent, m_AppId);
+        m_FetchKey = EditorGUILayout.TextField(m_SecretKeyContent, m_FetchKey);
 
         downloadManager.m_AppId = m_AppId;
-        downloadManager.m_DataKey = m_DataKey;
-
+        downloadManager.m_FetchKey = m_FetchKey;
 
         if (oldPath != m_FetchKey && !string.IsNullOrEmpty(m_FetchKey))
         {
             EditorPrefs.SetString(k_FetchKey, m_FetchKey);
         }
-        m_StartDate = EditorGUILayout.TextField(new GUIContent("Start Date (YYYY-MM-DD)", "Start date as ISO-8601 datetime"), m_StartDate);
-        m_EndDate = EditorGUILayout.TextField(new GUIContent("End Date (YYYY-MM-DD)", "End date as ISO-8601 datetime"), m_EndDate);
+        m_StartDate = EditorGUILayout.TextField(m_StartDateContent, m_StartDate);
+        m_EndDate = EditorGUILayout.TextField(m_EndDateContent, m_EndDate);
 
         if (GUILayout.Button("Create New Job"))
         {
@@ -291,6 +296,18 @@ public class RawDataInspector : EditorWindow
         }
     }
 
+    private GUIContent m_MinusEventContent = new GUIContent("- event", "Delete this event");
+    private GUIContent m_PlusParamContent = new GUIContent("+ param", "Add a parameter to this event");
+    private GUIContent m_StrValueContent = new GUIContent("Value");
+    private GUIContent m_RangeContent = new GUIContent("Range");
+    private GUIContent[] m_ParamTypeContent = new GUIContent[] {
+        new GUIContent("S", "string"), 
+        new GUIContent("#", "float or int"), 
+        new GUIContent("B", "boolean")
+    };
+    private GUIContent m_MinusParamContent = new GUIContent("- param", "Delete this parameter");
+    private GUIContent m_PlusEventContent = new GUIContent("+ Event", "Events to be randomly added into the created data.");
+
     void FreeformRandomDataView()
     {
 
@@ -305,12 +322,12 @@ public class RawDataInspector : EditorWindow
 
             EditorGUILayout.BeginHorizontal();
             evt.name = EditorGUILayout.TextField(evt.name);
-            if (GUILayout.Button(new GUIContent("- event", "Delete this event")))
+            if (GUILayout.Button(m_MinusEventContent))
             {
                 m_CustomEvents.Remove(evt);
                 break;
             }
-            if (GUILayout.Button(new GUIContent("+ param", "Add a parameter to this event")))
+            if (GUILayout.Button(m_PlusParamContent))
             {
                 evt.Add(new TestEventParam());
             }
@@ -330,19 +347,15 @@ public class RawDataInspector : EditorWindow
                         EditorGUILayout.LabelField("Value True or False");
                         break;
                     case TestEventParam.Str:
-                        param.strValue = EditorGUILayout.TextField(new GUIContent("Value"), param.strValue);
+                        param.strValue = EditorGUILayout.TextField(m_StrValueContent, param.strValue);
                         break;
                     case TestEventParam.Num:
-                        param.min = EditorGUILayout.FloatField(new GUIContent("Range"), param.min);
+                        param.min = EditorGUILayout.FloatField(m_RangeContent, param.min);
                         param.max = EditorGUILayout.FloatField(param.max);
                         break;
                 }
-                param.type = GUILayout.Toolbar(param.type, new GUIContent[] {
-                    new GUIContent("S", "string"), 
-                    new GUIContent("#", "float or int"), 
-                    new GUIContent("B", "boolean")
-                });
-                if (GUILayout.Button(new GUIContent("- param", "Delete this parameter")))
+                param.type = GUILayout.Toolbar(param.type, m_ParamTypeContent);
+                if (GUILayout.Button(m_MinusParamContent))
                 {
                     evt.Remove(param);
                     break;
@@ -354,7 +367,7 @@ public class RawDataInspector : EditorWindow
             }
         }
         EditorGUILayout.Space();
-        if (GUILayout.Button(new GUIContent("+ Event", "Events to be randomly added into the created data.")))
+        if (GUILayout.Button(m_PlusEventContent))
         {
             m_CustomEvents.Add(new TestCustomEvent());
         }
@@ -442,30 +455,39 @@ public class RawDataInspector : EditorWindow
         CommonEventView();
     }
 
+    private GUIContent m_DeviceCountContent = new GUIContent("Device count", "The number of unique devices you want to simulate");
+    private GUIContent m_SessionCountContent = new GUIContent("Session count", "The number of sessions you want to simulate per device");
+    private GUIContent m_EventCountContent = new GUIContent("Event count", "The total number of events you want to simulate per session");
+    private GUIContent m_IosContent = new GUIContent("iOS", "Send as if from iOS");
+    private GUIContent m_AndroidContent = new GUIContent("Android", "Send as if from Android");
+    private GUIContent m_WebGlContent = new GUIContent("WebGL", "Send as if from WebGL");
+
     void CommonEventView()
     {
         GUILayout.Space(20f);
 
-        m_DeviceCount = EditorGUILayout.IntField(new GUIContent("Device count", "The number of unique devices you want to simulate"), m_DeviceCount);
+        m_DeviceCount = EditorGUILayout.IntField(m_DeviceCountContent, m_DeviceCount);
         EditorPrefs.SetInt(k_DeviceCountKey, m_DeviceCount);
 
-        m_SessionCount = EditorGUILayout.IntField(new GUIContent("Session count", "The number of sessions you want to simulate per device"), m_SessionCount);
+        m_SessionCount = EditorGUILayout.IntField(m_SessionCountContent, m_SessionCount);
         EditorPrefs.SetInt(k_SessionCountKey, m_SessionCount);
 
-        m_EventCount = EditorGUILayout.IntField(new GUIContent("Event count", "The total number of events you want to simulate per session"), m_EventCount);
+        m_EventCount = EditorGUILayout.IntField(m_EventCountContent, m_EventCount);
         EditorPrefs.SetInt(k_EventCountKey, m_EventCount);
 
         GUILayout.BeginVertical("box");
         GUILayout.Label("Platforms");
-        m_SendIos = EditorGUILayout.Toggle(new GUIContent("iOS", "Send as if from iOS"), m_SendIos);
-        m_SendAndroid = EditorGUILayout.Toggle(new GUIContent("Android", "Send as if from Android"), m_SendAndroid);
-        m_SendWeb = EditorGUILayout.Toggle(new GUIContent("WebGL", "Send as if from WebGL"), m_SendWeb);
+        m_SendIos = EditorGUILayout.Toggle(m_IosContent, m_SendIos);
+        m_SendAndroid = EditorGUILayout.Toggle(m_AndroidContent, m_SendAndroid);
+        m_SendWeb = EditorGUILayout.Toggle(m_WebGlContent, m_SendWeb);
         GUILayout.EndVertical();
     }
 
+    private GUIContent m_DataStoryIndexContent = new GUIContent("Demo", "Pick a story for some demo data.");
+
     void CreateDemoData()
     {
-        m_DataStoryIndex = EditorGUILayout.Popup(new GUIContent("Demo", "Pick a story for some demo data."), m_DataStoryIndex, m_DataStoryList);
+        m_DataStoryIndex = EditorGUILayout.Popup(m_DataStoryIndexContent, m_DataStoryIndex, m_DataStoryList);
 
         var story = m_DataStories[m_DataStoryIndex];
         EditorGUILayout.LabelField("Genre", EditorStyles.boldLabel);
@@ -959,9 +981,9 @@ public class RawDataInspector : EditorWindow
         {
             System.IO.Directory.CreateDirectory(savePath);
         }
-        string outputFileName = firstDate + "_custom.txt";
+        string outputFileName = firstDate + "_custom.md.gz";
         string path = System.IO.Path.Combine(savePath, outputFileName);
-        System.IO.File.WriteAllText(path, data);
+        IonicGZip.CompressAndSave(path, data);
     }
 
     string GetSavePath()
@@ -1030,6 +1052,15 @@ public class RawDataInspector : EditorWindow
 
     protected void RestoreValues()
     {
+        #if UNITY_5_3_OR_NEWER
+        if (string.IsNullOrEmpty(m_AppId) && !string.IsNullOrEmpty(Application.cloudProjectId))
+        {
+            m_AppId = Application.cloudProjectId;
+        }
+        #endif
+
+
+
         m_DataPath = EditorPrefs.GetString(k_DataPathKey, m_DataPath);
         m_IncludeTime = EditorPrefs.GetBool(k_IncludeTimeKey, m_IncludeTime);
         m_IncludeX = EditorPrefs.GetBool(k_IncludeXKey, m_IncludeX);
@@ -1096,7 +1127,7 @@ public class RawDataInspector : EditorWindow
     void ViewEventNames()
     {
         string oldEventsString = string.Join("|", m_EventNames.ToArray());
-        if (GUILayout.Button(new GUIContent("+ Event Name", "Events to be randomly added into the created data.")))
+        if (GUILayout.Button(m_AddEventContent))
         {
             m_EventNames.Add("Event name");
         }

@@ -55,6 +55,7 @@ namespace UnityAnalyticsHeatmap
         RawEventClient m_RawEventClient;
         HeatmapAggregator m_Aggregator;
 
+        private GUIContent[] m_SmootherOptionsContent;
         Texture2D unionIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/union.png") as Texture2D;
         Texture2D numberIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/number.png") as Texture2D;
         Texture2D noneIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/none.png") as Texture2D;
@@ -145,6 +146,12 @@ namespace UnityAnalyticsHeatmap
                 arbitraryFieldsList = loadedArbitraryFields.Split('|');
             }
             m_ArbitraryFields = new List<string>(arbitraryFieldsList);
+
+            m_SmootherOptionsContent = new GUIContent[] {
+                new GUIContent(unionIcon, "Unify all"), 
+                new GUIContent(numberIcon, "Smooth to value"),
+                new GUIContent(noneIcon, "No smoothing")
+            };
         }
 
         public static AggregationInspector Init(RawEventClient client, HeatmapAggregator aggregator)
@@ -184,12 +191,20 @@ namespace UnityAnalyticsHeatmap
             m_RawEventClient.Fetch(m_RawDataPath, localOnly, new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end, rawFetchHandler);
         }
 
+        private GUIContent m_UseCustomDataPathContent = new GUIContent("Use custom data path", "By default, will use Application.persistentDataPath");
+        private GUIContent m_DataPathContent = new GUIContent("Save to path", "Where to save and retrieve data (defaults to Application.persistentDataPath");
+        private GUIContent m_DatesContent = new GUIContent("Dates", "ISO-8601 datetimes (YYYY-MM-DD)");
+        private GUIContent m_AddFieldContent = new GUIContent("+", "Add field");
+        private GUIContent m_RemapColorContent = new GUIContent("Remap color to field", "By default, heatmap color is determined by event density. Checking this box allows you to remap to a specific field (e.g., use to identify fps drops.)");
+        private GUIContent m_RemapColorFieldContent = new GUIContent("Field","Name the field to remap");
+        private GUIContent m_RemapOptionIndexContent = new GUIContent("Remap operation", "How should the remapped variable aggregate?");
+
         public void OnGUI()
         {
             GUILayout.BeginVertical("box");
             GUILayout.BeginHorizontal();
             bool oldUseCustomDataPath = m_UseCustomDataPath;
-            m_UseCustomDataPath = EditorGUILayout.Toggle(new GUIContent("Use custom data path", "By default, will use Application.persistentDataPath"), m_UseCustomDataPath);
+            m_UseCustomDataPath = EditorGUILayout.Toggle(m_UseCustomDataPathContent, m_UseCustomDataPath);
             if (oldUseCustomDataPath != m_UseCustomDataPath)
             {
                 EditorPrefs.SetBool(k_UseCustomDataPathKey, m_UseCustomDataPath);
@@ -207,7 +222,7 @@ namespace UnityAnalyticsHeatmap
             else
             {
                 string oldDataPath = m_DataPath;
-                m_DataPath = EditorGUILayout.TextField(new GUIContent("Save to path", "Where to save and retrieve data (defaults to Application.persistentDataPath"), m_DataPath);
+                m_DataPath = EditorGUILayout.TextField(m_DataPathContent, m_DataPath);
                 if (string.IsNullOrEmpty(m_DataPath))
                 {
                     m_DataPath = Application.persistentDataPath;
@@ -222,7 +237,7 @@ namespace UnityAnalyticsHeatmap
             m_RawEventClient.SetDataPath(m_DataPath);
 
             GUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(new GUIContent("Dates", "ISO-8601 datetimes (YYYY-MM-DD)"), GUILayout.Width(35));
+            EditorGUILayout.LabelField(m_DatesContent, GUILayout.Width(35));
             m_StartDate = EditorGUILayout.TextField(m_StartDate);
             EditorGUILayout.LabelField("-", GUILayout.Width(10));
             m_EndDate = EditorGUILayout.TextField(m_EndDate);
@@ -284,7 +299,7 @@ namespace UnityAnalyticsHeatmap
                         break;
                     }
                     m_ArbitraryFields[a] = EditorGUILayout.TextField(m_ArbitraryFields[a]);
-                    if (a == m_ArbitraryFields.Count-1 && GUILayout.Button(new GUIContent("+", "Add field")))
+                    if (a == m_ArbitraryFields.Count-1 && GUILayout.Button(m_AddFieldContent))
                     {
                         m_ArbitraryFields.Add("Field name");
                     }
@@ -300,7 +315,7 @@ namespace UnityAnalyticsHeatmap
 
             GUILayout.BeginVertical("Box");
             bool oldRemapColor = m_RemapColor;
-            m_RemapColor = EditorGUILayout.Toggle(new GUIContent("Remap color to field", "By default, heatmap color is determined by event density. Checking this box allows you to remap to a specific field (e.g., use to identify fps drops.)"), m_RemapColor);
+            m_RemapColor = EditorGUILayout.Toggle(m_RemapColorContent, m_RemapColor);
             if (oldRemapColor != m_RemapColor)
             {
                 EditorPrefs.SetBool(k_RemapColorKey, m_RemapColor);
@@ -309,8 +324,8 @@ namespace UnityAnalyticsHeatmap
             {
                 string oldRemapField = m_RemapColorField;
                 int oldOptionIndex = m_RemapOptionIndex;
-                m_RemapColorField = EditorGUILayout.TextField(new GUIContent("Field","Name the field to remap"), m_RemapColorField);
-                m_RemapOptionIndex = EditorGUILayout.Popup(new GUIContent("Remap operation", "How should the remapped variable aggregate?"), m_RemapOptionIndex, m_RemapOptions);
+                m_RemapColorField = EditorGUILayout.TextField(m_RemapColorFieldContent, m_RemapColorField);
+                m_RemapOptionIndex = EditorGUILayout.Popup(m_RemapOptionIndexContent, m_RemapOptionIndex, m_RemapOptions);
 
                 if (m_RemapOptionIds[m_RemapOptionIndex] == AggregationMethod.Percentile)
                 {
@@ -331,12 +346,10 @@ namespace UnityAnalyticsHeatmap
         void SmootherControl(ref int toggler, ref float value, string label, string tooltip, string toggleKey, string valueKey)
         {
             GUILayout.BeginVertical();
+
             int oldToggler = toggler;
-            toggler = GUILayout.Toolbar(toggler, new GUIContent[] {
-                new GUIContent(unionIcon, "Union"), 
-                new GUIContent(numberIcon, "Smooth to value"),
-                new GUIContent(noneIcon, "No smoothing")
-            }, GUILayout.MaxWidth(100));
+            toggler = GUILayout.Toolbar(
+                toggler, m_SmootherOptionsContent, GUILayout.MaxWidth(100));
             float oldValue = value;
 
             float lw = EditorGUIUtility.labelWidth;

@@ -127,7 +127,7 @@ namespace UnityAnalyticsHeatmap
                 string savePath = GetSavePath();
                 if (System.IO.Directory.Exists(savePath))
                 {
-                    var possibleFilesToFetch = new List<string>(Directory.GetFiles(savePath, "*.txt"));
+                    var possibleFilesToFetch = new List<string>(Directory.GetFiles(savePath, "*.gz"));
 
                     m_FilesToFetch = new List<string>();
 
