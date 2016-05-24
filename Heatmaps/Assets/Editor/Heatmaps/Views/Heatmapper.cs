@@ -106,14 +106,6 @@ public class Heatmapper : EditorWindow
             AttemptReconnectWithHeatmapInstance();
         }
         GUILayout.EndVertical();
-
-        if (GUILayout.Button("GZip"))
-        {
-            string[] myList = new string[1]{
-                System.IO.Path.Combine(Application.dataPath, "../Raw/README.md.gz")
-            };
-            Debug.Log(IonicTest.DecompressFiles(myList));
-        }
         EditorGUILayout.EndScrollView();
     }
 
