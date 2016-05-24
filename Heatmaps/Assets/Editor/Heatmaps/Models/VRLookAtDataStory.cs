@@ -6,7 +6,7 @@ namespace UnityAnalyticsHeatmap
 {
     public class VRLookAtDataStory : DataStory
     {
-        public VRLookAtDataStory()
+        public VRLookAtDataStory() : base()
         {
             name = "VR Look At";
             genre = "VR Adventure";
@@ -31,9 +31,7 @@ namespace UnityAnalyticsHeatmap
         #region implemented abstract members of DataStory
         public override Dictionary<double, string> Generate()
         {
-            // Set a seed so set is consistently generated
-            UnityEngine.Random.seed = 42;
-
+            base.Generate();
             List<string> eventNames = new List<string>(){"Heatmap.LookAt"};
 
             List<TestCustomEvent> events = new List<TestCustomEvent>();
@@ -62,7 +60,7 @@ namespace UnityAnalyticsHeatmap
 
             string data = RawDataInspector.headers;
             int fileCount = 0;
-            int eventCount = 60;
+            int eventCount = 30;
             int deviceCount = 5;
             int sessionCount = 1;
 

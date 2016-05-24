@@ -6,7 +6,7 @@ namespace UnityAnalyticsHeatmap
 {
     public class SpeedRacerDataStory : DataStory
     {
-        public SpeedRacerDataStory()
+        public SpeedRacerDataStory() : base()
         {
             name = "Speed Racer";
             genre = "2D Car Racing Game";
@@ -41,9 +41,7 @@ namespace UnityAnalyticsHeatmap
         #region implemented abstract members of DataStory
         public override Dictionary<double, string> Generate()
         {
-            // Set a seed so set is consistently generated
-            UnityEngine.Random.seed = 42;
-
+            base.Generate();
             List<string> eventNames = new List<string>(){"Heatmap.PlayerPosition","Heatmap.Crash"};
 
             List<TestCustomEvent> events = new List<TestCustomEvent>();

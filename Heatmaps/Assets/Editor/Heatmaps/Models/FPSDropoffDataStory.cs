@@ -10,7 +10,7 @@ namespace UnityAnalyticsHeatmap
     {
         int m_Levels = 5;
 
-        public FPSDropoffDataStory()
+        public FPSDropoffDataStory() : base()
         {
             name = "Maze 2: FPS Dropoff";
             genre = "2D Maze Game";
@@ -43,9 +43,7 @@ namespace UnityAnalyticsHeatmap
 
         override protected Dictionary<double, string> Play()
         {
-            // Set a seed so set is consistently generated
-            UnityEngine.Random.seed = 42;
-
+            base.Generate();
             List<string> eventNames = new List<string>(){m_EventName};
 
             List<TestCustomEvent> events = new List<TestCustomEvent>();

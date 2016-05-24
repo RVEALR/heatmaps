@@ -6,7 +6,7 @@ namespace UnityAnalyticsHeatmap
 {
     public class BasicDataStory : DataStory
     {
-        public BasicDataStory()
+        public BasicDataStory() : base()
         {
             name = "Basic Functionality";
             genre = "Any";
@@ -27,9 +27,7 @@ namespace UnityAnalyticsHeatmap
         #region implemented abstract members of DataStory
         public override Dictionary<double, string> Generate()
         {
-            // Set a seed so set is consistently generated
-            UnityEngine.Random.seed = 42;
-
+            base.Generate();
             List<string> eventNames = new List<string>(){"Heatmap.ShotWeapon"};
 
             List<TestCustomEvent> events = new List<TestCustomEvent>();

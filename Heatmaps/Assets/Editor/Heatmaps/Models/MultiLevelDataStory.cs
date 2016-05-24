@@ -8,7 +8,7 @@ namespace UnityAnalyticsHeatmap
     {
         int m_Levels = 5;
 
-        public MultiLevelDataStory()
+        public MultiLevelDataStory() : base()
         {
             name = "Maze 1: Multilevel Game";
             genre = "2D Maze Game";
@@ -36,9 +36,7 @@ namespace UnityAnalyticsHeatmap
 
         override protected Dictionary<double, string> Play()
         {
-            // Set a seed so set is consistently generated
-            UnityEngine.Random.seed = 42;
-
+            base.Generate();
             List<string> eventNames = new List<string>(){m_EventName};
 
             List<TestCustomEvent> events = new List<TestCustomEvent>();

@@ -11,6 +11,9 @@ namespace UnityAnalyticsHeatmap
 {
     public abstract class DataStory
     {
+        public DataStory()
+        {
+        }
         public static DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
 
         public string name = "";
@@ -19,7 +22,16 @@ namespace UnityAnalyticsHeatmap
         public string whatToTry = "";
         public string sampleCode = "";
 
-        public abstract Dictionary<double, string> Generate();
+        public virtual Dictionary<double, string> Generate()
+        {
+            // Set a seed so set is consistently generated
+            #if UNITY_5_4_OR_NEWER
+            UnityEngine.Random.InitState(42);
+            #elif
+            UnityEngine.Random.seed = 42;
+            #endif
+            return null;
+        }
 
         public override string ToString()
         {
