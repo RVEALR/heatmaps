@@ -19,7 +19,7 @@ public class HeatmapSubmap : MonoBehaviour
 
         #if UNITY_5_4_OR_NEWER
         GetComponent<MeshRenderer>().lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
-        #elif
+        #else
         GetComponent<MeshRenderer>().useLightProbes = false;
         #endif
         GetComponent<MeshRenderer>().reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
