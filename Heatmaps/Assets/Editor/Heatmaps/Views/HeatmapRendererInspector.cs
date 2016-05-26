@@ -96,8 +96,9 @@ namespace UnityAnalyticsHeatmap
         private GUIContent m_ParticleDirectionContent = new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point");
         private GUIContent m_PlaySpeedContent = new GUIContent("Play Speed", "Speed at which playback occurs");
         private GUIContent m_RestartContent = new GUIContent("<<", "Back to Start");
-        private GUIContent m_PlayContent = new GUIContent(playText, playTip);
-        private GUIContent m_PauseContent = new GUIContent(playText, playTip);
+        private GUIContent m_PlayContent = new GUIContent(">", "Play");
+        private GUIContent m_PauseContent = new GUIContent("||", "Pause");
+        private GUIContent m_TipsContent = new GUIContent("Hot tips", "When enabled, see individual point information on rollover. Caution: can be costly! Also note, submap must be selected to see hot tips.");
 
         public void OnGUI()
         {
@@ -173,10 +174,8 @@ namespace UnityAnalyticsHeatmap
                 m_IsPlaying = false;
             }
 
-            string playTip = m_IsPlaying ? "Pause" : "Play";
-            string playText = m_IsPlaying ? "||" : ">";
-            GUIContent playContent = new GUIContent(playText, playTip);
-            if (GUILayout.Button(playContent))
+            GUIContent playButtonContent = m_IsPlaying ? m_PauseContent : m_PlayContent;
+            if (GUILayout.Button(playButtonContent))
             {
                 if (m_StartTime < m_MaxTime && m_EndTime == m_MaxTime)
                 {
@@ -205,7 +204,7 @@ namespace UnityAnalyticsHeatmap
                 int current = m_GameObject.GetComponent<IHeatmapRenderer>().currentPoints;
                 GUILayout.Label("Points (displayed/total): " + current + " / " + total);
                 bool oldTips = m_Tips;
-                m_Tips = EditorGUILayout.Toggle(new GUIContent("Hot tips", "When enabled, see individual point information on rollover. Caution: can be costly! Also note, submap must be selected to see hot tips."), m_Tips);
+                m_Tips = EditorGUILayout.Toggle(m_TipsContent, m_Tips);
                 if (oldTips != m_Tips)
                 {
                     EditorPrefs.SetBool(k_ShowTipsKey, m_Tips);
@@ -317,7 +316,6 @@ namespace UnityAnalyticsHeatmap
                     if (r != null)
                     {
                         r.UpdateTimeLimits(m_StartTime, m_EndTime);
-                        EditorGUI.FocusTextInControl("");
                         m_Heatmapper.Repaint();
                     }
                 }
