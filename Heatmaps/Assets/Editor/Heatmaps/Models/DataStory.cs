@@ -14,7 +14,6 @@ namespace UnityAnalyticsHeatmap
         public DataStory()
         {
         }
-        public static DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
 
         public string name = "";
         public string genre = "";

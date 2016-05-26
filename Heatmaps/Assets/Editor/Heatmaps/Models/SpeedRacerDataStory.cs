@@ -81,7 +81,7 @@ namespace UnityAnalyticsHeatmap
 
             DateTime now = DateTime.UtcNow;
             int totalSeconds = deviceCount * eventCount * sessionCount;
-            double endSeconds = Math.Round((now - epoch).TotalSeconds);
+            double endSeconds = Math.Round((now - UnityAnalytics.DateTimeUtils.s_Epoch).TotalSeconds);
             double startSeconds = endSeconds - totalSeconds;
             double currentSeconds = startSeconds;
             double firstDate = currentSeconds;

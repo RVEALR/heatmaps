@@ -140,7 +140,7 @@ namespace UnityAnalyticsHeatmap
                         string fileName = Path.GetFileName(possibleFilesToFetch[a]);
                         Double fileDateString = Convert.ToDouble(fileName.Substring(0, fileName.IndexOf("_")));
                         // Create a date at the epoch, then add to it
-                        DateTime fileDate = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
+                        DateTime fileDate = UnityAnalytics.DateTimeUtils.s_Epoch;
                         fileDate = fileDate.AddSeconds(fileDateString);
                         if (fileDate >= heuristicStart && fileDate <= heuristicEnd)
                         {

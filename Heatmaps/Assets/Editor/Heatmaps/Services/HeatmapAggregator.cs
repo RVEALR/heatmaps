@@ -27,12 +27,12 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using UnityAnalytics;
 
 namespace UnityAnalyticsHeatmap
 {
     public class HeatmapAggregator
     {
-        static DateTime epoch = new DateTime(1970,1,1,0,0,0,0,System.DateTimeKind.Utc);
         string[] pointProperties = new string[]{ "x", "y", "z", "rx", "ry", "rz", "dx", "dy", "dz", "t" };
 
         int m_ReportFiles = 0;
@@ -229,7 +229,7 @@ namespace UnityAnalyticsHeatmap
                     string eventName = rowData[nameIndex];
                     string paramsData = rowData[paramsIndex];
                     double unixTimeStamp = double.Parse(rowData[submitTimeIndex]);
-                    DateTime rowDate = epoch.AddSeconds(unixTimeStamp);
+                    DateTime rowDate = DateTimeUtils.s_Epoch.AddSeconds(unixTimeStamp);
 
 
                     string platform = rowData[platformIndex];
