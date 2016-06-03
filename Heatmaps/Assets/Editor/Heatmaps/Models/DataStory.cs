@@ -23,13 +23,13 @@ namespace UnityAnalyticsHeatmap
 
         public abstract Dictionary<double, string> Generate();
 
-        protected void SetRandomSeed()
+        protected void SetRandomSeed(int value = 42)
         {
             // Set a seed so set is consistently generated
             #if UNITY_5_4_OR_NEWER
-            UnityEngine.Random.InitState(42);
+            UnityEngine.Random.InitState(value);
             #else
-            UnityEngine.Random.seed = 42;
+            UnityEngine.Random.seed = value;
             #endif
         }
 
