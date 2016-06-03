@@ -54,6 +54,11 @@ public class TestCustomEvent : List<TestEventParam> {
 
     public string WriteEvent(int deviceId, int sessionId, double currentSeconds, string platform, bool isDebug = false)
     {
+        return WriteEvent("device" + deviceId + "-DDDD-DDDD", "session" + sessionId + "-SSSS-SSSS", currentSeconds, platform, isDebug);
+    }
+
+    public string WriteEvent(string deviceId, string sessionId, double currentSeconds, string platform, bool isDebug = false)
+    {
         string evt = "";
         evt += currentSeconds + "\t";
 
@@ -64,8 +69,8 @@ public class TestCustomEvent : List<TestEventParam> {
         evt += "custom\t";
 
         // User ID, Session ID
-        evt += "device" + deviceId + "-DDDD-DDDD\t";
-        evt += "session" + sessionId + "-SSSS-SSSS\t";
+        evt += deviceId + "\t";
+        evt += sessionId + "\t";
 
         // Remote IP
         evt += "1.1.1.1\t";
