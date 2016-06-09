@@ -7,12 +7,12 @@
 /// works.
 /// 
 /// RDE instantiates 'Jobs' that roll up raw data into files based on an app key and a date range.
-/// Calling DownloadManager.GetData() with an appropriate date range returns a JobRequest
+/// Calling RawDataClient.GetData() with an appropriate date range returns a JobRequest
 /// with an appropriate m_JobId that uniquely identifies the Job. But this does NOT mean
 /// that you have data. The server asynchronously collates the requested data, a process
 /// which may take seconds to minutes to complete.
 /// 
-/// The DownloadManager polls the server, asking if the Job is complete. Once it is, the
+/// The RawDataClient polls the server, asking if the Job is complete. Once it is, the
 /// manager's CompletionHandler fires, providing the requester with the desired data.
 /// 
 /// This process is human-slow (as mentioned, it could take minutes). So it is suggested
@@ -21,94 +21,8 @@
 /// once baked, the kitchen timer should go "ding!"
 /// 
 /// RAW DATA API
-/// export_job (POST)
-/// Requests a new export job. The job may take seconds or minutes to process.
-///     params:
-///         key: the secret key for the project.
-///         startDate: an ISO-8601 datetime representing the start date of desired data.
-///         endDate: an ISO-8601 datetime representing the end date of desired data.
-///                  If omitted, job will generate through to the present.
-///         previousJobId: if provided, replaces startDate, using the endDate of the previous job.
-///         dataSet: A type of event to download:
-///             - appRunning: sent periodically as the game runs
-///             - appStart: sent once each time the game starts
-///             - custom: your custom events, including heatmap events, are part of these
-///             - deviceInfo: sent once, detailing the type of device on which the game is running
-///             - transaction: sent whenever an in-app purchase is recorded
-///             - userInfo: used with attribution info
-///         format: Supported return formats. Currently includes:
-///             - json
-///             - tsv
-///     returns:
-///         A JSON string reporting the jobId of the created job, or an error.
-///         {
-///             "error":"any error content",
-///             "jobId":"An Id to be used to check status and download the result"
-///         }
-///     example:
-///         https://analytics.cloud.unity3d.com/api/v2/exportJob
-///         POST with params:
-///             appId: "your-app-id"
-///             key: "your-secret-key"
-///             startDate: 2017-01-31
-///             endDate: 2017-02-05
-///             dataSet: "custom"
-///             format: "tsv"
-///
-/// export_job (GET)
-/// Checks on the status of a job.
-///     params:
-///         appId: The application Id.
-///         jobId: The unique identifier for this job.
-///     returns:
-///         A JSON string reporting the job status.
-///         {
-///             "error":"any error content",
-///             "jobId":"The provided jobId",
-///             "status":"created,submitted,finished,error"
-///             "data":"A download URL for the completed job"
-///         }
-///     example:
-///         https://analytics.cloud.unity3d.com/api/v2/exportJob?appId=your-app-id&jobId=your-job-id
-///
-/// download (GET)
-/// Fetches the result data from a job
-///     params:
-///         jobId: The unique identifier for this job.
-///         secureHash: A key to the job sent from the server via export_job (GET).
-///     returns:
-///         A JSON string listing all known historical jobs.
-///         {
-///             "all_jobs": [
-///                {
-///                     "status": "finished",
-///                     "jobId": "unique-job-id",
-///                     "dataSet": "custom",
-///                     "dateRange": "04/01/2016 - 04/02/2016",
-///                     "created": "04/30/2016 18:32:56",
-///                     "jobDuration": "00:00:22",
-///                     "jobLink": "link-to-data-download",
-///                     "downloadFormat": "tsv",
-///                     "secureHash": "the-secure-hash"
-///                },
-///                ...
-///             ],
-///             "data_sets": [
-///                 "deviceInfo",
-///                 "custom",
-///                 ...
-///             ]
-///         }
-///     example:
-///         https://analytics.cloud.unity3d.com/api/v2/download/your-job-id/secure-hash
-/// 
-/// 
-/// export_jobs (GET)
-/// Returns the historical list of jobs for this app.
-///     params
-///         appId: The application Id.
-///     example:
-///         https://analytics.cloud.unity3d.com/api/v2/exportJobs?appId=your-app-id
+/// Documentation for the Raw Data API currently resides here:
+/// https://docs.google.com/document/d/1uxWYktRGAO7scxQ-mgi19v93eo9MG-8X_53RTlWy1Vo/edit#heading=h.49fs52cteoc
 
 
 using System;
@@ -122,9 +36,8 @@ using System.IO;
 namespace UnityAnalytics
 {
 
-    public class DownloadManager
+    public class RawDataClient
     {
-        //private const string BasePath = "https://staging-dashboard.uca.cloud.unity3d.com/";
         private const string BasePath = "https://analytics.cloud.unity3d.com/";
         private const string APIPath = BasePath + "api/v2/projects/";
 
@@ -132,13 +45,13 @@ namespace UnityAnalytics
         public const string JobStatusPath = APIPath + "{0}/rawdataexports/{1}";
         public const string GetJobsPath = APIPath + "{0}/rawdataexports";
 
-        private static DownloadManager _instance;
+        private static RawDataClient _instance;
 
-        public static DownloadManager GetInstance()
+        public static RawDataClient GetInstance()
         {
             if (_instance == null)
             {
-                _instance = new DownloadManager();
+                _instance = new RawDataClient();
             }
             return _instance;
         }
@@ -203,7 +116,7 @@ namespace UnityAnalytics
         public delegate void JobsListCompletionHandler(bool success, List<RawDataReport> list, string reason = "");
         JobsListCompletionHandler m_GetJobsCompletionHandler;
 
-        public DownloadManager()
+        public RawDataClient()
         {
         }
 

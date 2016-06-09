@@ -218,7 +218,7 @@ public class RawDataInspector : EditorWindow
 
     Vector2 m_ScrollPosition;
 
-    DownloadManager m_DownloadManager;
+    RawDataClient m_RawDataClient;
 
     public RawDataInspector()
     {
@@ -228,7 +228,7 @@ public class RawDataInspector : EditorWindow
         m_CompleteContent = new GUIContent(completeIcon, "Complete");
         m_RunningContent = new GUIContent(runningIcon, "Running");
 
-        m_DownloadManager = DownloadManager.GetInstance();
+        m_RawDataClient = RawDataClient.GetInstance();
     }
 
     void OnFocus()
@@ -236,7 +236,7 @@ public class RawDataInspector : EditorWindow
         if (EditorPrefs.GetBool(k_Installed))
         {
             RestoreValues();
-            m_DownloadManager.GetJobs(GetJobsCompletionHandler);
+            m_RawDataClient.GetJobs(GetJobsCompletionHandler);
         }
         else
         {
@@ -276,7 +276,7 @@ public class RawDataInspector : EditorWindow
             FetchView();
             if (!m_ValidManifest)
             {
-                m_DownloadManager.GetJobs(GetJobsCompletionHandler);
+                m_RawDataClient.GetJobs(GetJobsCompletionHandler);
                 m_ValidManifest = true;
             }
         }
@@ -323,9 +323,9 @@ public class RawDataInspector : EditorWindow
         RestoreAppId();
         m_SecretKey = EditorGUILayout.TextField(m_SecretKeyContent, m_SecretKey);
 
-        m_DownloadManager.m_DataPath = m_DataPath;
-        m_DownloadManager.m_AppId = m_AppId;
-        m_DownloadManager.m_SecretKey = m_SecretKey;
+        m_RawDataClient.m_DataPath = m_DataPath;
+        m_RawDataClient.m_AppId = m_AppId;
+        m_RawDataClient.m_SecretKey = m_SecretKey;
         if (oldKey != m_SecretKey && !string.IsNullOrEmpty(m_SecretKey))
         {
             EditorPrefs.SetString(k_FetchKey, m_SecretKey);
@@ -350,7 +350,7 @@ public class RawDataInspector : EditorWindow
         {
             DateTime startDate = DateTime.Parse(m_StartDate).ToUniversalTime();
             DateTime endDate = DateTime.Parse(m_EndDate).ToUniversalTime();
-            RawDataReport report = m_DownloadManager.CreateJob(m_EventTypesContent[m_EventTypeIndex].text, startDate, endDate);
+            RawDataReport report = m_RawDataClient.CreateJob(m_EventTypesContent[m_EventTypeIndex].text, startDate, endDate);
             if (m_Jobs == null)
             {
                 m_Jobs = new List<RawDataReport>();
@@ -360,7 +360,7 @@ public class RawDataInspector : EditorWindow
         }
         if (GUILayout.Button("Get Jobs"))
         {
-            m_DownloadManager.GetJobs(GetJobsCompletionHandler);
+            m_RawDataClient.GetJobs(GetJobsCompletionHandler);
         }
         EditorGUILayout.EndVertical();
 
@@ -409,7 +409,7 @@ public class RawDataInspector : EditorWindow
                 }
                 else if (GUILayout.Button("Download"))
                 {
-                    m_DownloadManager.Download(job);
+                    m_RawDataClient.Download(job);
                     job.isLocal = true;
                 }
                 GUILayout.EndHorizontal();
@@ -456,11 +456,11 @@ public class RawDataInspector : EditorWindow
         }
         if (GUILayout.Button("Dashboard"))
         {
-            Application.OpenURL(m_DownloadManager.DashboardPath);
+            Application.OpenURL(m_RawDataClient.DashboardPath);
         }
         if (GUILayout.Button("Project Config"))
         {
-            Application.OpenURL(m_DownloadManager.ConfigPath);
+            Application.OpenURL(m_RawDataClient.ConfigPath);
         }
         EditorGUILayout.EndHorizontal();
     }
@@ -863,7 +863,7 @@ public class RawDataInspector : EditorWindow
 
     void CreateManifestFile(List<RawDataReport> list)
     {
-        var manifest = m_DownloadManager.GenerateManifest(list);
+        var manifest = m_RawDataClient.GenerateManifest(list);
         SaveFile(manifest, "manifest.json", false);
     }
 

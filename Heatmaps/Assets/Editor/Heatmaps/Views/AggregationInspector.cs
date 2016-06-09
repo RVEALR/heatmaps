@@ -201,8 +201,8 @@ namespace UnityAnalyticsHeatmap
                 throw new Exception("The end date is not properly formatted. Correct format is YYYY-MM-DD.");
             }
 
-            DownloadManager.GetInstance().m_DataPath = m_DataPath;
-            var fileList = DownloadManager.GetInstance().GetFiles(new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end);
+            RawDataClient.GetInstance().m_DataPath = m_DataPath;
+            var fileList = RawDataClient.GetInstance().GetFiles(new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end);
             ProcessAggregation(fileList);
         }
 
