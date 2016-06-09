@@ -117,29 +117,51 @@ using System.Net;
 using System.Collections.Specialized;
 using System.Text;
 using UnityEngine;
+using System.IO;
 
 namespace UnityAnalytics
 {
-    interface IDownloadManager
-    {
-        string m_AppId{get;set;}
-        string m_DataKey{get;set;}
-        JobRequest CreateJob(DateTime startDate, DateTime endDate);
-        JobRequest CreateJob(DateTime startDate);
-        JobRequest CreateJob(JobRequest previousJob);
-        JobRequest CreateJob(JobRequest previousJob, DateTime endDate);
-        List<JobRequest> GetJobs();
-        void Download(JobRequest job);
-    }
 
-    public class DownloadManager : IDownloadManager
+    public class DownloadManager
     {
-        private const string BasePath = "http://localhost:3000/api/";
-        public const string CreateJobPath = BasePath + "exportJob";
-        public const string JobStatusPath = BasePath + "exportJob";
-        public const string GetJobsPath = BasePath + "exportJobs";
-        public const string DownloadPath = BasePath + "download";
+        //private const string BasePath = "https://staging-dashboard.uca.cloud.unity3d.com/";
+        private const string BasePath = "https://analytics.cloud.unity3d.com/";
+        private const string APIPath = BasePath + "api/v2/projects/";
 
+        public const string CreateJobPath = APIPath + "{0}/rawdataexports";
+        public const string JobStatusPath = APIPath + "{0}/rawdataexports/{1}";
+        public const string GetJobsPath = APIPath + "{0}/rawdataexports";
+
+        private static DownloadManager _instance;
+
+        public static DownloadManager GetInstance()
+        {
+            if (_instance == null)
+            {
+                _instance = new DownloadManager();
+            }
+            return _instance;
+        }
+
+        public string DashboardPath
+        {
+            get
+            {
+                return BasePath + "raw_data/" + m_AppId;
+            }
+        }
+
+        public string ConfigPath
+        {
+            get
+            {
+                return BasePath + "projects/" + m_AppId + "/edit";
+            }
+        }
+
+        private const string k_ManifestFileName = "manifest.json";
+
+        private List<RawDataReport> m_ReportList;
 
         protected string _appId;
         public string m_AppId
@@ -154,7 +176,7 @@ namespace UnityAnalytics
             }
         }
         protected string _key;
-        public string m_DataKey
+        public string m_SecretKey
         {
             get
             {
@@ -165,215 +187,467 @@ namespace UnityAnalytics
                 _key = value;
             }
         }
+        protected string _dataPath;
+        public string m_DataPath
+        {
+            get
+            {
+                return _dataPath;
+            }
+            set
+            {
+                _dataPath = value;
+            }
+        }
 
-        public delegate void CompletionHandler(bool success, string reason = "");
-        CompletionHandler downloadCompletionHandler;
-
-
-        protected List<JobRequest> m_Requests;
+        public delegate void JobsListCompletionHandler(bool success, List<RawDataReport> list, string reason = "");
+        JobsListCompletionHandler m_GetJobsCompletionHandler;
 
         public DownloadManager()
         {
-            m_Requests = new List<JobRequest>();
         }
 
-        public JobRequest CreateJob(JobRequest priorJob)
+        public RawDataReport CreateJob(string type, RawDataRequest priorRequest)
         {
-            
-            return CreateJob(priorJob, DateTime.UtcNow);
+            return CreateJob(type, priorRequest, DateTime.UtcNow);
         }
 
-        public JobRequest CreateJob(DateTime startDate)
+        public RawDataReport CreateJob(string type, DateTime startDate)
         {
-            return CreateJob(startDate, DateTime.UtcNow);
+            return CreateJob(type, startDate, DateTime.UtcNow);
         }
 
-        public JobRequest CreateJob(JobRequest priorJob, DateTime endDate)
+        public RawDataReport CreateJob(string type, RawDataRequest priorRequest, DateTime endDate)
         {
-            JobRequest job = new JobRequest();
-            job.m_PreviousRequest = priorJob;
-            job.m_StartDate = priorJob.m_EndDate;
-            job.m_EndDate   = endDate;
-            job.m_DataKey = m_DataKey;
-            job.m_AppId = m_AppId;
-            job.Create();
-            m_Requests.Add(job);
-            return job;
+            var request = new RawDataRequest(priorRequest, endDate);
+            var report = SubmitRequest(request);
+            return report;
         }
 
-        public JobRequest CreateJob(DateTime startDate, DateTime endDate)
+        public RawDataReport CreateJob(string type, DateTime startDate, DateTime endDate)
         {
-            JobRequest job = new JobRequest();
-            job.m_StartDate = startDate;
-            job.m_EndDate   = endDate;
-            job.m_DataKey = m_DataKey;
-            job.m_AppId = m_AppId;
-            job.Create();
-            m_Requests.Add(job);
-            return job;
+            var request = new RawDataRequest(type, startDate, endDate);
+            var report = SubmitRequest(request);
+            return report;
         }
 
-        public List<JobRequest> GetJobs()
+        private RawDataReport SubmitRequest(RawDataRequest request)
         {
-            WebClient client = new WebClient();
-            Authorization(client);
-            //client.Headers[HttpRequestHeader.ContentType] = "application/x-www-form-urlencoded";
-            string responsebody =  client.DownloadString(DownloadManager.GetJobsPath + "/" + m_AppId);
-            //string responsebody = Encoding.UTF8.GetString(responsebytes);
-
-           // https://analytics.cloud.unity3d.com/api/v1/batches?appid=e102ba43-6f40-4a68-bdce-253c3683844b&hash=c2b3471733f85967191897a4f3390117f9ef7b5b
-            Debug.Log(responsebody);
-
-            var report = MiniJSON.Json.Deserialize(responsebody) as Dictionary<string, object>;
-
-
-            List<JobRequest> list = new List<JobRequest>();
-            if (report.ContainsKey("all_jobs"))
+            RawDataReport report = null;
+            using(WebClient client = new WebClient())
             {
-                List<object> items;
-                items = report["all_jobs"] as List<object>;
-                foreach(Dictionary<string, object> item in items)
+                client.Encoding = System.Text.Encoding.UTF8;
+                Authorization(client);
+                string url = string.Format(CreateJobPath, m_AppId);
+                string start = request.startDate.ToString("yyyy-MM-dd");
+                string end = request.endDate.ToString("yyyy-MM-dd");
+                string data = "\"startDate\":\"{0}\",\"endDate\":\"{1}\",\"format\":\"{2}\",\"dataset\":\"{3}\"";
+                data = "{" + string.Format(data, start, end, "tsv", request.dataset) + "}";
+                string result = client.UploadString(new Uri(url), "POST", data);
+                var dict = MiniJSON.Json.Deserialize(result) as Dictionary<string, object>;
+
+                report = new RawDataReport(dict);
+            }
+
+            return report;
+        }
+
+        public List<RawDataReport> GetManifest()
+        {
+            List<RawDataReport> list = null;
+            string path = PathFromFileName(k_ManifestFileName);
+            if (File.Exists(path))
+            {
+                using(var stream = new StreamReader(path))
                 {
-                    JobRequest job = new JobRequest();
-                    job.m_AppId = m_AppId;
-
-                    object created = null;
-                    item.TryGetValue("created", out created);
-                    job.m_Created = created == null ? "unknown" : created.ToString();
-
-                    object dateRange = null;
-                    item.TryGetValue("dateRange", out dateRange);
-                    job.m_DateRange = dateRange == null ? "unknown" : dateRange.ToString();
-
-                    object status = null;
-                    item.TryGetValue("status", out status);
-                    job.m_Status = (JobRequestStatus)Enum.Parse(typeof(JobRequestStatus), status.ToString());
-                    list.Add(job);
+                    string text = stream.ReadToEnd();
+                    list = GenerateList(text);
+                    TestLocalFiles(list);
+                    if (m_GetJobsCompletionHandler != null)
+                    {
+                        m_GetJobsCompletionHandler(true, list);
+                    }
                 }
             }
             return list;
         }
-        public void Download(JobRequest job)
+
+        public List<string> GetFiles(UnityAnalyticsEventType[]eventTypes, DateTime start, DateTime end)
         {
+            var eventList = new List<UnityAnalyticsEventType>(eventTypes);
+            var resultList = new List<string>();
+            var manifest = GetManifest();
+            if (manifest != null)
+            {
+                for (var a = 0; a < manifest.Count; a++)
+                {
+                    var evt = (UnityAnalyticsEventType)Enum.Parse(typeof(UnityAnalyticsEventType), manifest[a].request.dataset);
+                    if (eventList.Contains(evt) && manifest[a].status == RawDataReport.Completed)
+                    {
+                        var fileList = manifest[a].result.fileList;
+                        for (var b = 0; b < fileList.Count; b++)
+                        {
+                            if (fileList[b].name == "headers.gz")
+                            {
+                                continue;
+                            }
+                            DateTime date = DateTime.Parse(fileList[b].date).ToUniversalTime();
+                            if (date >= start && date <= end)
+                            {
+                                var path = PathFromFileName(fileList[b].name);
+                                resultList.Add(path);
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("No manifest found");
+            }
+            return resultList;
+        }
+
+        public void GetJobs(JobsListCompletionHandler getJobsCompletionHandler)
+        {
+            m_GetJobsCompletionHandler = getJobsCompletionHandler;
+            if (string.IsNullOrEmpty(m_DataPath))
+            {
+                return;
+            }
+
+            // Get and return local version
+            GetManifest();
+
+            if (string.IsNullOrEmpty(m_AppId) || string.IsNullOrEmpty(m_SecretKey))
+            {
+                return;
+            }
+
+            // Then get and return the remote version
+            using(WebClient client = new WebClient())
+            {
+                client.Encoding = System.Text.Encoding.UTF8;
+                Authorization(client);
+                string url = string.Format(GetJobsPath, m_AppId);
+                string responsebody =  client.DownloadString(url);
+                SaveFile(k_ManifestFileName, responsebody);
+                var list = GenerateList(responsebody);
+                TestLocalFiles(list);
+                if (m_GetJobsCompletionHandler != null)
+                {
+                    m_GetJobsCompletionHandler(true, list);
+                }
+            }
+        }
+
+        public string GenerateManifest(List<RawDataReport> list)
+        {
+            var str = "[";
+            for(var a = 0; a < list.Count; a++)
+            {
+                var report = list[a];
+                str += report.ToString();
+                if (a < list.Count-1)
+                    str += ",";
+            }
+            str += "]";
+            return str;
+        }
+
+        private List<RawDataReport> GenerateList(string text)
+        {
+            var reportRecordList = new List<RawDataReport>();
+            var list = MiniJSON.Json.Deserialize(text) as List<object>;
+            for (var a = 0; a < list.Count; a++)
+            {
+                var report = list[a] as Dictionary<string, object>;
+                reportRecordList.Add(new RawDataReport(report));
+            }
+            return reportRecordList;
+        }
+
+        private void TestLocalFiles(List<RawDataReport> list)
+        {
+            for (var a = 0; a < list.Count; a++)
+            {
+                list[a].isLocal = FilesHaveLoaded(list[a]);
+            }
+        }
+
+        public bool FilesHaveLoaded(RawDataReport report)
+        {
+            if (report.result == null || report.result.fileList.Count == 0)
+            {
+                return false;
+            }
+            for (var a = 0; a < report.result.fileList.Count; a++)
+            {
+                if (!FileHasLoaded(report.result.fileList[a]))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public bool FileHasLoaded(RawDataFile file)
+        {
+            string path = PathFromFileName(file.name);
+            return File.Exists(path);
+        }
+
+        private string PathFromFileName(string fileName)
+        {
+            string savePath = System.IO.Path.Combine(m_DataPath, "RawData");
+            if (!System.IO.Directory.Exists(savePath))
+            {
+                System.IO.Directory.CreateDirectory(savePath);
+            }
+            return savePath + Path.DirectorySeparatorChar + fileName;
+        }
+
+        private void SaveFile(string outputFileName, string outputData)
+        {
+            File.WriteAllText(PathFromFileName(outputFileName), outputData);
+        }
+
+        public void Download(RawDataReport job)
+        {
+            for(int a = 0; a < job.result.fileList.Count; a++)
+            {
+                string file = job.result.fileList[a].url;
+                using(WebClient client = new WebClient())
+                {
+                    string savePath = PathFromFileName(job.result.fileList[a].name);
+                    client.DownloadFile(file, savePath);
+                }
+            }
         }
 
         protected void Authorization(WebClient client)
         {
-            string credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes(m_AppId + ":" + m_DataKey));
-            client.Headers[HttpRequestHeader.Authorization] = string.Format("Basic ", credentials);
+            string credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes(m_AppId + ":" + m_SecretKey));
+            client.Headers.Add("Content-Type", "application/json");
+            client.Headers.Add(HttpRequestHeader.Authorization, string.Format("Basic {0}", credentials));
+
+
         }
     }
 
-    /// <summary>
-    /// Represents a request to RDE for a new Job
-    /// </summary>
-    public class JobRequest
+    public class RawDataReport
     {
-        // Request variables
-        public JobRequest m_PreviousRequest;   // Note: null if m_StartDate is set.
-        public DateTime m_StartDate;           // Note: null if m_PreviousRequest is set.
-        public DateTime m_EndDate;             // Note: null if open-ended query.
-        public string m_AppId;
-        public string m_DataKey;
-        public UnityAnalyticsEventType m_DataSet;
+        public const string Completed = "completed";
+        public const string Failed = "failed";
+        public const string Running = "running";
 
-        // Result variables
-        public JobRequestStatus m_Status;
-        public string m_ErrorMessage = "";
-        public string m_JobId;
-        public string m_JobLink;
-        public string m_SecureHash;
-        public string m_Format = "tsv";
 
-        // Useful for debugging and UI
-        public string m_Created;
-        public string m_DateRange;
-        public string m_Duration;
+        public string id;
+        public string upid;
+        public string status;
+        public DateTime createdAt;
+        public int duration;
+        public RawDataRequest request;
+        public RawDataResult result;
+        private bool _isLocal = false;
 
-        WebClient client = new WebClient();
-        bool m_RequestPending = false;
-
-        public delegate void CompletionHandler(bool success, string reason = "");
-        public CompletionHandler downloadCompletionHandler;
-
-        public JobRequest Create()
+        public bool isLocal
         {
-            if (!m_RequestPending && !string.IsNullOrEmpty(m_AppId))
+            get
             {
-                DateTime useStartDate = (m_PreviousRequest != null) ? m_PreviousRequest.m_EndDate : m_StartDate;
-                string start = useStartDate.ToString("yyyy-MM-dd");
-                string end = m_EndDate.ToString("yyyy-MM-dd");
-
-                var payload = new NameValueCollection();
-                payload.Add("appId", m_AppId);
-                payload.Add("key", m_DataKey);
-                payload.Add("startDate", start);
-                payload.Add("endDate", end);
-                payload.Add("format", "tsv");
-                payload.Add("dataset", "custom");
-
-                client.Headers[HttpRequestHeader.ContentType] = "application/x-www-form-urlencoded";
-                var responsebytes =  client.UploadValues(DownloadManager.CreateJobPath, "POST", payload);
-                string responsebody = Encoding.UTF8.GetString(responsebytes);
-                var report = MiniJSON.Json.Deserialize(responsebody) as Dictionary<string, string>;
-
-                if (report.ContainsKey("error"))
-                {
-                    //Do error stuff
-                    m_Status = JobRequestStatus.error;
-                    m_ErrorMessage = report["error"];
-                }
-                else if (report.ContainsKey("jobId"))
-                {
-                    m_JobId = report["jobId"];
-                    m_Status = JobRequestStatus.created;
-                }
-                return this;
+                return _isLocal;
             }
-            return null;
-        }
-
-        public JobRequest GetStatus()
-        {
-            if (!m_RequestPending && !string.IsNullOrEmpty(m_AppId) && !string.IsNullOrEmpty(m_JobId))
+            set
             {
-                string data = "appId = " + m_AppId + " jobId = " + m_JobId;
-                var result = client.UploadString(DownloadManager.JobStatusPath, "GET", data);
-                var report = MiniJSON.Json.Deserialize(result) as Dictionary<string, string>;
-
-                if (report.ContainsKey("error"))
-                {
-                    //Do error stuff
-                    m_Status = JobRequestStatus.error;
-                    m_ErrorMessage = report["error"];
-                }
-                else if (report.ContainsKey("status"))
-                {
-                    m_Status = (JobRequestStatus)Enum.Parse(typeof(JobRequestStatus), report["status"]);
-                    if (m_Status == JobRequestStatus.finished && report.ContainsKey("data"))
-                    {
-                        m_JobLink = report["data"];
-                    }
-                }
-                return this;
-            }
-            return null;
-        }
-
-        public void Download(string url, string filePath, CompletionHandler handler)
-        {
-            if (!m_RequestPending)
-            {
-                m_RequestPending = true;
-                this.downloadCompletionHandler = handler;
-                client.DownloadFileAsync(new Uri(url), filePath);
+                _isLocal = value;
             }
         }
 
-        protected void OnDownloadFileCompleted(System.ComponentModel.AsyncCompletedEventArgs e)
+        public RawDataReport(Dictionary<string, object> dict)
         {
-            //            base.OnDownloadFileCompleted(e);
-            //            downloadCompletionHandler(true, "Download complete");
+            id = (string)dict["id"];
+            upid = (string)dict["upid"];
+            status = (string)dict["status"];
+            createdAt = DateTime.Parse((string)dict["createdAt"]);
+            duration = Convert.ToInt32(dict["duration"]);
+
+            request = new RawDataRequest(dict["request"] as Dictionary<string, object>);
+            result = (dict.ContainsKey("result") && dict["result"] != null) ? new RawDataResult(dict["result"] as Dictionary<string, object>) : null;
+        }
+
+        public RawDataReport(RawDataRequest request)
+        {
+            this.request = request;
+        }
+
+        internal static string NewProp(string key, string value, bool stripComma = false)
+        {
+            var comma = stripComma ? "" : ",";
+            return "\"" + key + "\":\"" + value + "\"" + comma;
+        }
+
+        internal static string NewProp(string key, int value, bool stripComma = false)
+        {
+            var comma = stripComma ? "" : ",";
+            return "\"" + key + "\":" + value + comma;
+        }
+
+        internal static string ToDateStr(DateTime date)
+        {
+            return date.ToString("o");
+        }
+
+        public override string ToString()
+        {
+            var str = "{";
+            str += NewProp("id", id);
+            str += NewProp("upid", upid);
+            str += NewProp("status", status);
+            str += NewProp("createdAt", ToDateStr(createdAt));
+            str += NewProp("duration", duration);
+            str += "\"request\":";
+            str += request.ToString() + ",";
+            str += "\"result\":";
+            if (result != null)
+            {
+                str += result.ToString();
+            }
+            else
+            {
+                str += "\"null\"";
+            }
+            str += "}";
+            return str;
+        }
+    }
+
+    public class RawDataResult
+    {
+        public int size;
+        public int eventCount;
+        public List<RawDataFile> fileList;   //contains name, url, size, date
+        public bool intraDay;
+
+        public RawDataResult(Dictionary<string, object> dict)
+        {
+            size = (dict.ContainsKey("size")) ? Convert.ToInt32(dict["size"]) : 0;
+            eventCount = (dict.ContainsKey("eventCount")) ? Convert.ToInt32(dict["eventCount"]) : 0;
+            intraDay = (dict.ContainsKey("intraDay")) ? Convert.ToBoolean(dict["intraDay"]) : false;
+            fileList = new List<RawDataFile>();
+
+            if (dict.ContainsKey("fileList"))
+            {
+                var fileListFromDict = (dict["fileList"] == null) ? new List<object>() : dict["fileList"] as List<object>;
+
+                foreach(var file in fileListFromDict)
+                {
+                    fileList.Add(new RawDataFile(file as Dictionary<string,object>));
+                }
+            }
+        }
+
+        public RawDataResult(int size, int eventCount, List<RawDataFile> list, bool intraDay)
+        {
+            this.size = size;
+            this.eventCount = eventCount;
+            this.intraDay = intraDay;
+            fileList = list;
+        }
+
+        public override string ToString()
+        {
+            var str = "{";
+            str += RawDataReport.NewProp("size", size);
+            str += RawDataReport.NewProp("eventCount", eventCount);
+            str += "\"fileList\":[";
+            for (var a = 0; a < fileList.Count; a ++)
+            {
+                str += fileList[a].ToString();
+                if (a < fileList.Count - 1)
+                {
+                    str += ",";
+                }
+            }
+            str += "]}";
+            return str;
+        }
+    }
+
+    public class RawDataRequest
+    {
+        public DateTime startDate;
+        public DateTime endDate;
+        public string format;
+        public string dataset;
+
+        public RawDataRequest(Dictionary<string, object> dict)
+        {
+            startDate = DateTime.Parse((string)dict["startDate"]);
+            endDate = DateTime.Parse((string)dict["endDate"]);
+            format = (string)dict["format"];
+            dataset = (string)dict["dataset"];
+        }
+
+        public RawDataRequest(string type, DateTime start, DateTime end)
+        {
+            dataset = type;
+            startDate = start;
+            endDate = end;
+            format = "tsv";
+        }
+
+        public RawDataRequest(RawDataRequest priorRequest, DateTime endDate)
+        {
+            startDate = priorRequest.endDate;
+            this.endDate = endDate;
+            format = priorRequest.format;
+            dataset = priorRequest.dataset;
+        }
+
+        public override string ToString()
+        {
+            var str = "{";
+            str += RawDataReport.NewProp("startDate", RawDataReport.ToDateStr(startDate));
+            str += RawDataReport.NewProp("endDate", RawDataReport.ToDateStr(endDate));
+            str += RawDataReport.NewProp("format", format);
+            str += RawDataReport.NewProp("dataset", dataset, true);
+            str += "}";
+            return str;
+        }
+    }
+
+    public class RawDataFile
+    {
+        public string name;
+        public string url;
+        public int size;
+        public string date;
+
+        public RawDataFile (Dictionary<string, object> dict)
+        {
+            name = (string)dict["name"];
+            url = (string)dict["url"];
+            size = Convert.ToInt32(dict["size"]);
+            date = dict.ContainsKey("date") ? (string)dict["date"] : null;
+        }
+
+        public RawDataFile (string name, string url, int size, string date)
+        {
+            this.name = name;
+            this.url = url;
+            this.size = size;
+            this.date = date;
+        }
+
+        public override string ToString()
+        {
+            var str = "{";
+            str += RawDataReport.NewProp("name", name);
+            str += RawDataReport.NewProp("url", url);
+            str += RawDataReport.NewProp("size", size);
+            str += RawDataReport.NewProp("date", date, true);
+            str += "}";
+            return str;
         }
     }
 
