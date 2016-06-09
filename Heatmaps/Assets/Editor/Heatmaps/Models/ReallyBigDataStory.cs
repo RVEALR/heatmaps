@@ -73,7 +73,7 @@ namespace UnityAnalyticsHeatmap
 
             var retv = new Dictionary<double, string>();
 
-            string data = RawDataInspector.headers;
+            string data = "";
             int fileCount = 0;
             int eventCount = 500;
             int deviceCount = 5;
