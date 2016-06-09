@@ -6,11 +6,14 @@ using UnityAnalyticsHeatmap;
 using System.Collections.Generic;
 using System.Collections;
 using UnityAnalytics;
+using System.Linq;
 
 public class RawDataInspector : EditorWindow
 {
     private static string k_FetchKey = "UnityAnalyticsRawDataGenFetchKey";
     private static string k_Installed = "UnityAnalyticsRawDataGenInstallKey";
+    private static string k_StartDate = "UnityAnalyticsRawDataStartDateKey";
+    private static string k_EndDate = "UnityAnalyticsRawDataEndDateKey";
     private static string k_DataPathKey = "UnityAnalyticsRawDataGenDataPath";
     private static string k_DeviceCountKey = "UnityAnalyticsRawDataGenDeviceCount";
     private static string k_SessionCountKey = "UnityAnalyticsRawDataGenSessionCount";
@@ -55,7 +58,42 @@ public class RawDataInspector : EditorWindow
     private static string k_MinDZ = "UnityAnalyticsRawDataGenMinDZ";
     private static string k_MaxDZ = "UnityAnalyticsRawDataGenMaxDZ";
 
+    private static Color s_BoxColor = new Color(.9f,.9f,.9f);
+
     private GUIContent m_AddEventContent = new GUIContent("+ Event Name", "Events to be randomly added into the created data.");
+
+    private GUIContent m_UpidContent = new GUIContent("UPID", "Copy the Unity Project ID from Services > Settings or the 'Editing Project' page of your project dashboard");
+    private GUIContent m_SecretKeyContent = new GUIContent("API Key", "Copy the key from the 'Editing Project' page of your project dashboard");
+    private GUIContent m_StartDateContent = new GUIContent("Start Date (YYYY-MM-DD)", "Start date as ISO-8601 datetime");
+    private GUIContent m_EndDateContent = new GUIContent("End Date (YYYY-MM-DD)", "End date as ISO-8601 datetime");
+
+    private Texture2D failedIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/failed.png") as Texture2D;
+    private Texture2D completeIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/success.png") as Texture2D;
+    private Texture2D runningIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/running.png") as Texture2D;
+    private GUIContent m_FailedContent;
+    private GUIContent m_CompleteContent;
+    private GUIContent m_RunningContent;
+
+    private GUIContent m_MinusEventContent = new GUIContent("- event", "Delete this event");
+    private GUIContent m_PlusParamContent = new GUIContent("+ param", "Add a parameter to this event");
+    private GUIContent m_StrValueContent = new GUIContent("Value");
+    private GUIContent m_RangeContent = new GUIContent("Range");
+    private GUIContent[] m_ParamTypeContent = new GUIContent[] {
+        new GUIContent("S", "string"),
+        new GUIContent("#", "float or int"),
+        new GUIContent("B", "boolean")
+    };
+    private GUIContent m_MinusParamContent = new GUIContent("- param", "Delete this parameter");
+    private GUIContent m_PlusEventContent = new GUIContent("+ Event", "Events to be randomly added into the created data.");
+
+    private GUIContent m_DeviceCountContent = new GUIContent("Device count", "The number of unique devices you want to simulate");
+    private GUIContent m_SessionCountContent = new GUIContent("Session count", "The number of sessions you want to simulate per device");
+    private GUIContent m_EventCountContent = new GUIContent("Event count", "The total number of events you want to simulate per session");
+    private GUIContent m_IosContent = new GUIContent("iOS", "Send as if from iOS");
+    private GUIContent m_AndroidContent = new GUIContent("Android", "Send as if from Android");
+    private GUIContent m_WebGlContent = new GUIContent("WebGL", "Send as if from WebGL");
+
+    private GUIContent m_DataStoryIndexContent = new GUIContent("Demo", "Pick a story for some demo data.");
 
     private static int defaultEventCount = 100;
     private static int defaultDeviceCount = 5;
@@ -71,7 +109,6 @@ public class RawDataInspector : EditorWindow
     private static float defaultMaxFPS = 99f;
 
     public const string headers = "ts\tappid\ttype\tuserid\tsessionid\tremote_ip\tplatform\tsdk_ver\tdebug_device\tuser_agent\tsubmit_time\tname\tcustom_params\n";
-    private static DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
     
     [MenuItem("Window/Unity Analytics/Raw Data #%r")]
     static void RawDataInspectorMenuOption()
@@ -80,6 +117,7 @@ public class RawDataInspector : EditorWindow
     }
 
     string m_DataPath = "";
+    bool m_ValidManifest = false;
 
     int m_EventCount = defaultEventCount;
     int m_DeviceCount = defaultDeviceCount;
@@ -108,12 +146,23 @@ public class RawDataInspector : EditorWindow
         new SpeedRacerDataStory()
     };
 
+    GUIContent[] m_EventTypesContent = new GUIContent[]{
+        new GUIContent("appRunning"),
+        new GUIContent("appStart"),
+        new GUIContent("custom"),
+        new GUIContent("deviceInfo"),
+        new GUIContent("transaction"),
+        new GUIContent("userInfo")
+    };
+    int m_EventTypeIndex = 0;
+
     string m_AppId = "";
-    string m_FetchKey = "";
+    string m_SecretKey = "";
     string m_StartDate = "";
     string m_EndDate = "";
 
-    List<JobRequest> m_Jobs = null;
+    List<RawDataReport> m_Jobs = null;
+    bool[] m_JobFoldouts;
 
     int m_DataSource = 0;
     static int FETCH = 0;
@@ -169,11 +218,17 @@ public class RawDataInspector : EditorWindow
 
     Vector2 m_ScrollPosition;
 
-    DownloadManager downloadManager = new DownloadManager();
+    DownloadManager m_DownloadManager;
 
     public RawDataInspector()
     {
         titleContent = new GUIContent("Raw Data");
+
+        m_FailedContent = new GUIContent(failedIcon, "Failed");
+        m_CompleteContent = new GUIContent(completeIcon, "Complete");
+        m_RunningContent = new GUIContent(runningIcon, "Running");
+
+        m_DownloadManager = DownloadManager.GetInstance();
     }
 
     void OnFocus()
@@ -181,6 +236,7 @@ public class RawDataInspector : EditorWindow
         if (EditorPrefs.GetBool(k_Installed))
         {
             RestoreValues();
+            m_DownloadManager.GetJobs(GetJobsCompletionHandler);
         }
         else
         {
@@ -190,7 +246,6 @@ public class RawDataInspector : EditorWindow
 
     void OnGUI()
     {
-        m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
         EditorPrefs.SetString(k_DataPathKey, m_DataPath);
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Reset"))
@@ -214,35 +269,44 @@ public class RawDataInspector : EditorWindow
         }
 
         m_DataSource = GUILayout.Toolbar(m_DataSource, new string[] {"Fetch Data", "Generate Test Data"});
+        GUILayout.Space(10);
 
         if (m_DataSource == FETCH)
         {
             FetchView();
+            if (!m_ValidManifest)
+            {
+                m_DownloadManager.GetJobs(GetJobsCompletionHandler);
+                m_ValidManifest = true;
+            }
         }
         else if (m_DataSource == GENERATE) 
         {
             m_GenerateType = EditorGUILayout.Popup(m_GenerateType, new string[] { "Heatmap Random", "Freeform Random" , "Demo Data"});
             if (m_GenerateType == HEATMAP_RANDOM)
             {
+                m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
                 HeatmapRandomDataView();
                 CreateCode();
+                EditorGUILayout.EndScrollView();
             }
             else if (m_GenerateType == FREEFORM_RANDOM)
             {
+                m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
                 FreeformRandomDataView();
                 CreateCode();
+                EditorGUILayout.EndScrollView();
             }
             else if (m_GenerateType == DEMO)
             {
-                CreateDemoData();
+                m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
+                DemoDataView();
+                EditorGUILayout.EndScrollView();
             }
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Purge"))
             {
-                if (EditorUtility.DisplayDialog("Destroy local data?", "You are about to delete your local heatmaps data cache, meaning you'll have to reload from the server (or regenerate from this tool). Are you sure?", "Purge", "Cancel"))
-                {
-                    PurgeData();
-                }
+                PurgeData();
             }
             if (GUILayout.Button("Generate"))
             {
@@ -250,67 +314,165 @@ public class RawDataInspector : EditorWindow
             }
             EditorGUILayout.EndHorizontal();
         }
-        EditorGUILayout.EndScrollView();
     }
-
-    private GUIContent m_UpidContent = new GUIContent("UPID", "Copy the Unity Project ID from Services > Settings or the 'Editing Project' page of your project dashboard");
-    private GUIContent m_SecretKeyContent = new GUIContent("Secret Key", "Copy the key from the 'Editing Project' page of your project dashboard");
-    private GUIContent m_StartDateContent = new GUIContent("Start Date (YYYY-MM-DD)", "Start date as ISO-8601 datetime");
-    private GUIContent m_EndDateContent = new GUIContent("End Date (YYYY-MM-DD)", "End date as ISO-8601 datetime");
 
     void FetchView()
     {
-        string oldPath = m_FetchKey;
+        string oldKey = m_SecretKey;
         m_AppId = EditorGUILayout.TextField(m_UpidContent, m_AppId);
-        m_FetchKey = EditorGUILayout.TextField(m_SecretKeyContent, m_FetchKey);
+        RestoreAppId();
+        m_SecretKey = EditorGUILayout.TextField(m_SecretKeyContent, m_SecretKey);
 
-        downloadManager.m_AppId = m_AppId;
-        downloadManager.m_FetchKey = m_FetchKey;
-
-        if (oldPath != m_FetchKey && !string.IsNullOrEmpty(m_FetchKey))
+        m_DownloadManager.m_DataPath = m_DataPath;
+        m_DownloadManager.m_AppId = m_AppId;
+        m_DownloadManager.m_SecretKey = m_SecretKey;
+        if (oldKey != m_SecretKey && !string.IsNullOrEmpty(m_SecretKey))
         {
-            EditorPrefs.SetString(k_FetchKey, m_FetchKey);
+            EditorPrefs.SetString(k_FetchKey, m_SecretKey);
         }
+
+        EditorGUILayout.BeginVertical("box");
+        GUILayout.Label("New Job", EditorStyles.boldLabel);
+        m_EventTypeIndex = EditorGUILayout.Popup(m_EventTypeIndex, m_EventTypesContent);
+
+        var oldStartDate = m_StartDate;
+        var oldEndDate = m_EndDate;
         m_StartDate = EditorGUILayout.TextField(m_StartDateContent, m_StartDate);
         m_EndDate = EditorGUILayout.TextField(m_EndDateContent, m_EndDate);
-
-        if (GUILayout.Button("Create New Job"))
+        if (oldStartDate != m_StartDate || oldEndDate != m_EndDate)
         {
-
+            EditorPrefs.SetString(k_StartDate, m_StartDate);
+            EditorPrefs.SetString(k_EndDate, m_EndDate);
         }
-        GUILayout.Space(20f);
 
+        GUILayout.Space(10f);
+        if (GUILayout.Button("Create"))
+        {
+            DateTime startDate = DateTime.Parse(m_StartDate).ToUniversalTime();
+            DateTime endDate = DateTime.Parse(m_EndDate).ToUniversalTime();
+            RawDataReport report = m_DownloadManager.CreateJob(m_EventTypesContent[m_EventTypeIndex].text, startDate, endDate);
+            if (m_Jobs == null)
+            {
+                m_Jobs = new List<RawDataReport>();
+            }
+            m_Jobs.Add(report);
+            m_JobFoldouts = m_Jobs.Select(fb => false).ToArray();
+        }
         if (GUILayout.Button("Get Jobs"))
         {
-            m_Jobs = downloadManager.GetJobs();
+            m_DownloadManager.GetJobs(GetJobsCompletionHandler);
         }
+        EditorGUILayout.EndVertical();
+
+        m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
+        EditorGUILayout.BeginVertical("box");
         if (m_Jobs != null)
         {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Start" + " — " + "End", EditorStyles.boldLabel);
+            GUILayout.Label("Status", EditorStyles.boldLabel);
+            GUILayout.EndHorizontal();
+
             for (int a = 0; a < m_Jobs.Count; a++)
             {
+                var job = m_Jobs[a];
+
+                string start = String.Format("{0:yyyy-MM-dd}", job.request.startDate);
+                string end = String.Format("{0:yyyy-MM-dd}", job.request.endDate);
+                string shortStart = String.Format("{0:MM-dd}", job.request.startDate);
+                string shortEnd = String.Format("{0:MM-dd}", job.request.endDate);
+                string created = String.Format("{0:yyyy-MM-dd hh:mm:ss}", job.createdAt);
+                string type = job.request.dataset;
+
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(m_Jobs[a].m_DateRange);
-                GUILayout.Label(m_Jobs[a].m_Status.ToString());
+                m_JobFoldouts[a] = EditorGUI.Foldout(EditorGUILayout.GetControlRect(),
+                    m_JobFoldouts[a],
+                    new GUIContent(type + ": " + shortStart + " to " + shortEnd, start + " — " + end + "\n" + job.id),
+                    true);
+
+                switch(job.status)
+                {
+                    case RawDataReport.Failed:
+                        GUILayout.Label(m_FailedContent);
+                        break;
+                    case RawDataReport.Completed:
+                        GUILayout.Label(m_CompleteContent);
+                        break;
+                    case RawDataReport.Running:
+                        GUILayout.Label(m_RunningContent);
+                        break;
+                }
+
+                if (job.isLocal)
+                {
+                    GUILayout.Label("Downloaded");
+                }
+                else if (GUILayout.Button("Download"))
+                {
+                    m_DownloadManager.Download(job);
+                    job.isLocal = true;
+                }
                 GUILayout.EndHorizontal();
+
+
+                if (m_JobFoldouts[a])
+                {
+                    Color defaultColor = GUI.color;
+                    GUI.backgroundColor = s_BoxColor;
+                    GUILayout.BeginVertical("box");
+                    GUILayout.Label("ID: " + job.id);
+                    GUILayout.Label("Created: " + created);
+                    GUILayout.Label("Duration: " + (job.duration/1000) + " seconds");
+                    if (job.result != null)
+                    {
+                        GUILayout.Label("# Events: " + job.result.eventCount);
+                        GUILayout.Label("# Bytes: " + job.result.size);
+                        GUILayout.Label("# Files: " + job.result.fileList.Count);
+                        GUILayout.Label("Partial day: " + job.result.intraDay);
+                    }
+                    GUILayout.EndVertical();
+                    GUI.backgroundColor = defaultColor;
+                }
+
+            }
+
+            if (m_Jobs.Count == 0)
+            {
+                GUILayout.Label("No jobs found", EditorStyles.boldLabel);
             }
         }
+        else
+        {
+            GUILayout.Label("No data yet", EditorStyles.boldLabel);
+        }
+        GUILayout.Space(10f);
+        EditorGUILayout.EndVertical();
+        EditorGUILayout.EndScrollView();
+
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Purge"))
+        {
+            PurgeData();
+        }
+        if (GUILayout.Button("Dashboard"))
+        {
+            Application.OpenURL(m_DownloadManager.DashboardPath);
+        }
+        if (GUILayout.Button("Project Config"))
+        {
+            Application.OpenURL(m_DownloadManager.ConfigPath);
+        }
+        EditorGUILayout.EndHorizontal();
     }
 
-    private GUIContent m_MinusEventContent = new GUIContent("- event", "Delete this event");
-    private GUIContent m_PlusParamContent = new GUIContent("+ param", "Add a parameter to this event");
-    private GUIContent m_StrValueContent = new GUIContent("Value");
-    private GUIContent m_RangeContent = new GUIContent("Range");
-    private GUIContent[] m_ParamTypeContent = new GUIContent[] {
-        new GUIContent("S", "string"), 
-        new GUIContent("#", "float or int"), 
-        new GUIContent("B", "boolean")
-    };
-    private GUIContent m_MinusParamContent = new GUIContent("- param", "Delete this parameter");
-    private GUIContent m_PlusEventContent = new GUIContent("+ Event", "Events to be randomly added into the created data.");
+    private void GetJobsCompletionHandler(bool success, List<RawDataReport> list, string reason = "")
+    {
+        m_Jobs = list;
+        m_JobFoldouts = m_Jobs.Select(fb => false).ToArray();
+    }
 
     void FreeformRandomDataView()
     {
-
         var preCustomEventsString = TestCustomEvent.StringifyList(m_CustomEvents);
 
         int iterator = 0;
@@ -455,13 +617,6 @@ public class RawDataInspector : EditorWindow
         CommonEventView();
     }
 
-    private GUIContent m_DeviceCountContent = new GUIContent("Device count", "The number of unique devices you want to simulate");
-    private GUIContent m_SessionCountContent = new GUIContent("Session count", "The number of sessions you want to simulate per device");
-    private GUIContent m_EventCountContent = new GUIContent("Event count", "The total number of events you want to simulate per session");
-    private GUIContent m_IosContent = new GUIContent("iOS", "Send as if from iOS");
-    private GUIContent m_AndroidContent = new GUIContent("Android", "Send as if from Android");
-    private GUIContent m_WebGlContent = new GUIContent("WebGL", "Send as if from WebGL");
-
     void CommonEventView()
     {
         GUILayout.Space(20f);
@@ -483,11 +638,11 @@ public class RawDataInspector : EditorWindow
         GUILayout.EndVertical();
     }
 
-    private GUIContent m_DataStoryIndexContent = new GUIContent("Demo", "Pick a story for some demo data.");
-
-    void CreateDemoData()
+    void DemoDataView()
     {
-        m_DataStoryIndex = EditorGUILayout.Popup(m_DataStoryIndexContent, m_DataStoryIndex, m_DataStoryList);
+        EditorGUILayout.LabelField(m_DataStoryIndexContent, EditorStyles.boldLabel);
+
+        m_DataStoryIndex = EditorGUILayout.Popup(m_DataStoryIndex, m_DataStoryList);
 
         var story = m_DataStories[m_DataStoryIndex];
         EditorGUILayout.LabelField("Genre", EditorStyles.boldLabel);
@@ -686,6 +841,7 @@ public class RawDataInspector : EditorWindow
 
     void GenerateData()
     {
+        CreateHeadersFile();
         if (m_GenerateType == FREEFORM_RANDOM)
         {
             GenerateFreeformData();
@@ -698,6 +854,17 @@ public class RawDataInspector : EditorWindow
         {
             GenerateStoryData();
         }
+    }
+
+    void CreateHeadersFile()
+    {
+        SaveFile(headers, "headers.gz", true);
+    }
+
+    void CreateManifestFile(List<RawDataReport> list)
+    {
+        var manifest = m_DownloadManager.GenerateManifest(list);
+        SaveFile(manifest, "manifest.json", false);
     }
 
     void GenerateFreeformData()
@@ -739,18 +906,21 @@ public class RawDataInspector : EditorWindow
             return;
         }
 
-        int linesPerFile = 100;
+        int linesPerFile = 1000;
         int currentFileLines = 0;
         DateTime now = DateTime.UtcNow;
 
-        string data = headers;
+        string data = "";
         int fileCount = 0;
 
         int totalSeconds = m_DeviceCount * m_EventCount * m_SessionCount;
-        double endSeconds = Math.Round((now - epoch).TotalSeconds);
+        double endSeconds = Math.Round((now - DateTimeUtils.s_Epoch).TotalSeconds);
         double startSeconds = endSeconds - totalSeconds;
         double currentSeconds = startSeconds;
-        double firstDate = currentSeconds;
+
+        // Save a list containing:
+        // data, startSeconds, endSeconds
+        List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
 
         for (int a = 0; a < m_DeviceCount; a++)
         {
@@ -766,17 +936,22 @@ public class RawDataInspector : EditorWindow
                     currentFileLines ++;
 
                     if (currentFileLines >= linesPerFile || currentSeconds == endSeconds) {
-                        SaveFile(data, firstDate);
-                        firstDate = currentSeconds;
+                        var saveObj = new Dictionary<string, object>();
+                        saveObj.Add("data", data);
+                        saveObj.Add("startSeconds", startSeconds);
+                        saveObj.Add("endSeconds", currentSeconds);
+                        result.Add(saveObj);
+                        startSeconds = currentSeconds;
                         currentFileLines = 0;
-                        data = headers;
+                        data = "";
                         fileCount++;
                     }
                 }
             }
         }
-        string files = (fileCount == 1) ? " file." : " files.";
-        Debug.Log("Generated random data: " + totalSeconds + " events " + " in " + fileCount + files);
+
+
+        SaveDemoData(result, totalSeconds);
     }
 
     void GenerateHeatmapData()
@@ -868,18 +1043,20 @@ public class RawDataInspector : EditorWindow
             events.Add(customEvent);
         }
 
-        int linesPerFile = 100;
+        int linesPerFile = 1000;
         int currentFileLines = 0;
         DateTime now = DateTime.UtcNow;
 
-        string data = headers;
-        int fileCount = 0;
+        string data = "";
 
         int totalSeconds = m_DeviceCount * m_EventCount * m_SessionCount;
-        double endSeconds = Math.Round((now - epoch).TotalSeconds);
+        double endSeconds = Math.Round((now - DateTimeUtils.s_Epoch).TotalSeconds);
         double startSeconds = endSeconds - totalSeconds;
         double currentSeconds = startSeconds;
-        double firstDate = currentSeconds;
+
+        // Save a list containing:
+        // data, startSeconds, endSeconds
+        List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
 
         for (int a = 0; a < m_DeviceCount; a++)
         {
@@ -900,34 +1077,59 @@ public class RawDataInspector : EditorWindow
                     data += evt;
                     currentFileLines ++;
 
-                    if (currentFileLines >= linesPerFile || currentSeconds == endSeconds) {
-                        SaveFile(data, firstDate);
-                        firstDate = currentSeconds;
+                    if (currentFileLines > linesPerFile || currentSeconds == endSeconds) {
+
+                        var saveObj = new Dictionary<string, object>();
+                        saveObj.Add("data", data);
+                        saveObj.Add("startSeconds", startSeconds);
+                        saveObj.Add("endSeconds", currentSeconds);
+                        result.Add(saveObj);
+                        startSeconds = currentSeconds;
                         currentFileLines = 0;
-                        data = headers;
-                        fileCount++;
+                        data = "";
                     }
                 }
             }
         }
-        string files = (fileCount == 1) ? " file." : " files.";
-        Debug.Log("Generated heatmap data: " + totalSeconds + " events " + " in " + fileCount + files);
+
+        SaveDemoData(result, totalSeconds);
     }
 
     void GenerateStoryData()
     {
         DataStory story = m_DataStories[m_DataStoryIndex];
+        // Save a list containing:
+        // data, startSeconds, endSeconds
+        List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
+        string firstItem = "";
+        string lastItem = "";
+
+
         if (story != null)
         {
-            Dictionary<double, string> data = story.Generate();
-            int fileCount = 0;
-            foreach(KeyValuePair<double, string> item in data)
+            Dictionary<double, string> storyData = story.Generate();
+            foreach(KeyValuePair<double, string> item in storyData)
             {
-                SaveFile(item.Value, item.Key);
-                fileCount ++;
+                string[] dataList = item.Value.Split('\n');
+
+                string firstItemForStory = dataList[0].Substring(0, dataList[0].IndexOf('\t'));
+                string lastItemForStory = dataList[dataList.Length-2].Substring(0, dataList[dataList.Length-2].IndexOf('\t'));
+                if (string.IsNullOrEmpty(firstItem))
+                {
+                    firstItem = firstItemForStory;
+                }
+                lastItem = lastItemForStory;
+                double startSeconds = double.Parse(firstItemForStory);
+                double endSeconds = double.Parse(lastItemForStory);
+
+                var saveObj = new Dictionary<string, object>();
+                saveObj.Add("data", item.Value);
+                saveObj.Add("startSeconds", startSeconds);
+                saveObj.Add("endSeconds", endSeconds);
+                result.Add(saveObj);
             }
-            string files = (fileCount == 1) ? " file." : " files.";
-            Debug.Log("Generated data for " + story.name + " in " + fileCount + files);
+            int totalSeconds = int.Parse(lastItem) - int.Parse(firstItem);
+            SaveDemoData(result, totalSeconds);
         }
     }
 
@@ -973,7 +1175,65 @@ public class RawDataInspector : EditorWindow
         }
     }
 
-    void SaveFile(string data, double firstDate)
+    void SaveDemoData(List<Dictionary<string, object>> dataList, int totalSeconds)
+    {
+        // Compose the manifest
+        var fileList = new List<RawDataFile>();
+        var earliestStart = DateTime.UtcNow;
+
+        int size = 0;
+        int eventCount = 0;
+        for (int a = 0; a < dataList.Count; a++)
+        {
+            Dictionary<string, object> dataObj = dataList[a];
+            string dataStr = (string)dataObj["data"];
+            double startSeconds = (double)dataObj["startSeconds"];
+            double endSeconds = (double)dataObj["endSeconds"];
+
+            // Save the file
+            int fileSize = SaveFile(dataStr, "part-" + startSeconds + ".md.gz", true);
+            size += fileSize;
+            eventCount += dataStr.Count(x => x == '\n');
+
+            // Build the manifest entry
+            var start = DateTimeUtils.s_Epoch.AddSeconds(startSeconds);
+            var end = DateTimeUtils.s_Epoch.AddSeconds(endSeconds);
+
+            earliestStart = start < earliestStart ? start : earliestStart;
+            var file = new RawDataFile("part-" + startSeconds + ".md.gz", "http://fakeurl", fileSize, end.ToString("o"));
+            fileList.Add(file);
+        }
+
+        var request = new RawDataRequest("custom", earliestStart, DateTime.UtcNow);
+        var report = new RawDataReport(request);
+
+
+        report.createdAt = DateTime.UtcNow;
+        report.duration = 100;
+        report.id = System.Guid.NewGuid().ToString();
+        report.upid = System.Guid.NewGuid().ToString();
+        report.status = "completed";
+
+        // Create a "result"
+        var result = new RawDataResult(size, eventCount, fileList, false);
+        report.result = result;
+
+        //Save the manifest
+        var reportList = new List<RawDataReport>();
+        reportList.Add(report);
+        CreateManifestFile(reportList);
+
+        // Report
+        string files = (dataList.Count == 1) ? " file." : " files.";
+        Debug.Log("Generated heatmap data: " + totalSeconds + " events " + " in " + dataList.Count + files);
+    }
+
+    int SaveCustomFile(string data, double firstDate)
+    {
+        return SaveFile(data, firstDate + "_custom.md.gz", true);
+    }
+
+    int SaveFile(string data, string fileName, bool compress)
     {
         string savePath = System.IO.Path.Combine(GetSavePath(), "RawData");
         // Create the save path if necessary
@@ -981,9 +1241,24 @@ public class RawDataInspector : EditorWindow
         {
             System.IO.Directory.CreateDirectory(savePath);
         }
-        string outputFileName = firstDate + "_custom.md.gz";
+        string outputFileName = fileName;
         string path = System.IO.Path.Combine(savePath, outputFileName);
-        IonicGZip.CompressAndSave(path, data);
+        int size = 0;
+        if (compress)
+        {
+            IonicGZip.CompressAndSave(path, data);
+        }
+        else
+        {
+            using (System.IO.StreamWriter file =
+                new System.IO.StreamWriter(path))
+            {
+                file.Write(data);
+            }
+        }
+        System.IO.FileInfo fileInfo = new System.IO.FileInfo(path);
+        size = (int)fileInfo.Length;
+        return size;
     }
 
     string GetSavePath()
@@ -993,10 +1268,13 @@ public class RawDataInspector : EditorWindow
     
     public void PurgeData()
     {
-        string savePath = System.IO.Path.Combine(GetSavePath(), "RawData");
-        if (System.IO.Directory.Exists(savePath))
+        if (EditorUtility.DisplayDialog("Destroy local data?", "You are about to delete your local heatmaps data cache, meaning you'll have to reload from the server (or regenerate from this tool). Are you sure?", "Purge", "Cancel"))
         {
-            System.IO.Directory.Delete(savePath, true);
+            string savePath = System.IO.Path.Combine(GetSavePath(), "RawData");
+            if (System.IO.Directory.Exists(savePath))
+            {
+                System.IO.Directory.Delete(savePath, true);
+            }
         }
     }
 
@@ -1050,7 +1328,7 @@ public class RawDataInspector : EditorWindow
         EditorPrefs.SetBool(k_Installed, true);
     }
 
-    protected void RestoreValues()
+    protected void RestoreAppId()
     {
         #if UNITY_5_3_OR_NEWER
         if (string.IsNullOrEmpty(m_AppId) && !string.IsNullOrEmpty(Application.cloudProjectId))
@@ -1058,10 +1336,16 @@ public class RawDataInspector : EditorWindow
             m_AppId = Application.cloudProjectId;
         }
         #endif
+    }
 
+    protected void RestoreValues()
+    {
+        RestoreAppId();
 
-
+        m_SecretKey = EditorPrefs.GetString(k_FetchKey, m_SecretKey);
         m_DataPath = EditorPrefs.GetString(k_DataPathKey, m_DataPath);
+        m_StartDate = EditorPrefs.GetString(k_StartDate, m_StartDate);
+        m_EndDate = EditorPrefs.GetString(k_EndDate, m_EndDate);
         m_IncludeTime = EditorPrefs.GetBool(k_IncludeTimeKey, m_IncludeTime);
         m_IncludeX = EditorPrefs.GetBool(k_IncludeXKey, m_IncludeX);
         m_MinX = EditorPrefs.GetFloat(k_MinX, m_MinX);
