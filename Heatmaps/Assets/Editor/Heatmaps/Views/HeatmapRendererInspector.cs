@@ -63,6 +63,24 @@ namespace UnityAnalyticsHeatmap
         GameObject m_GameObject;
 
 
+        Texture2D darkSkinPlayIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/play_dark.png") as Texture2D;
+        Texture2D darkSkinPauseIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/pause_dark.png") as Texture2D;
+        Texture2D darkSkinRewindIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/rwd_dark.png") as Texture2D;
+
+        Texture2D lightSkinPlayIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/play_light.png") as Texture2D;
+        Texture2D lightSkinPauseIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/pause_light.png") as Texture2D;
+        Texture2D lightSkinRewindIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/rwd_light.png") as Texture2D;
+
+        private GUIContent m_ParticleSizeContent = new GUIContent("Size", "The display size of an individual data point");
+        private GUIContent m_ParticleShapeContent = new GUIContent("Shape", "The display shape of an individual data point");
+        private GUIContent m_ParticleDirectionContent = new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point");
+        private GUIContent m_PlaySpeedContent = new GUIContent("Play Speed", "Speed at which playback occurs");
+        private GUIContent m_TipsContent = new GUIContent("Hot tips", "When enabled, see individual point information on rollover. Caution: can be costly! Also note, submap must be selected to see hot tips.");
+        private GUIContent m_RestartContent;
+        private GUIContent m_PlayContent;
+        private GUIContent m_PauseContent;
+
+
         public HeatmapRendererInspector()
         {
             m_StartTime = EditorPrefs.GetFloat(k_StartTimeKey, m_StartTime);
@@ -82,6 +100,20 @@ namespace UnityAnalyticsHeatmap
             m_HighZ = EditorPrefs.GetFloat(k_HighXKey, m_HighZ);
 
             m_Tips = EditorPrefs.GetBool(k_ShowTipsKey, false);
+
+            var playIcon = lightSkinPlayIcon;
+            var pauseIcon = lightSkinPauseIcon;
+            var rwdIcon = lightSkinRewindIcon;
+            if (EditorPrefs.GetInt("UserSkin") == 1)
+            {
+                playIcon = darkSkinPlayIcon;
+                pauseIcon = darkSkinPauseIcon;
+                rwdIcon = darkSkinRewindIcon;
+            }
+
+            m_RestartContent = new GUIContent(rwdIcon, "Back to Start");
+            m_PlayContent = new GUIContent(playIcon, "Play");
+            m_PauseContent = new GUIContent(pauseIcon, "Pause");
         }
 
         public static HeatmapRendererInspector Init(Heatmapper heatmapper)
@@ -90,15 +122,6 @@ namespace UnityAnalyticsHeatmap
             inspector.m_Heatmapper = heatmapper;
             return inspector;
         }
-
-        private GUIContent m_ParticleSizeContent = new GUIContent("Size", "The display size of an individual data point");
-        private GUIContent m_ParticleShapeContent = new GUIContent("Shape", "The display shape of an individual data point");
-        private GUIContent m_ParticleDirectionContent = new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point");
-        private GUIContent m_PlaySpeedContent = new GUIContent("Play Speed", "Speed at which playback occurs");
-        private GUIContent m_RestartContent = new GUIContent("<<", "Back to Start");
-        private GUIContent m_PlayContent = new GUIContent(">", "Play");
-        private GUIContent m_PauseContent = new GUIContent("||", "Pause");
-        private GUIContent m_TipsContent = new GUIContent("Hot tips", "When enabled, see individual point information on rollover. Caution: can be costly! Also note, submap must be selected to see hot tips.");
 
         public void OnGUI()
         {

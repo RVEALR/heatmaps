@@ -9,6 +9,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 using UnityAnalytics;
+using System.Linq;
 
 namespace UnityAnalyticsHeatmap
 {
@@ -52,24 +53,26 @@ namespace UnityAnalyticsHeatmap
 
         AggregationHandler m_AggregationHandler;
 
-        RawEventClient m_RawEventClient;
         HeatmapAggregator m_Aggregator;
 
         private GUIContent[] m_SmootherOptionsContent;
-        Texture2D unionIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/union.png") as Texture2D;
-        Texture2D numberIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/number.png") as Texture2D;
-        Texture2D noneIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/none.png") as Texture2D;
+        Texture2D darkSkinUnionIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/union_dark.png") as Texture2D;
+        Texture2D darkSkinNumberIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/number_dark.png") as Texture2D;
+        Texture2D darkSkinNoneIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/none_dark.png") as Texture2D;
+
+        Texture2D lightSkinUnionIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/union_light.png") as Texture2D;
+        Texture2D lightSkinNumberIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/number_light.png") as Texture2D;
+        Texture2D lightSkinNoneIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/none_light.png") as Texture2D;
 
         string m_StartDate = "";
         string m_EndDate = "";
         float m_Space = k_DefaultSpace;
         float m_Time = k_DefaultTime;
         float m_Rotation = k_DefaultRotation;
-       
 
-        const int SMOOTH_UNION = 0;
-        const int SMOOTH_VALUE = 1;
-        const int SMOOTH_NONE = 2;
+        const int SMOOTH_VALUE = 0;
+        const int SMOOTH_NONE = 1;
+        const int SMOOTH_UNION = 2;
 
         int m_SmoothSpaceToggle = SMOOTH_VALUE;
         int m_SmoothTimeToggle = SMOOTH_UNION;
@@ -108,10 +111,9 @@ namespace UnityAnalyticsHeatmap
 
         List<string> m_ArbitraryFields = new List<string>{ };
 
-        public AggregationInspector(RawEventClient client, HeatmapAggregator aggregator)
+        public AggregationInspector(HeatmapAggregator aggregator)
         {
             m_Aggregator = aggregator;
-            m_RawEventClient = client;
 
             // Restore cached paths
             m_RawDataPath = EditorPrefs.GetString(k_UrlKey);
@@ -147,16 +149,27 @@ namespace UnityAnalyticsHeatmap
             }
             m_ArbitraryFields = new List<string>(arbitraryFieldsList);
 
+
+            var unionIcon = lightSkinUnionIcon;
+            var smoothIcon = lightSkinNumberIcon;
+            var noneIcon = lightSkinNoneIcon;
+            if (EditorPrefs.GetInt("UserSkin") == 1)
+            {
+                unionIcon = darkSkinUnionIcon;
+                smoothIcon = darkSkinNumberIcon;
+                noneIcon = darkSkinNoneIcon;
+            }
+
             m_SmootherOptionsContent = new GUIContent[] {
-                new GUIContent(unionIcon, "Unify all"), 
-                new GUIContent(numberIcon, "Smooth to value"),
-                new GUIContent(noneIcon, "No smoothing")
+                new GUIContent(smoothIcon, "Smooth to value"),
+                new GUIContent(noneIcon, "No smoothing"),
+                new GUIContent(unionIcon, "Unify all")
             };
         }
 
-        public static AggregationInspector Init(RawEventClient client, HeatmapAggregator aggregator)
+        public static AggregationInspector Init(HeatmapAggregator aggregator)
         {
-            return new AggregationInspector(client, aggregator);
+            return new AggregationInspector(aggregator);
         }
 
         public void SystemReset()
@@ -188,11 +201,13 @@ namespace UnityAnalyticsHeatmap
                 throw new Exception("The end date is not properly formatted. Correct format is YYYY-MM-DD.");
             }
 
-            m_RawEventClient.Fetch(m_RawDataPath, localOnly, new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end, rawFetchHandler);
+            DownloadManager.GetInstance().m_DataPath = m_DataPath;
+            var fileList = DownloadManager.GetInstance().GetFiles(new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end);
+            ProcessAggregation(fileList);
         }
 
         private GUIContent m_UseCustomDataPathContent = new GUIContent("Use custom data path", "By default, will use Application.persistentDataPath");
-        private GUIContent m_DataPathContent = new GUIContent("Save to path", "Where to save and retrieve data (defaults to Application.persistentDataPath");
+        private GUIContent m_DataPathContent = new GUIContent("Input path", "Where to retrieve data (defaults to Application.persistentDataPath");
         private GUIContent m_DatesContent = new GUIContent("Dates", "ISO-8601 datetimes (YYYY-MM-DD)");
         private GUIContent m_AddFieldContent = new GUIContent("+", "Add field");
         private GUIContent m_RemapColorContent = new GUIContent("Remap color to field", "By default, heatmap color is determined by event density. Checking this box allows you to remap to a specific field (e.g., use to identify fps drops.)");
@@ -234,7 +249,6 @@ namespace UnityAnalyticsHeatmap
             }
 
             m_Aggregator.SetDataPath(m_DataPath);
-            m_RawEventClient.SetDataPath(m_DataPath);
 
             GUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(m_DatesContent, GUILayout.Width(35));
@@ -246,10 +260,10 @@ namespace UnityAnalyticsHeatmap
 
             // SMOOTHERS (SPACE, ROTATION, TIME)
             GUILayout.BeginVertical("box");
-            GUILayout.Label("Smooth", EditorStyles.boldLabel);
+            GUILayout.Label("Smooth/Unionize", EditorStyles.boldLabel);
             GUILayout.BeginHorizontal();
             // SPACE
-            SmootherControl(ref m_SmoothSpaceToggle, ref m_Space, "Space", "Divider to smooth out x/y/z data", k_SmoothSpaceKey, k_SpaceKey);
+            SmootherControl(ref m_SmoothSpaceToggle, ref m_Space, "Space", "Divider to smooth out x/y/z data", k_SmoothSpaceKey, k_SpaceKey, 2);
             // ROTATION
             SmootherControl(ref m_SmoothRotationToggle, ref m_Rotation, "Rotation", "Divider to smooth out angular data", k_SmoothRotationKey, k_RotationKey);
             // TIME
@@ -343,13 +357,16 @@ namespace UnityAnalyticsHeatmap
             GUILayout.EndVertical();
         }
 
-        void SmootherControl(ref int toggler, ref float value, string label, string tooltip, string toggleKey, string valueKey)
+        void SmootherControl(ref int toggler, ref float value, string label, string tooltip, string toggleKey, string valueKey, int endIndex = -1)
         {
             GUILayout.BeginVertical();
 
+            var options = endIndex == -1 ? m_SmootherOptionsContent : 
+                m_SmootherOptionsContent.Take(endIndex).ToArray();
+
             int oldToggler = toggler;
             toggler = GUILayout.Toolbar(
-                toggler, m_SmootherOptionsContent, GUILayout.MaxWidth(100));
+                toggler, options, GUILayout.MaxWidth(100));
             float oldValue = value;
 
             float lw = EditorGUIUtility.labelWidth;
@@ -381,7 +398,7 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        void rawFetchHandler(List<string> fileList)
+        void ProcessAggregation(List<string> fileList)
         {
             if (fileList.Count == 0)
             {

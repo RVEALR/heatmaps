@@ -23,7 +23,6 @@ public class Heatmapper : EditorWindow
     {
         m_DataPath = "";
         m_Aggregator = new HeatmapAggregator(m_DataPath);
-        m_EventClient = new RawEventClient(m_DataPath);
     }
 
     // Views
@@ -32,7 +31,6 @@ public class Heatmapper : EditorWindow
     HeatmapRendererInspector m_RenderView;
 
     // Data handlers
-    RawEventClient m_EventClient;
     HeatmapAggregator m_Aggregator;
 
     GameObject m_HeatMapInstance;
@@ -64,7 +62,7 @@ public class Heatmapper : EditorWindow
         GUILayout.BeginVertical("box");
         if (m_AggregationView == null)
         {
-            m_AggregationView = AggregationInspector.Init(m_EventClient, m_Aggregator);
+            m_AggregationView = AggregationInspector.Init(m_Aggregator);
         }
         m_ShowAggregate = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), m_ShowAggregate, "Data", true);
         if (m_ShowAggregate)
