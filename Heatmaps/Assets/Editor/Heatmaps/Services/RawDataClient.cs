@@ -188,6 +188,7 @@ namespace UnityAnalytics
         public List<string> GetFiles(UnityAnalyticsEventType[]eventTypes, DateTime start, DateTime end)
         {
             var eventList = new List<UnityAnalyticsEventType>(eventTypes);
+            var resultsAsDict = new Dictionary<DateTime, KeyValuePair<DateTime, string>>();
             var resultList = new List<string>();
             var manifest = GetManifest();
             if (manifest != null)
@@ -197,6 +198,7 @@ namespace UnityAnalytics
                     var evt = (UnityAnalyticsEventType)Enum.Parse(typeof(UnityAnalyticsEventType), manifest[a].request.dataset);
                     if (eventList.Contains(evt) && manifest[a].status == RawDataReport.Completed)
                     {
+                        DateTime reportDate = manifest[a].createdAt;
                         var fileList = manifest[a].result.fileList;
                         for (var b = 0; b < fileList.Count; b++)
                         {
@@ -204,14 +206,27 @@ namespace UnityAnalytics
                             {
                                 continue;
                             }
-                            DateTime date = DateTime.Parse(fileList[b].date).ToUniversalTime();
-                            if (date >= start && date <= end)
+                            DateTime fileDate = DateTime.Parse(fileList[b].date).ToUniversalTime();
+                            if (fileDate >= start && fileDate <= end)
                             {
                                 var path = PathFromFileName(fileList[b].name);
-                                resultList.Add(path);
+                                KeyValuePair<DateTime, string> kv = new KeyValuePair<DateTime, string>(reportDate, path);
+
+                                // Look for any matching date, but take the one from the more recent report
+                                if (resultsAsDict.ContainsKey(fileDate))
+                                {
+                                    var existingKV = resultsAsDict[fileDate];
+                                    kv = (existingKV.Key > reportDate) ? existingKV : kv;
+                                    resultsAsDict.Remove(fileDate);
+                                }
+                                resultsAsDict.Add(fileDate, kv);
                             }
                         }
                     }
+                }
+                foreach(var kv in resultsAsDict)
+                {
+                    resultList.Add(kv.Value.Value);
                 }
             }
             else
