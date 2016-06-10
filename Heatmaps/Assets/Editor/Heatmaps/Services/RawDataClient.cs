@@ -120,21 +120,33 @@ namespace UnityAnalytics
         {
         }
 
-        public RawDataReport CreateJob(string type, RawDataRequest priorRequest)
+        public RawDataReport ContinueFromJob(RawDataReport priorReport)
         {
-            return CreateJob(type, priorRequest, DateTime.UtcNow);
+            return ContinueFromJob(priorReport, DateTime.UtcNow);
+        }
+
+        public RawDataReport ContinueFromJob(RawDataReport priorReport, DateTime endDate)
+        {
+            RawDataReport report = null;
+            using(WebClient client = new WebClient())
+            {
+                client.Encoding = System.Text.Encoding.UTF8;
+                Authorization(client);
+                string url = string.Format(CreateJobPath, m_AppId);
+                string end = endDate.ToString("yyyy-MM-dd");
+                string data = "\"continueFrom\":\"{0}\",\"endDate\":\"{1}\",\"format\":\"{2}\",\"dataset\":\"{3}\"";
+                data = "{" + string.Format(data, priorReport.id, end, "tsv", priorReport.request.dataset) + "}";
+                string result = client.UploadString(new Uri(url), "POST", data);
+                var dict = MiniJSON.Json.Deserialize(result) as Dictionary<string, object>;
+                report = new RawDataReport(dict);
+            }
+
+            return report;
         }
 
         public RawDataReport CreateJob(string type, DateTime startDate)
         {
             return CreateJob(type, startDate, DateTime.UtcNow);
-        }
-
-        public RawDataReport CreateJob(string type, RawDataRequest priorRequest, DateTime endDate)
-        {
-            var request = new RawDataRequest(priorRequest, endDate);
-            var report = SubmitRequest(request);
-            return report;
         }
 
         public RawDataReport CreateJob(string type, DateTime startDate, DateTime endDate)
@@ -158,7 +170,6 @@ namespace UnityAnalytics
                 data = "{" + string.Format(data, start, end, "tsv", request.dataset) + "}";
                 string result = client.UploadString(new Uri(url), "POST", data);
                 var dict = MiniJSON.Json.Deserialize(result) as Dictionary<string, object>;
-
                 report = new RawDataReport(dict);
             }
 
@@ -507,10 +518,14 @@ namespace UnityAnalytics
         public DateTime endDate;
         public string format;
         public string dataset;
+        public string continueFrom;
 
         public RawDataRequest(Dictionary<string, object> dict)
         {
-            startDate = DateTime.Parse((string)dict["startDate"]);
+            if (dict.ContainsKey("startDate"))
+                startDate = DateTime.Parse((string)dict["startDate"]);
+            if (dict.ContainsKey("continueFrom"))
+                continueFrom = (string)dict["continueFrom"];
             endDate = DateTime.Parse((string)dict["endDate"]);
             format = (string)dict["format"];
             dataset = (string)dict["dataset"];

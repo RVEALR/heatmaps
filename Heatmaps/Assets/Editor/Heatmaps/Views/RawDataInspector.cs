@@ -67,6 +67,10 @@ public class RawDataInspector : EditorWindow
     private GUIContent m_StartDateContent = new GUIContent("Start Date (YYYY-MM-DD)", "Start date as ISO-8601 datetime");
     private GUIContent m_EndDateContent = new GUIContent("End Date (YYYY-MM-DD)", "End date as ISO-8601 datetime");
 
+    private GUIContent m_ContinueJobContent = new GUIContent(">", "Continue job");
+    private GUIContent m_DownloadJobContent = new GUIContent("Download", "Download job files");
+    private GUIContent m_GetJobsContent = new GUIContent("Get Jobs", "Load the manifest of job files");
+
     private Texture2D failedIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/failed.png") as Texture2D;
     private Texture2D completeIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/success.png") as Texture2D;
     private Texture2D runningIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/running.png") as Texture2D;
@@ -225,7 +229,7 @@ public class RawDataInspector : EditorWindow
         titleContent = new GUIContent("Raw Data");
 
         m_FailedContent = new GUIContent(failedIcon, "Failed");
-        m_CompleteContent = new GUIContent(completeIcon, "Complete");
+        m_CompleteContent = new GUIContent(completeIcon, "Completed");
         m_RunningContent = new GUIContent(runningIcon, "Running");
 
         m_RawDataClient = RawDataClient.GetInstance();
@@ -345,7 +349,7 @@ public class RawDataInspector : EditorWindow
         }
 
         GUILayout.Space(10f);
-        if (GUILayout.Button("Create"))
+        if (GUILayout.Button("Create Job"))
         {
             DateTime startDate = DateTime.Parse(m_StartDate).ToUniversalTime();
             DateTime endDate = DateTime.Parse(m_EndDate).ToUniversalTime();
@@ -357,14 +361,14 @@ public class RawDataInspector : EditorWindow
             m_Jobs.Add(report);
             m_JobFoldouts = m_Jobs.Select(fb => false).ToArray();
         }
-        if (GUILayout.Button("Get Jobs"))
-        {
-            m_RawDataClient.GetJobs(GetJobsCompletionHandler);
-        }
         EditorGUILayout.EndVertical();
 
         m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
         EditorGUILayout.BeginVertical("box");
+        if (GUILayout.Button(m_GetJobsContent))
+        {
+            m_RawDataClient.GetJobs(GetJobsCompletionHandler);
+        }
         if (m_Jobs != null)
         {
             GUILayout.BeginHorizontal();
@@ -372,10 +376,9 @@ public class RawDataInspector : EditorWindow
             GUILayout.Label("Status", EditorStyles.boldLabel);
             GUILayout.EndHorizontal();
 
-            for (int a = 0; a < m_Jobs.Count; a++)
+            for (int a = m_Jobs.Count-1; a > -1; a--)
             {
                 var job = m_Jobs[a];
-
                 string start = String.Format("{0:yyyy-MM-dd}", job.request.startDate);
                 string end = String.Format("{0:yyyy-MM-dd}", job.request.endDate);
                 string shortStart = String.Format("{0:MM-dd}", job.request.startDate);
@@ -406,10 +409,19 @@ public class RawDataInspector : EditorWindow
                 {
                     GUILayout.Label("Downloaded");
                 }
-                else if (GUILayout.Button("Download"))
+                else if (job.status == RawDataReport.Completed)
                 {
-                    m_RawDataClient.Download(job);
-                    job.isLocal = true;
+                    if (GUILayout.Button(m_DownloadJobContent, GUILayout.MaxWidth(100f)))
+                    {
+                        m_RawDataClient.Download(job);
+                        job.isLocal = true;
+                    }
+                    if (GUILayout.Button(m_ContinueJobContent, GUILayout.MaxWidth(20f)))
+                    {
+                        RawDataReport report = m_RawDataClient.ContinueFromJob(job);
+                        m_Jobs.Add(report);
+                        m_JobFoldouts = m_Jobs.Select(fb => false).ToArray();
+                    }
                 }
                 GUILayout.EndHorizontal();
 
