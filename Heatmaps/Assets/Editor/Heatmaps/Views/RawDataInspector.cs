@@ -1370,6 +1370,12 @@ public class RawDataInspector : EditorWindow
             {
                 System.IO.Directory.Delete(savePath, true);
             }
+            // Clear all local jobs since they've been destroyed
+            for (int a = 0; a < m_Jobs.Count; a++)
+            {
+                var job = m_Jobs[a];
+                job.isLocal = false;
+            }
         }
     }
 
