@@ -59,8 +59,10 @@ public class TestCustomEvent : List<TestEventParam> {
 
     public string WriteEvent(string deviceId, string sessionId, double currentSeconds, string platform, bool isDebug = false)
     {
+        double currentMilliseconds = currentSeconds * 1000;
+
         string evt = "";
-        evt += currentSeconds + "\t";
+        evt += currentMilliseconds + "\t";
 
         // AppID
         evt += "1234-abcd-5678-efgh\t";
@@ -88,7 +90,7 @@ public class TestCustomEvent : List<TestEventParam> {
         evt += "Corridor%20Z/3 CFNetwork/758.2.8 Darwin/15.0.0\t";
 
         // Submit time
-        evt += currentSeconds + "\t";
+        evt += currentMilliseconds + "\t";
 
         // Event Name
         evt += this.name + "\t";

@@ -64,6 +64,15 @@ namespace UnityAnalyticsHeatmap
         Texture2D lightSkinNumberIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/number_light.png") as Texture2D;
         Texture2D lightSkinNoneIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/none_light.png") as Texture2D;
 
+        private GUIContent m_UseCustomDataPathContent = new GUIContent("Use custom data path", "By default, will use Application.persistentDataPath");
+        private GUIContent m_DataPathContent = new GUIContent("Input path", "Where to retrieve data (defaults to Application.persistentDataPath");
+        private GUIContent m_DatesContent = new GUIContent("Dates", "ISO-8601 datetimes (YYYY-MM-DD)");
+        private GUIContent m_AddFieldContent = new GUIContent("+", "Add field");
+        private GUIContent m_RemapColorContent = new GUIContent("Remap color to field", "By default, heatmap color is determined by event density. Checking this box allows you to remap to a specific field (e.g., use to identify fps drops.)");
+        private GUIContent m_RemapColorFieldContent = new GUIContent("Field","Name the field to remap");
+        private GUIContent m_RemapOptionIndexContent = new GUIContent("Remap operation", "How should the remapped variable aggregate?");
+        private GUIContent m_PercentileContent = new GUIContent("Percentile", "A value between 0 and 100");
+
         string m_StartDate = "";
         string m_EndDate = "";
         float m_Space = k_DefaultSpace;
@@ -206,14 +215,6 @@ namespace UnityAnalyticsHeatmap
             ProcessAggregation(fileList);
         }
 
-        private GUIContent m_UseCustomDataPathContent = new GUIContent("Use custom data path", "By default, will use Application.persistentDataPath");
-        private GUIContent m_DataPathContent = new GUIContent("Input path", "Where to retrieve data (defaults to Application.persistentDataPath");
-        private GUIContent m_DatesContent = new GUIContent("Dates", "ISO-8601 datetimes (YYYY-MM-DD)");
-        private GUIContent m_AddFieldContent = new GUIContent("+", "Add field");
-        private GUIContent m_RemapColorContent = new GUIContent("Remap color to field", "By default, heatmap color is determined by event density. Checking this box allows you to remap to a specific field (e.g., use to identify fps drops.)");
-        private GUIContent m_RemapColorFieldContent = new GUIContent("Field","Name the field to remap");
-        private GUIContent m_RemapOptionIndexContent = new GUIContent("Remap operation", "How should the remapped variable aggregate?");
-
         public void OnGUI()
         {
             GUILayout.BeginVertical("box");
@@ -343,7 +344,7 @@ namespace UnityAnalyticsHeatmap
 
                 if (m_RemapOptionIds[m_RemapOptionIndex] == AggregationMethod.Percentile)
                 {
-                    m_Percentile = EditorGUILayout.FloatField("Percentile", m_Percentile);
+                    m_Percentile = Mathf.Clamp(EditorGUILayout.FloatField(m_PercentileContent, m_Percentile), 0, 100f);
                 }
                 if (oldRemapField != m_RemapColorField)
                 {

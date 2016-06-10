@@ -236,7 +236,6 @@ public class RawDataInspector : EditorWindow
         if (EditorPrefs.GetBool(k_Installed))
         {
             RestoreValues();
-            m_RawDataClient.GetJobs(GetJobsCompletionHandler);
         }
         else
         {
@@ -938,8 +937,8 @@ public class RawDataInspector : EditorWindow
                     if (currentFileLines >= linesPerFile || currentSeconds == endSeconds) {
                         var saveObj = new Dictionary<string, object>();
                         saveObj.Add("data", data);
-                        saveObj.Add("startSeconds", startSeconds);
-                        saveObj.Add("endSeconds", currentSeconds);
+                        saveObj.Add("startSeconds", startSeconds * 1000);
+                        saveObj.Add("endSeconds", currentSeconds * 1000);
                         result.Add(saveObj);
                         startSeconds = currentSeconds;
                         currentFileLines = 0;
@@ -951,7 +950,7 @@ public class RawDataInspector : EditorWindow
         }
 
 
-        SaveDemoData(result, totalSeconds);
+        SaveDemoData(result);
     }
 
     void GenerateHeatmapData()
@@ -996,7 +995,7 @@ public class RawDataInspector : EditorWindow
         for (int a = 0; a < m_EventNames.Count; a++)
         {
             TestCustomEvent customEvent = new TestCustomEvent();
-            customEvent.name = m_EventNames[a];
+            customEvent.name = "Heatmap." + m_EventNames[a];
             var x = new TestEventParam("x", TestEventParam.Num, m_MinX, m_MaxX);
             customEvent.Add(x);
             var y = new TestEventParam("y", TestEventParam.Num, m_MinY, m_MaxY);
@@ -1081,8 +1080,8 @@ public class RawDataInspector : EditorWindow
 
                         var saveObj = new Dictionary<string, object>();
                         saveObj.Add("data", data);
-                        saveObj.Add("startSeconds", startSeconds);
-                        saveObj.Add("endSeconds", currentSeconds);
+                        saveObj.Add("startSeconds", startSeconds*1000);
+                        saveObj.Add("endSeconds", currentSeconds*1000);
                         result.Add(saveObj);
                         startSeconds = currentSeconds;
                         currentFileLines = 0;
@@ -1092,7 +1091,7 @@ public class RawDataInspector : EditorWindow
             }
         }
 
-        SaveDemoData(result, totalSeconds);
+        SaveDemoData(result);
     }
 
     void GenerateStoryData()
@@ -1101,9 +1100,6 @@ public class RawDataInspector : EditorWindow
         // Save a list containing:
         // data, startSeconds, endSeconds
         List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
-        string firstItem = "";
-        string lastItem = "";
-
 
         if (story != null)
         {
@@ -1112,15 +1108,10 @@ public class RawDataInspector : EditorWindow
             {
                 string[] dataList = item.Value.Split('\n');
 
-                string firstItemForStory = dataList[0].Substring(0, dataList[0].IndexOf('\t'));
-                string lastItemForStory = dataList[dataList.Length-2].Substring(0, dataList[dataList.Length-2].IndexOf('\t'));
-                if (string.IsNullOrEmpty(firstItem))
-                {
-                    firstItem = firstItemForStory;
-                }
-                lastItem = lastItemForStory;
-                double startSeconds = double.Parse(firstItemForStory);
-                double endSeconds = double.Parse(lastItemForStory);
+                string firstItem = dataList[0].Substring(0, dataList[0].IndexOf('\t'));
+                string lastItem = dataList[dataList.Length-2].Substring(0, dataList[dataList.Length-2].IndexOf('\t'));
+                double startSeconds = double.Parse(firstItem);
+                double endSeconds = double.Parse(lastItem);
 
                 var saveObj = new Dictionary<string, object>();
                 saveObj.Add("data", item.Value);
@@ -1128,8 +1119,7 @@ public class RawDataInspector : EditorWindow
                 saveObj.Add("endSeconds", endSeconds);
                 result.Add(saveObj);
             }
-            int totalSeconds = int.Parse(lastItem) - int.Parse(firstItem);
-            SaveDemoData(result, totalSeconds);
+            SaveDemoData(result);
         }
     }
 
@@ -1175,7 +1165,7 @@ public class RawDataInspector : EditorWindow
         }
     }
 
-    void SaveDemoData(List<Dictionary<string, object>> dataList, int totalSeconds)
+    void SaveDemoData(List<Dictionary<string, object>> dataList)
     {
         // Compose the manifest
         var fileList = new List<RawDataFile>();
@@ -1191,16 +1181,16 @@ public class RawDataInspector : EditorWindow
             double endSeconds = (double)dataObj["endSeconds"];
 
             // Save the file
-            int fileSize = SaveFile(dataStr, "part-" + startSeconds + ".md.gz", true);
+            int fileSize = SaveFile(dataStr, "part-" + startSeconds + ".gz", true);
             size += fileSize;
             eventCount += dataStr.Count(x => x == '\n');
 
             // Build the manifest entry
-            var start = DateTimeUtils.s_Epoch.AddSeconds(startSeconds);
-            var end = DateTimeUtils.s_Epoch.AddSeconds(endSeconds);
+            var start = DateTimeUtils.s_Epoch.AddMilliseconds(startSeconds);
+            var end = DateTimeUtils.s_Epoch.AddMilliseconds(endSeconds);
 
             earliestStart = start < earliestStart ? start : earliestStart;
-            var file = new RawDataFile("part-" + startSeconds + ".md.gz", "http://fakeurl", fileSize, end.ToString("o"));
+            var file = new RawDataFile("part-" + startSeconds + ".gz", "http://fakeurl", fileSize, end.ToString("o"));
             fileList.Add(file);
         }
 
@@ -1225,12 +1215,12 @@ public class RawDataInspector : EditorWindow
 
         // Report
         string files = (dataList.Count == 1) ? " file." : " files.";
-        Debug.Log("Generated heatmap data: " + totalSeconds + " events " + " in " + dataList.Count + files);
+        Debug.Log("Generated heatmap data: " + eventCount + " events " + " in " + dataList.Count + files);
     }
 
     int SaveCustomFile(string data, double firstDate)
     {
-        return SaveFile(data, firstDate + "_custom.md.gz", true);
+        return SaveFile(data, firstDate + "_custom.gz", true);
     }
 
     int SaveFile(string data, string fileName, bool compress)

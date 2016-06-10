@@ -93,7 +93,7 @@ namespace UnityAnalyticsHeatmap
         {
             m_CompletionHandler = completionHandler;
 
-            string outputFileName = System.IO.Path.GetFileName(inputFiles[0]).Replace(".md.gz", ".json");
+            string outputFileName = System.IO.Path.GetFileName(inputFiles[0]).Replace(".gz", ".json");
 
             // Histograms stores all the data
             // Tuplish is the key, holding the combo that makes the point unique(often, x/y/z/t)
@@ -113,7 +113,6 @@ namespace UnityAnalyticsHeatmap
             }
             else
             {
-
                 foreach (string file in inputFiles)
                 {
                     m_ReportFiles++;
@@ -206,6 +205,7 @@ namespace UnityAnalyticsHeatmap
             List<string> groupOn,
             string remapDensityToField)
         {
+
             bool doRemap = !string.IsNullOrEmpty(remapDensityToField);
             if (doRemap)
             {
@@ -247,7 +247,7 @@ namespace UnityAnalyticsHeatmap
                 string eventName = rowData[nameIndex];
                 string paramsData = rowData[paramsIndex];
                 double unixTimeStamp = double.Parse(rowData[submitTimeIndex]);
-                DateTime rowDate = DateTimeUtils.s_Epoch.AddSeconds(unixTimeStamp);
+                DateTime rowDate = DateTimeUtils.s_Epoch.AddMilliseconds(unixTimeStamp);
 
 
                 string platform = rowData[platformIndex];
@@ -425,8 +425,8 @@ namespace UnityAnalyticsHeatmap
                     return point.histogram.Sum(x => (float)Convert.ToDecimal(x))/point.histogram.Count;
                 case AggregationMethod.Percentile:
                     point.histogram.Sort();
-                    int percentileIndx = (int)(percentile * point.histogram.Count);
-                    int finalIdx = (percentileIndx >= point.histogram.Count-1) ? point.histogram.Count-1 : percentileIndx;
+                    int percentileIdx = (int)((percentile/100f) * point.histogram.Count);
+                    int finalIdx = (percentileIdx >= point.histogram.Count-1) ? point.histogram.Count-1 : percentileIdx;
                     return point.histogram[finalIdx];
             }
             return 0;
