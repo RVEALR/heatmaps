@@ -286,14 +286,14 @@ public class RawDataInspector : EditorWindow
             {
                 m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
                 HeatmapRandomDataView();
-                CreateCode();
+                CreateHeatmapsCode();
                 EditorGUILayout.EndScrollView();
             }
             else if (m_GenerateType == FREEFORM_RANDOM)
             {
                 m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
                 FreeformRandomDataView();
-                CreateCode();
+                CreateFreeformCode();
                 EditorGUILayout.EndScrollView();
             }
             else if (m_GenerateType == DEMO)
@@ -511,7 +511,7 @@ public class RawDataInspector : EditorWindow
                         param.strValue = EditorGUILayout.TextField(m_StrValueContent, param.strValue);
                         break;
                     case TestEventParam.Num:
-                        param.min = EditorGUILayout.FloatField(m_RangeContent, param.min);
+                        param.min = Mathf.Min(EditorGUILayout.FloatField(m_RangeContent, param.min), param.max);
                         param.max = EditorGUILayout.FloatField(param.max);
                         break;
                 }
@@ -763,7 +763,7 @@ public class RawDataInspector : EditorWindow
         }
     }
 
-    void CreateCode()
+    void CreateHeatmapsCode()
     {
         EditorGUILayout.LabelField("Example code", EditorStyles.boldLabel);
 
@@ -833,6 +833,111 @@ public class RawDataInspector : EditorWindow
             }
             code += eventName + "," + transformText + time + dict + ");";
         }
+        var g = new GUIStyle(GUI.skin.textArea);
+        g.wordWrap = true;
+        EditorGUILayout.TextArea(code, g);
+    }
+
+    void CreateFreeformCode()
+    {
+        EditorGUILayout.LabelField("Example code", EditorStyles.boldLabel);
+
+        string code = "using UnityEngine.Analytics;\n";
+        code += "using System.Collections.Generic;\n\n";
+        code += "// Dictionary variables are examples. You must create your own!\n";
+
+        //Analytics.CustomEvent("test", new Dictionary<string, object>{{"param","value"}});
+
+        for(int a = 0; a < m_CustomEvents.Count; a++)
+        {
+            TestCustomEvent evt = m_CustomEvents[a];
+            code += "Analytics.CustomEvent(";
+
+            code += "\"" + evt.name + "\"";
+
+            if (evt.Count > 0)
+            {
+                code += ", new Dictionary<string, object>{";
+                for (int b = 0; b < evt.Count; b++)
+                {
+                    var param = evt[b];
+                    code += "{\"" + param.name + "\", ";
+                    switch(param.type)
+                    {
+                        case TestEventParam.Str:
+                            code += "\"" + param.strValue+ "\"}";
+                            break;
+                        case TestEventParam.Num:
+                            float num = param.min + (param.max - param.min)/2f;
+                            code += "" + num + "}";
+                            break;
+                        case TestEventParam.Bool:
+                            code += "true}";
+                            break;
+                    }
+                    if (b < evt.Count-1)
+                    {
+                        code += ", ";
+                    }
+                }
+                code += "}";
+            }
+
+            code += ");\n";
+        }
+
+//            string testEventName = "someEvent";
+//            if (m_EventNames != null && m_EventNames.Count > 0) {
+//                testEventName = m_EventNames[0];
+//            }
+//            string eventName = "\"" + testEventName + "\"";
+//            string transformText = "";
+//            string time = "";
+//            string dict = "";
+//
+//            if (m_Rotational == ROTATION)
+//            {
+//                transformText += "transform";
+//            }
+//            else if (m_IncludeZ)
+//            {
+//                transformText += "transform.position";
+//            }
+//            else
+//            {
+//                transformText += "new Vector2(transform.position.x, transform.position.y)";
+//            }
+//            if (m_Rotational == DESTINATION)
+//            {
+//                transformText += ",otherGameObject.transform.position";
+//            }
+//
+//            if (m_IncludeTime)
+//            {
+//                time = ",Time.timesinceLevelLoad";
+//            }
+//           
+//                dict = ",new Dictionary<string,object>(){";
+//                if (m_IncludeLevel)
+//                {
+//                    dict += "{\"level\", levelId}";
+//                }
+//                if (m_IncludeLevel && m_IncludeFPS)
+//                {
+//                    dict += ",";
+//                }
+//                if (m_IncludeFPS)
+//                {
+//                    dict += "{\"fps\", fps}";
+//                }
+//                dict += "}";
+//            
+//            code += eventName + "," + transformText + time + dict + ");";
+
+
+
+
+
         var g = new GUIStyle(GUI.skin.textArea);
         g.wordWrap = true;
         EditorGUILayout.TextArea(code, g);
