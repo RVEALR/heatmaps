@@ -620,13 +620,13 @@ public class RawDataInspector : EditorWindow
     {
         GUILayout.Space(20f);
 
-        m_DeviceCount = EditorGUILayout.IntField(m_DeviceCountContent, m_DeviceCount);
+        m_DeviceCount = Math.Max(EditorGUILayout.IntField(m_DeviceCountContent, m_DeviceCount), 1);
         EditorPrefs.SetInt(k_DeviceCountKey, m_DeviceCount);
 
-        m_SessionCount = EditorGUILayout.IntField(m_SessionCountContent, m_SessionCount);
+        m_SessionCount = Math.Max(EditorGUILayout.IntField(m_SessionCountContent, m_SessionCount), 1);
         EditorPrefs.SetInt(k_SessionCountKey, m_SessionCount);
 
-        m_EventCount = EditorGUILayout.IntField(m_EventCountContent, m_EventCount);
+        m_EventCount = Math.Max(EditorGUILayout.IntField(m_EventCountContent, m_EventCount), 1);
         EditorPrefs.SetInt(k_EventCountKey, m_EventCount);
 
         GUILayout.BeginVertical("box");
