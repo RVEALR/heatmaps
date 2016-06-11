@@ -269,13 +269,23 @@ namespace UnityAnalytics
                 client.Encoding = System.Text.Encoding.UTF8;
                 Authorization(client);
                 string url = string.Format(GetJobsPath, m_AppId);
-                string responsebody =  client.DownloadString(url);
-                SaveFile(k_ManifestFileName, responsebody);
-                var list = GenerateList(responsebody);
-                TestLocalFiles(list);
-                if (m_GetJobsCompletionHandler != null)
+                try
                 {
-                    m_GetJobsCompletionHandler(true, list);
+                    string responsebody =  client.DownloadString(url);
+                    SaveFile(k_ManifestFileName, responsebody);
+                    var list = GenerateList(responsebody);
+                    TestLocalFiles(list);
+                    if (m_GetJobsCompletionHandler != null)
+                    {
+                        m_GetJobsCompletionHandler(true, list);
+                    }
+                }
+                catch(WebException ex)
+                {
+                    if (m_GetJobsCompletionHandler != null)
+                    {
+                        m_GetJobsCompletionHandler(false, new List<RawDataReport>(), ex.Status.ToString());
+                    }
                 }
             }
         }
