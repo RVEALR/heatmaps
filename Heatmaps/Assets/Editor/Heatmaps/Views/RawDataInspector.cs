@@ -228,9 +228,9 @@ public class RawDataInspector : EditorWindow
     {
         titleContent = new GUIContent("Raw Data");
 
-        m_FailedContent = new GUIContent(failedIcon, "Failed");
-        m_CompleteContent = new GUIContent(completeIcon, "Completed");
-        m_RunningContent = new GUIContent(runningIcon, "Running");
+        m_FailedContent = new GUIContent(failedIcon, "Status: Failed");
+        m_CompleteContent = new GUIContent(completeIcon, "Status: Completed");
+        m_RunningContent = new GUIContent(runningIcon, "Status: Running");
 
         m_RawDataClient = RawDataClient.GetInstance();
     }
@@ -245,24 +245,30 @@ public class RawDataInspector : EditorWindow
         {
             SetInitValues();
         }
+        if (m_DataSource == FETCH && !m_ValidManifest)
+        {
+            m_RawDataClient.GetJobs(GetJobsCompletionHandler);
+            m_ValidManifest = true;
+        }
     }
 
     void OnGUI()
     {
         EditorPrefs.SetString(k_DataPathKey, m_DataPath);
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Reset"))
+        using (new GUILayout.HorizontalScope())
         {
-            if (EditorUtility.DisplayDialog("Resetting to factory defaults", "Are you sure?", "Reset", "Cancel"))
+            if (GUILayout.Button("Reset"))
             {
-                SetInitValues();
+                if (EditorUtility.DisplayDialog("Resetting to factory defaults", "Are you sure?", "Reset", "Cancel"))
+                {
+                    SetInitValues();
+                }
+            }
+            if (GUILayout.Button("Open Folder"))
+            {
+                EditorUtility.RevealInFinder(m_DataPath);
             }
         }
-        if (GUILayout.Button("Open Folder"))
-        {
-            EditorUtility.RevealInFinder(m_DataPath);
-        }
-        GUILayout.EndHorizontal();
 
         //output path
         EditorGUILayout.LabelField("Output path", EditorStyles.boldLabel);
@@ -276,12 +282,7 @@ public class RawDataInspector : EditorWindow
 
         if (m_DataSource == FETCH)
         {
-            FetchView();
-            if (!m_ValidManifest)
-            {
-                m_RawDataClient.GetJobs(GetJobsCompletionHandler);
-                m_ValidManifest = true;
-            }
+            OnGUIFetchView();
         }
         else if (m_DataSource == GENERATE) 
         {
@@ -289,37 +290,38 @@ public class RawDataInspector : EditorWindow
             if (m_GenerateType == HEATMAP_RANDOM)
             {
                 m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
-                HeatmapRandomDataView();
-                CreateHeatmapsCode();
+                OnGUIHeatmapRandomDataView();
+                OnGUICreateHeatmapsCode();
                 EditorGUILayout.EndScrollView();
             }
             else if (m_GenerateType == FREEFORM_RANDOM)
             {
                 m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
-                FreeformRandomDataView();
-                CreateFreeformCode();
+                OnGUIFreeformRandomDataView();
+                OnGUICreateFreeformCode();
                 EditorGUILayout.EndScrollView();
             }
             else if (m_GenerateType == DEMO)
             {
                 m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
-                DemoDataView();
+                OnGUIDemoDataView();
                 EditorGUILayout.EndScrollView();
             }
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Purge"))
+            using (new GUILayout.HorizontalScope())
             {
-                PurgeData();
+                if (GUILayout.Button("Purge"))
+                {
+                    PurgeData();
+                }
+                if (GUILayout.Button("Generate"))
+                {
+                    GenerateData();
+                }
             }
-            if (GUILayout.Button("Generate"))
-            {
-                GenerateData();
-            }
-            EditorGUILayout.EndHorizontal();
         }
     }
 
-    void FetchView()
+    void OnGUIFetchView()
     {
         string oldKey = m_SecretKey;
         m_AppId = EditorGUILayout.TextField(m_UpidContent, m_AppId);
@@ -334,146 +336,145 @@ public class RawDataInspector : EditorWindow
             EditorPrefs.SetString(k_FetchKey, m_SecretKey);
         }
 
-        EditorGUILayout.BeginVertical("box");
-        GUILayout.Label("New Job", EditorStyles.boldLabel);
-        m_EventTypeIndex = EditorGUILayout.Popup(m_EventTypeIndex, m_EventTypesContent);
-
-        var oldStartDate = m_StartDate;
-        var oldEndDate = m_EndDate;
-        m_StartDate = EditorGUILayout.TextField(m_StartDateContent, m_StartDate);
-        m_EndDate = EditorGUILayout.TextField(m_EndDateContent, m_EndDate);
-        if (oldStartDate != m_StartDate || oldEndDate != m_EndDate)
+        using(new GUILayout.VerticalScope("box"))
         {
-            EditorPrefs.SetString(k_StartDate, m_StartDate);
-            EditorPrefs.SetString(k_EndDate, m_EndDate);
-        }
+            GUILayout.Label("New Job", EditorStyles.boldLabel);
+            m_EventTypeIndex = EditorGUILayout.Popup(m_EventTypeIndex, m_EventTypesContent);
 
-        GUILayout.Space(10f);
-        if (GUILayout.Button("Create Job"))
-        {
-            DateTime startDate = DateTime.Parse(m_StartDate).ToUniversalTime();
-            DateTime endDate = DateTime.Parse(m_EndDate).ToUniversalTime();
-            RawDataReport report = m_RawDataClient.CreateJob(m_EventTypesContent[m_EventTypeIndex].text, startDate, endDate);
-            if (m_Jobs == null)
+            var oldStartDate = m_StartDate;
+            var oldEndDate = m_EndDate;
+            m_StartDate = EditorGUILayout.TextField(m_StartDateContent, m_StartDate);
+            m_EndDate = EditorGUILayout.TextField(m_EndDateContent, m_EndDate);
+            if (oldStartDate != m_StartDate || oldEndDate != m_EndDate)
             {
-                m_Jobs = new List<RawDataReport>();
+                EditorPrefs.SetString(k_StartDate, m_StartDate);
+                EditorPrefs.SetString(k_EndDate, m_EndDate);
             }
-            m_Jobs.Add(report);
-            m_JobFoldouts = m_Jobs.Select(fb => false).ToArray();
+
+            GUILayout.Space(10f);
+            if (GUILayout.Button("Create Job"))
+            {
+                DateTime startDate = DateTime.Parse(m_StartDate).ToUniversalTime();
+                DateTime endDate = DateTime.Parse(m_EndDate).ToUniversalTime();
+                RawDataReport report = m_RawDataClient.CreateJob(m_EventTypesContent[m_EventTypeIndex].text, startDate, endDate);
+
+                if (m_Jobs == null)
+                {
+                    m_Jobs = new List<RawDataReport>();
+                }
+                m_Jobs.Add(report);
+                m_JobFoldouts = m_Jobs.Select(fb => false).ToArray();
+            }
         }
-        EditorGUILayout.EndVertical();
 
         m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
-        EditorGUILayout.BeginVertical("box");
-        if (GUILayout.Button(m_GetJobsContent))
+        using (new GUILayout.VerticalScope("box"))
         {
-            m_RawDataClient.GetJobs(GetJobsCompletionHandler);
-        }
-        if (m_Jobs != null)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Start" + " — " + "End", EditorStyles.boldLabel);
-            GUILayout.Label("Status", EditorStyles.boldLabel);
-            GUILayout.EndHorizontal();
-
-            for (int a = m_Jobs.Count-1; a > -1; a--)
+            if (GUILayout.Button(m_GetJobsContent))
             {
-                var job = m_Jobs[a];
-                string start = String.Format("{0:yyyy-MM-dd}", job.request.startDate);
-                string end = String.Format("{0:yyyy-MM-dd}", job.request.endDate);
-                string shortStart = String.Format("{0:MM-dd}", job.request.startDate);
-                string shortEnd = String.Format("{0:MM-dd}", job.request.endDate);
-                string created = String.Format("{0:yyyy-MM-dd hh:mm:ss}", job.createdAt);
-                string type = job.request.dataset;
-
-                GUILayout.BeginHorizontal();
-                m_JobFoldouts[a] = EditorGUI.Foldout(EditorGUILayout.GetControlRect(),
-                    m_JobFoldouts[a],
-                    new GUIContent(type + ": " + shortStart + " to " + shortEnd, start + " — " + end + "\n" + job.id),
-                    true);
-
-                switch(job.status)
-                {
-                    case RawDataReport.Failed:
-                        GUILayout.Label(m_FailedContent);
-                        break;
-                    case RawDataReport.Completed:
-                        GUILayout.Label(m_CompleteContent);
-                        break;
-                    case RawDataReport.Running:
-                        GUILayout.Label(m_RunningContent);
-                        break;
-                }
-
-                if (job.isLocal)
-                {
-                    GUILayout.Label("Downloaded");
-                }
-                else if (job.status == RawDataReport.Completed)
-                {
-                    if (GUILayout.Button(m_DownloadJobContent, GUILayout.MaxWidth(100f)))
-                    {
-                        m_RawDataClient.Download(job);
-                        job.isLocal = true;
-                    }
-                    if (GUILayout.Button(m_ContinueJobContent, GUILayout.MaxWidth(20f)))
-                    {
-                        RawDataReport report = m_RawDataClient.ContinueFromJob(job);
-                        m_Jobs.Add(report);
-                        m_JobFoldouts = m_Jobs.Select(fb => false).ToArray();
-                    }
-                }
-                GUILayout.EndHorizontal();
-
-
-                if (m_JobFoldouts[a])
-                {
-                    Color defaultColor = GUI.color;
-                    GUI.backgroundColor = s_BoxColor;
-                    GUILayout.BeginVertical("box");
-                    GUILayout.Label("ID: " + job.id);
-                    GUILayout.Label("Created: " + created);
-                    GUILayout.Label("Duration: " + (job.duration/1000) + " seconds");
-                    if (job.result != null)
-                    {
-                        GUILayout.Label("# Events: " + job.result.eventCount);
-                        GUILayout.Label("# Bytes: " + job.result.size);
-                        GUILayout.Label("# Files: " + job.result.fileList.Count);
-                        GUILayout.Label("Partial day: " + job.result.intraDay);
-                    }
-                    GUILayout.EndVertical();
-                    GUI.backgroundColor = defaultColor;
-                }
-
+                m_RawDataClient.GetJobs(GetJobsCompletionHandler);
             }
-
-            if (m_Jobs.Count == 0)
+            if (m_Jobs != null)
             {
-                GUILayout.Label("No jobs found", EditorStyles.boldLabel);
+                // Draw the layout
+                for (int a = m_Jobs.Count-1; a > -1; a--)
+                {
+                    var job = m_Jobs[a];
+                    string start = String.Format("{0:yyyy-MM-dd}", job.request.startDate);
+                    string end = String.Format("{0:yyyy-MM-dd}", job.request.endDate);
+                    string shortStart = String.Format("{0:MM-dd}", job.request.startDate);
+                    string shortEnd = String.Format("{0:MM-dd}", job.request.endDate);
+                    string created = String.Format("{0:yyyy-MM-dd hh:mm:ss}", job.createdAt);
+                    string type = job.request.dataset;
+
+                    using( new EditorGUILayout.HorizontalScope())
+                    {
+
+                        m_JobFoldouts[a] = EditorGUILayout.Foldout(
+                            m_JobFoldouts[a],
+                            new GUIContent(type + ": " + shortStart + " to " + shortEnd, start + " — " + end + "\n" + job.id));
+
+                        switch(job.status)
+                        {
+                        case RawDataReport.Failed:
+                            GUILayout.Label(m_FailedContent);
+                            break;
+                        case RawDataReport.Completed:
+                            GUILayout.Label(m_CompleteContent);
+                            break;
+                        case RawDataReport.Running:
+                            GUILayout.Label(m_RunningContent);
+                            break;
+                        }
+
+                        if (job.isLocal)
+                        {
+                            GUILayout.Label("Downloaded");
+                        }
+                        else if (job.status == RawDataReport.Completed)
+                        {
+                            if (GUILayout.Button(m_DownloadJobContent, GUILayout.MaxWidth(100f)))
+                            {
+                                m_RawDataClient.Download(job);
+                                job.isLocal = true;
+                            }
+                            if (GUILayout.Button(m_ContinueJobContent, GUILayout.MaxWidth(20f)))
+                            {
+                                RawDataReport report = m_RawDataClient.ContinueFromJob(job);
+                                m_Jobs.Add(report);
+                                m_JobFoldouts = m_Jobs.Select(fb => false).ToArray();
+                            }
+                        }
+                    }
+                    if (m_JobFoldouts[a])
+                    {
+                        Color defaultColor = GUI.color;
+                        GUI.backgroundColor = s_BoxColor;
+                        GUILayout.BeginVertical("box");
+                        GUILayout.Label("ID: " + job.id);
+                        GUILayout.Label("Created: " + created);
+                        GUILayout.Label("Duration: " + (job.duration/1000) + " seconds");
+                        if (job.result != null)
+                        {
+                            GUILayout.Label("# Events: " + job.result.eventCount);
+                            GUILayout.Label("# Bytes: " + job.result.size);
+                            GUILayout.Label("# Files: " + job.result.fileList.Count);
+                            GUILayout.Label("Partial day: " + job.result.intraDay);
+                        }
+                        GUILayout.EndVertical();
+                        GUI.backgroundColor = defaultColor;
+                    }
+                }
+
+                if (m_Jobs.Count == 0)
+                {
+                    GUILayout.Label("No jobs found", EditorStyles.boldLabel);
+                }
             }
+            else
+            {
+                GUILayout.Label("No data yet", EditorStyles.boldLabel);
+            }
+            GUILayout.Space(10f);
         }
-        else
-        {
-            GUILayout.Label("No data yet", EditorStyles.boldLabel);
-        }
-        GUILayout.Space(10f);
-        EditorGUILayout.EndVertical();
         EditorGUILayout.EndScrollView();
 
-        EditorGUILayout.BeginHorizontal();
-        if (GUILayout.Button("Purge"))
+
+        using (new GUILayout.HorizontalScope())
         {
-            PurgeData();
+            if (GUILayout.Button("Purge"))
+            {
+                PurgeData();
+            }
+            if (GUILayout.Button("Dashboard"))
+            {
+                Application.OpenURL(m_RawDataClient.DashboardPath);
+            }
+            if (GUILayout.Button("Project Config"))
+            {
+                Application.OpenURL(m_RawDataClient.ConfigPath);
+            }
         }
-        if (GUILayout.Button("Dashboard"))
-        {
-            Application.OpenURL(m_RawDataClient.DashboardPath);
-        }
-        if (GUILayout.Button("Project Config"))
-        {
-            Application.OpenURL(m_RawDataClient.ConfigPath);
-        }
-        EditorGUILayout.EndHorizontal();
     }
 
     private void GetJobsCompletionHandler(bool success, List<RawDataReport> list, string reason = "")
@@ -482,7 +483,7 @@ public class RawDataInspector : EditorWindow
         m_JobFoldouts = m_Jobs.Select(fb => false).ToArray();
     }
 
-    void FreeformRandomDataView()
+    void OnGUIFreeformRandomDataView()
     {
         var preCustomEventsString = TestCustomEvent.StringifyList(m_CustomEvents);
 
@@ -493,49 +494,53 @@ public class RawDataInspector : EditorWindow
 
             GUILayout.Label("Event " + ++iterator + ": " + evt.name, EditorStyles.boldLabel);
 
-            EditorGUILayout.BeginHorizontal();
-            evt.name = EditorGUILayout.TextField(evt.name);
-            if (GUILayout.Button(m_MinusEventContent))
+            using(new GUILayout.HorizontalScope())
             {
-                m_CustomEvents.Remove(evt);
-                break;
-            }
-            if (GUILayout.Button(m_PlusParamContent))
-            {
-                evt.Add(new TestEventParam());
-            }
-            EditorGUILayout.EndHorizontal();
-            for(int a = 0; a < evt.Count; a++)
-            {
-                EditorGUILayout.BeginVertical();
-                var param = evt[a];
-                EditorGUILayout.BeginHorizontal();
-                param.name = EditorGUILayout.TextField(new GUIContent("Parameter " + (a+1)), param.name);
-                EditorGUILayout.EndHorizontal();
-
-                EditorGUILayout.BeginHorizontal();
-                switch(param.type)
+                evt.name = EditorGUILayout.TextField(evt.name);
+                if (GUILayout.Button(m_MinusEventContent))
                 {
-                    case TestEventParam.Bool:
-                        EditorGUILayout.LabelField("Value True or False");
-                        break;
-                    case TestEventParam.Str:
-                        param.strValue = EditorGUILayout.TextField(m_StrValueContent, param.strValue);
-                        break;
-                    case TestEventParam.Num:
-                        param.min = Mathf.Min(EditorGUILayout.FloatField(m_RangeContent, param.min), param.max);
-                        param.max = EditorGUILayout.FloatField(param.max);
-                        break;
-                }
-                param.type = GUILayout.Toolbar(param.type, m_ParamTypeContent);
-                if (GUILayout.Button(m_MinusParamContent))
-                {
-                    evt.Remove(param);
+                    m_CustomEvents.Remove(evt);
                     break;
                 }
+                if (GUILayout.Button(m_PlusParamContent))
+                {
+                    evt.Add(new TestEventParam());
+                }
+            }
+            for(int a = 0; a < evt.Count; a++)
+            {
+                using(new GUILayout.VerticalScope())
+                {
+                    var param = evt[a];
+                    using(new GUILayout.HorizontalScope())
+                    {
+                        param.name = EditorGUILayout.TextField(new GUIContent("Parameter " + (a+1)), param.name);
+                    }
 
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.EndVertical();
+                    using(new GUILayout.HorizontalScope())
+                    {
+                        switch(param.type)
+                        {
+                            case TestEventParam.Bool:
+                                EditorGUILayout.LabelField("Value True or False");
+                                break;
+                            case TestEventParam.Str:
+                                param.strValue = EditorGUILayout.TextField(m_StrValueContent, param.strValue);
+                                break;
+                            case TestEventParam.Num:
+                                param.min = Mathf.Min(EditorGUILayout.FloatField(m_RangeContent, param.min), param.max);
+                                param.max = EditorGUILayout.FloatField(param.max);
+                                break;
+                        }
+                        param.type = GUILayout.Toolbar(param.type, m_ParamTypeContent);
+                        if (GUILayout.Button(m_MinusParamContent))
+                        {
+                            evt.Remove(param);
+                            break;
+                        }
+
+                    }
+                }
                 EditorGUILayout.Space();
             }
         }
@@ -553,7 +558,7 @@ public class RawDataInspector : EditorWindow
         CommonEventView();
     }
 
-    void HeatmapRandomDataView()
+    void OnGUIHeatmapRandomDataView()
     {
         ViewEventNames();
 
@@ -561,69 +566,80 @@ public class RawDataInspector : EditorWindow
         IncludeSet(ref m_IncludeTime, "time", k_IncludeTimeKey);
         
         //x
-        GUILayout.BeginHorizontal();
-        if (IncludeSet(ref m_IncludeX, "x", k_IncludeXKey, true)) {
-            DrawFloatRange(ref m_MinX, ref m_MaxX, k_MinX, k_MaxX);
+        using(new GUILayout.HorizontalScope())
+        {
+            if (IncludeSet(ref m_IncludeX, "x", k_IncludeXKey, true)) {
+                DrawFloatRange(ref m_MinX, ref m_MaxX, k_MinX, k_MaxX);
+            }
         }
-        GUILayout.EndHorizontal();
         //y
-        GUILayout.BeginHorizontal();
-        if (IncludeSet(ref m_IncludeY, "y", k_IncludeYKey, true)) {
-            DrawFloatRange(ref m_MinY, ref m_MaxY, k_MinY, k_MaxY);
+        using(new GUILayout.HorizontalScope())
+        {
+            if (IncludeSet(ref m_IncludeY, "y", k_IncludeYKey, true)) {
+                DrawFloatRange(ref m_MinY, ref m_MaxY, k_MinY, k_MaxY);
+            }
         }
-        GUILayout.EndHorizontal();
         //z
-        GUILayout.BeginHorizontal();
-        if (IncludeSet(ref m_IncludeZ, "z", k_IncludeZKey)) {
-            DrawFloatRange(ref m_MinZ, ref m_MaxZ, k_MinZ, k_MaxZ);
+        using(new GUILayout.HorizontalScope())
+        {
+            if (IncludeSet(ref m_IncludeZ, "z", k_IncludeZKey)) {
+                DrawFloatRange(ref m_MinZ, ref m_MaxZ, k_MinZ, k_MaxZ);
+            }
         }
-        GUILayout.EndHorizontal();
         
         m_Rotational = GUILayout.SelectionGrid(m_Rotational, new string[] {"None", "Rotation", "Destination"}, 3);
         EditorPrefs.SetInt(k_RotationKey, m_Rotational);
         
         if (m_Rotational == ROTATION) {
-            GUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("rx");
-            DrawFloatRange(ref m_MinRX, ref m_MaxRX, k_MinRX, k_MaxRX);
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("ry");
-            DrawFloatRange(ref m_MinRY, ref m_MaxRY, k_MinRY, k_MaxRY);
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("rz");
-            DrawFloatRange(ref m_MinRZ, ref m_MaxRZ, k_MinRZ, k_MaxRZ);
-            GUILayout.EndHorizontal();
+            using(new GUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("rx");
+                DrawFloatRange(ref m_MinRX, ref m_MaxRX, k_MinRX, k_MaxRX);
+            }
+            using(new GUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("ry");
+                DrawFloatRange(ref m_MinRY, ref m_MaxRY, k_MinRY, k_MaxRY);
+            }
+            using(new GUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("rz");
+                DrawFloatRange(ref m_MinRZ, ref m_MaxRZ, k_MinRZ, k_MaxRZ);
+            }
         } else if (m_Rotational == DESTINATION) {
             //destination
-            GUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("dx");
-            DrawFloatRange(ref m_MinDX, ref m_MaxDX, k_MinDX, k_MaxDX);
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("dy");
-            DrawFloatRange(ref m_MinDY, ref m_MaxDY, k_MinDY, k_MaxDY);
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("dz");
-            DrawFloatRange(ref m_MinDZ, ref m_MaxDZ, k_MinDZ, k_MaxDZ);
-            GUILayout.EndHorizontal();
+            using(new GUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("dx");
+                DrawFloatRange(ref m_MinDX, ref m_MaxDX, k_MinDX, k_MaxDX);
+            }
+            using(new GUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("dy");
+                DrawFloatRange(ref m_MinDY, ref m_MaxDY, k_MinDY, k_MaxDY);
+            }
+            using(new GUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("dz");
+                DrawFloatRange(ref m_MinDZ, ref m_MaxDZ, k_MinDZ, k_MaxDZ);
+            }
         }
         
         //level
-        GUILayout.BeginHorizontal();
-        if (IncludeSet(ref m_IncludeLevel, "level", k_IncludeLevelKey)) {
-            DrawIntRange(ref m_MinLevel, ref m_MaxLevel, k_MinLevel, k_MaxLevel);
+        using(new GUILayout.HorizontalScope())
+        {
+            if (IncludeSet(ref m_IncludeLevel, "level", k_IncludeLevelKey)) {
+                DrawIntRange(ref m_MinLevel, ref m_MaxLevel, k_MinLevel, k_MaxLevel);
+            }
         }
-        GUILayout.EndHorizontal();
         
         //fps
-        GUILayout.BeginHorizontal();
-        if (IncludeSet(ref m_IncludeFPS, "fps", k_IncludeFPSKey)) {
-            DrawFloatRange(ref m_MinFPS, ref m_MaxFPS, k_MinFPS, k_MaxFPS);
+        using(new GUILayout.HorizontalScope())
+        {
+            if (IncludeSet(ref m_IncludeFPS, "fps", k_IncludeFPSKey)) {
+                DrawFloatRange(ref m_MinFPS, ref m_MaxFPS, k_MinFPS, k_MaxFPS);
+            }
         }
-        GUILayout.EndHorizontal();
 
         CommonEventView();
     }
@@ -641,15 +657,16 @@ public class RawDataInspector : EditorWindow
         m_EventCount = Math.Max(EditorGUILayout.IntField(m_EventCountContent, m_EventCount), 1);
         EditorPrefs.SetInt(k_EventCountKey, m_EventCount);
 
-        GUILayout.BeginVertical("box");
-        GUILayout.Label("Platforms");
-        m_SendIos = EditorGUILayout.Toggle(m_IosContent, m_SendIos);
-        m_SendAndroid = EditorGUILayout.Toggle(m_AndroidContent, m_SendAndroid);
-        m_SendWeb = EditorGUILayout.Toggle(m_WebGlContent, m_SendWeb);
-        GUILayout.EndVertical();
+        using(new GUILayout.VerticalScope("box"))
+        {
+            GUILayout.Label("Platforms");
+            m_SendIos = EditorGUILayout.Toggle(m_IosContent, m_SendIos);
+            m_SendAndroid = EditorGUILayout.Toggle(m_AndroidContent, m_SendAndroid);
+            m_SendWeb = EditorGUILayout.Toggle(m_WebGlContent, m_SendWeb);
+        }
     }
 
-    void DemoDataView()
+    void OnGUIDemoDataView()
     {
         EditorGUILayout.LabelField(m_DataStoryIndexContent, EditorStyles.boldLabel);
 
@@ -775,7 +792,7 @@ public class RawDataInspector : EditorWindow
         }
     }
 
-    void CreateHeatmapsCode()
+    void OnGUICreateHeatmapsCode()
     {
         EditorGUILayout.LabelField("Example code", EditorStyles.boldLabel);
 
@@ -850,7 +867,7 @@ public class RawDataInspector : EditorWindow
         EditorGUILayout.TextArea(code, g);
     }
 
-    void CreateFreeformCode()
+    void OnGUICreateFreeformCode()
     {
         EditorGUILayout.LabelField("Example code", EditorStyles.boldLabel);
 
@@ -1530,14 +1547,15 @@ public class RawDataInspector : EditorWindow
         }
         for (var a = 0; a < m_EventNames.Count; a++)
         {
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("-", GUILayout.MaxWidth(20f)))
+            using(new GUILayout.HorizontalScope())
             {
-                m_EventNames.RemoveAt(a);
-                break;
+                if (GUILayout.Button("-", GUILayout.MaxWidth(20f)))
+                {
+                    m_EventNames.RemoveAt(a);
+                    break;
+                }
+                m_EventNames[a] = EditorGUILayout.TextField(m_EventNames[a]);
             }
-            m_EventNames[a] = EditorGUILayout.TextField(m_EventNames[a]);
-            GUILayout.EndHorizontal();
         }
         string currentEventsString = string.Join("|", m_EventNames.ToArray());
 
