@@ -1052,6 +1052,12 @@ public class RawDataInspector : EditorWindow
             return;
         }
 
+        if (m_DeviceCount * m_SessionCount * m_EventCount > 10000)
+        {
+            Debug.LogWarningFormat("Your current settings would generate {0} points. That's more than the 10000 max we think is advisable.", m_DeviceCount * m_SessionCount * m_EventCount);
+            return;
+        }
+
         int linesPerFile = 1000;
         int currentFileLines = 0;
         DateTime now = DateTime.UtcNow;
@@ -1114,7 +1120,6 @@ public class RawDataInspector : EditorWindow
 
         if (m_DeviceCount < 1) problems.Add("device");
         if (m_SessionCount < 1) problems.Add("session");
-        if (m_CustomEvents.Count < 1) problems.Add("event type");
         if (m_EventNames.Count < 1) problems.Add("event name");
         if (platforms.Count < 1) problems.Add("platform");
 
@@ -1135,6 +1140,12 @@ public class RawDataInspector : EditorWindow
                 }
             }
             Debug.LogWarningFormat("You must have at least one {0} to generate data.", missing);
+            return;
+        }
+
+        if (m_DeviceCount * m_SessionCount * m_EventCount > 10000)
+        {
+            Debug.LogWarningFormat("Your current settings would generate {0} points. That's more than the 10000 max we think is advisable.", m_DeviceCount * m_SessionCount * m_EventCount);
             return;
         }
 
