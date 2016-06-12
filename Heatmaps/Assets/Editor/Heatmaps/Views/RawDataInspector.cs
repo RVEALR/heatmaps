@@ -233,6 +233,13 @@ public class RawDataInspector : EditorWindow
         m_RunningContent = new GUIContent(runningIcon, "Status: Running");
 
         m_RawDataClient = RawDataClient.GetInstance();
+
+
+        if (m_DataSource == FETCH && !m_ValidManifest)
+        {
+            m_RawDataClient.GetJobs(GetJobsCompletionHandler);
+            m_ValidManifest = true;
+        }
     }
 
     void OnFocus()
@@ -244,11 +251,6 @@ public class RawDataInspector : EditorWindow
         else
         {
             SetInitValues();
-        }
-        if (m_DataSource == FETCH && !m_ValidManifest)
-        {
-            m_RawDataClient.GetJobs(GetJobsCompletionHandler);
-            m_ValidManifest = true;
         }
     }
 
@@ -389,36 +391,47 @@ public class RawDataInspector : EditorWindow
 
                     using( new EditorGUILayout.HorizontalScope())
                     {
+                        float windowWidth = EditorGUIUtility.currentViewWidth;
+                        float foldoutWidth = windowWidth * .5f;
+                        float downloadButtonWidth = 75f;
+                        float continueButtonWidth = 25f;
+                        float downloadedWidth = downloadButtonWidth;
+                        float statusWidth = 20f;
 
-                        m_JobFoldouts[a] = EditorGUILayout.Foldout(
+                        GUIContent foldoutContent = new GUIContent(type + ": " + shortStart + " to " + shortEnd, start + " — " + end + "\n" + job.id);
+                        Rect pos = GUILayoutUtility.GetRect(foldoutContent, "foldout");
+                        Rect rect = new Rect(pos.x, pos.y, foldoutWidth, 20f);
+                        m_JobFoldouts[a] = EditorGUI.Foldout(
+                            rect,
                             m_JobFoldouts[a],
-                            new GUIContent(type + ": " + shortStart + " to " + shortEnd, start + " — " + end + "\n" + job.id));
+                            foldoutContent,
+                            true
+                            );
 
+                        var statusContent = m_CompleteContent;
                         switch(job.status)
                         {
                         case RawDataReport.Failed:
-                            GUILayout.Label(m_FailedContent);
-                            break;
-                        case RawDataReport.Completed:
-                            GUILayout.Label(m_CompleteContent);
+                            statusContent = m_FailedContent;
                             break;
                         case RawDataReport.Running:
-                            GUILayout.Label(m_RunningContent);
+                            statusContent = m_RunningContent;
                             break;
                         }
+                        GUILayout.Label(statusContent, GUILayout.Width(statusWidth));
 
-                        if (job.isLocal)
+                        if (job.status == RawDataReport.Completed)
                         {
-                            GUILayout.Label("Downloaded");
-                        }
-                        else if (job.status == RawDataReport.Completed)
-                        {
-                            if (GUILayout.Button(m_DownloadJobContent, GUILayout.MaxWidth(100f)))
+                            if (job.isLocal)
+                            {
+                                GUILayout.Label("Downloaded", GUILayout.Width(downloadedWidth));
+                            }
+                            else if (GUILayout.Button(m_DownloadJobContent, GUILayout.Width(downloadButtonWidth)))
                             {
                                 m_RawDataClient.Download(job);
                                 job.isLocal = true;
                             }
-                            if (GUILayout.Button(m_ContinueJobContent, GUILayout.MaxWidth(20f)))
+                            if (GUILayout.Button(m_ContinueJobContent, GUILayout.Width(continueButtonWidth)))
                             {
                                 RawDataReport report = m_RawDataClient.ContinueFromJob(job);
                                 m_Jobs.Add(report);
