@@ -71,9 +71,6 @@ public class RawDataInspector : EditorWindow
     private GUIContent m_DownloadJobContent = new GUIContent("Download", "Download job files");
     private GUIContent m_GetJobsContent = new GUIContent("Get Jobs", "Load the manifest of job files");
 
-    private Texture2D failedIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/failed.png") as Texture2D;
-    private Texture2D completeIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/success.png") as Texture2D;
-    private Texture2D runningIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/running.png") as Texture2D;
     private GUIContent m_FailedContent;
     private GUIContent m_CompleteContent;
     private GUIContent m_RunningContent;
@@ -224,21 +221,25 @@ public class RawDataInspector : EditorWindow
 
     RawDataClient m_RawDataClient;
 
-    public RawDataInspector()
+    void OnEnable()
     {
-        titleContent = new GUIContent("Raw Data");
-
-        m_FailedContent = new GUIContent(failedIcon, "Status: Failed");
-        m_CompleteContent = new GUIContent(completeIcon, "Status: Completed");
-        m_RunningContent = new GUIContent(runningIcon, "Status: Running");
-
-        m_RawDataClient = RawDataClient.GetInstance();
-
-
-        if (m_DataSource == FETCH && !m_ValidManifest)
+        if (m_RawDataClient == null)
         {
-            m_RawDataClient.GetJobs(GetJobsCompletionHandler);
-            m_ValidManifest = true;
+            Texture2D failedIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/failed.png") as Texture2D;
+            Texture2D completeIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/success.png") as Texture2D;
+            Texture2D runningIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/running.png") as Texture2D;
+
+            m_RawDataClient = RawDataClient.GetInstance();
+            if (m_DataSource == FETCH && !m_ValidManifest)
+            {
+                m_RawDataClient.GetJobs(GetJobsCompletionHandler);
+                m_ValidManifest = true;
+            }
+            titleContent = new GUIContent("Raw Data");
+            m_FailedContent = new GUIContent(failedIcon, "Status: Failed");
+            m_CompleteContent = new GUIContent(completeIcon, "Status: Completed");
+            m_RunningContent = new GUIContent(runningIcon, "Status: Running");
+            return;
         }
     }
 
@@ -257,7 +258,8 @@ public class RawDataInspector : EditorWindow
     void OnGUI()
     {
         EditorPrefs.SetString(k_DataPathKey, m_DataPath);
-        using (new GUILayout.HorizontalScope())
+
+        using (new EditorGUILayout.HorizontalScope())
         {
             if (GUILayout.Button("Reset"))
             {
@@ -309,7 +311,7 @@ public class RawDataInspector : EditorWindow
                 OnGUIDemoDataView();
                 EditorGUILayout.EndScrollView();
             }
-            using (new GUILayout.HorizontalScope())
+            using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("Purge"))
                 {
@@ -389,7 +391,7 @@ public class RawDataInspector : EditorWindow
                     string created = String.Format("{0:yyyy-MM-dd hh:mm:ss}", job.createdAt);
                     string type = job.request.dataset;
 
-                    using( new EditorGUILayout.HorizontalScope())
+                    using(new EditorGUILayout.HorizontalScope())
                     {
                         float windowWidth = EditorGUIUtility.currentViewWidth;
                         float foldoutWidth = windowWidth * .5f;
@@ -443,18 +445,19 @@ public class RawDataInspector : EditorWindow
                     {
                         Color defaultColor = GUI.color;
                         GUI.backgroundColor = s_BoxColor;
-                        GUILayout.BeginVertical("box");
-                        GUILayout.Label("ID: " + job.id);
-                        GUILayout.Label("Created: " + created);
-                        GUILayout.Label("Duration: " + (job.duration/1000) + " seconds");
-                        if (job.result != null)
+                        using(new GUILayout.VerticalScope("box"))
                         {
-                            GUILayout.Label("# Events: " + job.result.eventCount);
-                            GUILayout.Label("# Bytes: " + job.result.size);
-                            GUILayout.Label("# Files: " + job.result.fileList.Count);
-                            GUILayout.Label("Partial day: " + job.result.intraDay);
+                            GUILayout.Label("ID: " + job.id);
+                            GUILayout.Label("Created: " + created);
+                            GUILayout.Label("Duration: " + (job.duration/1000) + " seconds");
+                            if (job.result != null)
+                            {
+                                GUILayout.Label("# Events: " + job.result.eventCount);
+                                GUILayout.Label("# Bytes: " + job.result.size);
+                                GUILayout.Label("# Files: " + job.result.fileList.Count);
+                                GUILayout.Label("Partial day: " + job.result.intraDay);
+                            }
                         }
-                        GUILayout.EndVertical();
                         GUI.backgroundColor = defaultColor;
                     }
                 }
