@@ -533,10 +533,10 @@ namespace UnityAnalytics
         public RawDataRequest(Dictionary<string, object> dict)
         {
             if (dict.ContainsKey("startDate"))
-                startDate = DateTime.Parse((string)dict["startDate"]);
+                startDate = DateTime.Parse((string)dict["startDate"]).ToUniversalTime();
             if (dict.ContainsKey("continueFrom"))
                 continueFrom = (string)dict["continueFrom"];
-            endDate = DateTime.Parse((string)dict["endDate"]);
+            endDate = DateTime.Parse((string)dict["endDate"]).ToUniversalTime();
             format = (string)dict["format"];
             dataset = (string)dict["dataset"];
         }
