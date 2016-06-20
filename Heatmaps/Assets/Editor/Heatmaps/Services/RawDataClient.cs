@@ -21,8 +21,8 @@
 /// once baked, the kitchen timer should go "ding!"
 /// 
 /// RAW DATA API
-/// Documentation for the Raw Data API currently resides here:
-/// https://docs.google.com/document/d/1uxWYktRGAO7scxQ-mgi19v93eo9MG-8X_53RTlWy1Vo/edit#heading=h.49fs52cteoc
+/// Documentation for the Raw Data API currently can be found here:
+/// http://docs.unity3d.com/540/Documentation/Manual/UnityAnalyticsRawDataExport.html
 
 
 using System;
@@ -139,6 +139,8 @@ namespace UnityAnalytics
                 string result = client.UploadString(new Uri(url), "POST", data);
                 var dict = MiniJSON.Json.Deserialize(result) as Dictionary<string, object>;
                 report = new RawDataReport(dict);
+                // fill in the startDate for reporting purposes
+                report.request.startDate = priorReport.request.endDate;
             }
 
             return report;
