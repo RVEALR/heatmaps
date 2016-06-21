@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections;
 using UnityAnalytics;
 using System.Linq;
+using System.Net;
 
 public class RawDataInspector : EditorWindow
 {
@@ -358,15 +359,35 @@ public class RawDataInspector : EditorWindow
             GUILayout.Space(10f);
             if (GUILayout.Button("Create Job"))
             {
-                DateTime startDate = DateTime.Parse(m_StartDate).ToUniversalTime();
-                DateTime endDate = DateTime.Parse(m_EndDate).ToUniversalTime();
-                RawDataReport report = m_RawDataClient.CreateJob(m_EventTypesContent[m_EventTypeIndex].text, startDate, endDate);
-
+                RawDataReport report = null;
+                try
+                {
+                    DateTime startDate = DateTime.Parse(m_StartDate).ToUniversalTime();
+                    DateTime endDate = DateTime.Parse(m_EndDate).ToUniversalTime();
+                    report = m_RawDataClient.CreateJob(m_EventTypesContent[m_EventTypeIndex].text, startDate, endDate);
+                }
+                catch(Exception ex)
+                {
+                    string exText = "Unknown exception.";
+                    if (ex is FormatException)
+                    {
+                        exText = "Date formats appear to be incorrect. Start and End Dates must be ISO-8601 format (YYYY-MM-DD).";
+                    }
+                    else if (ex is WebException)
+                    {
+                        WebException webEx = ex as WebException;
+                        exText = webEx.Message;
+                    }
+                    EditorUtility.DisplayDialog("Can't create job", exText, "OK");
+                }
                 if (m_Jobs == null)
                 {
                     m_Jobs = new List<RawDataReport>();
                 }
-                m_Jobs.Add(report);
+                if (report != null)
+                {
+                    m_Jobs.Add(report);
+                }
                 m_JobFoldouts = m_Jobs.Select(fb => false).ToArray();
             }
         }
