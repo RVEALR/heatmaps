@@ -109,7 +109,7 @@ namespace UnityAnalyticsHeatmap
             var headers = GetHeaders();
             if (headers["name"] == -1 || headers["submit_time"] == -1 || headers["custom_params"] == -1)
             {
-                Debug.LogWarning ("No headers found");
+                Debug.LogWarning ("No headers found. This can happen if (a) you have no headers.gz file, or (b) the headers.gz file you have represents some other event type than custom. Try (re-)downloading some custom events.");
             }
             else
             {
