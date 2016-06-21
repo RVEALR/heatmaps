@@ -215,7 +215,7 @@ namespace UnityAnalytics
                         var fileList = manifest[a].result.fileList;
                         for (var b = 0; b < fileList.Count; b++)
                         {
-                            if (fileList[b].name == "headers.gz")
+                            if (fileList[b].name.Contains("headers.gz"))
                             {
                                 continue;
                             }
@@ -370,7 +370,12 @@ namespace UnityAnalytics
                 string file = job.result.fileList[a].url;
                 using(WebClient client = new WebClient())
                 {
-                    string savePath = PathFromFileName(job.result.fileList[a].name);
+                    string fileName = job.result.fileList[a].name;
+                    if (fileName.Contains("headers.gz"))
+                    {
+                        fileName = job.request.dataset + "_" + job.result.fileList[a].name;
+                    }
+                    string savePath = PathFromFileName(fileName);
                     client.DownloadFile(file, savePath);
                 }
             }

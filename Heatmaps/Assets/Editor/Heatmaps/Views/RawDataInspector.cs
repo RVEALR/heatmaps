@@ -1028,7 +1028,7 @@ public class RawDataInspector : EditorWindow
 
     void CreateHeadersFile()
     {
-        SaveFile(headers, "headers.gz", true);
+        SaveFile(headers, "custom_headers.gz", true);
     }
 
     void CreateManifestFile(List<RawDataReport> list)
@@ -1039,7 +1039,6 @@ public class RawDataInspector : EditorWindow
 
     void GenerateFreeformData()
     {
-        
         List<string> platforms = new List<string>();
         if (m_SendIos)
             platforms.Add("ios");
@@ -1448,10 +1447,13 @@ public class RawDataInspector : EditorWindow
                 System.IO.Directory.Delete(savePath, true);
             }
             // Clear all local jobs since they've been destroyed
-            for (int a = 0; a < m_Jobs.Count; a++)
+            if (m_Jobs != null)
             {
-                var job = m_Jobs[a];
-                job.isLocal = false;
+                for (int a = 0; a < m_Jobs.Count; a++)
+                {
+                    var job = m_Jobs[a];
+                    job.isLocal = false;
+                }
             }
         }
     }

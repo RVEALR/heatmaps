@@ -109,7 +109,7 @@ namespace UnityAnalyticsHeatmap
             var headers = GetHeaders();
             if (headers["name"] == -1 || headers["submit_time"] == -1 || headers["custom_params"] == -1)
             {
-                Debug.LogWarning ("No headers found. This can happen if (a) you have no headers.gz file, or (b) the headers.gz file you have represents some other event type than custom. Try (re-)downloading some custom events.");
+                Debug.LogWarning ("No headers found. The likeliest cause of this is that you have no custom_headers.gz file. Perhaps you need to download a raw data job?");
             }
             else
             {
@@ -185,7 +185,7 @@ namespace UnityAnalyticsHeatmap
         {
             var retv = new Dictionary<string, int>();
             string path = System.IO.Path.Combine(m_DataPath, "RawData");
-            path = System.IO.Path.Combine(path, "headers.gz");
+            path = System.IO.Path.Combine(path, "custom_headers.gz");
             string tsv = IonicGZip.DecompressFile(path);
             tsv = tsv.Replace(System.Environment.NewLine, "");
             List<string> rowData = new List<string>(tsv.Split('\t'));
