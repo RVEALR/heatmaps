@@ -125,11 +125,15 @@ namespace UnityAnalyticsHeatmap
 
         public void OnGUI()
         {
-            EditorGUILayout.BeginVertical("box");
+            SerializedObject serializedGradient = null;
             SerializedProperty colorGradient = null;
             if (m_GameObject != null)
             {
-                SerializedObject serializedGradient = new SerializedObject(m_GameObject.GetComponent<GradientContainer>());
+                serializedGradient = new SerializedObject(m_GameObject.GetComponent<GradientContainer>());
+            }
+
+            using(new EditorGUILayout.VerticalScope("box"))
+            {
                 if (serializedGradient != null)
                 {
                     colorGradient = serializedGradient.FindProperty("ColorGradient");
@@ -141,84 +145,86 @@ namespace UnityAnalyticsHeatmap
                     }
                 }
             }
-            EditorGUILayout.EndVertical();
 
             // PARTICLE SIZE/SHAPE
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Particle", EditorStyles.boldLabel);
-            var oldParticleSize = m_ParticleSize;
-            m_ParticleSize = EditorGUILayout.FloatField(m_ParticleSizeContent, m_ParticleSize);
-            m_ParticleSize = Mathf.Max(0.05f, m_ParticleSize);
-            if (oldParticleSize != m_ParticleSize)
+            using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorPrefs.SetFloat(k_ParticleSizeKey, m_ParticleSize);
-            }
-
-            var oldParticleShapeIndex = m_ParticleShapeIndex;
-            m_ParticleShapeIndex = EditorGUILayout.Popup(m_ParticleShapeContent, m_ParticleShapeIndex, m_ParticleShapeOptions);
-            if (oldParticleShapeIndex != m_ParticleShapeIndex)
-            {
-                EditorPrefs.SetInt(k_ParticleShapeKey, m_ParticleShapeIndex);
-            }
-
-            if (m_ParticleShapeIndex > 2)
-            {
-                var oldParticleDirectionIndex = m_ParticleDirectionIndex;
-                m_ParticleDirectionIndex = EditorGUILayout.Popup(m_ParticleDirectionContent, m_ParticleDirectionIndex, m_ParticleDirectionOptions);
-                if (oldParticleDirectionIndex != m_ParticleDirectionIndex)
+                EditorGUILayout.LabelField("Particle", EditorStyles.boldLabel);
+                var oldParticleSize = m_ParticleSize;
+                m_ParticleSize = EditorGUILayout.FloatField(m_ParticleSizeContent, m_ParticleSize);
+                m_ParticleSize = Mathf.Max(0.05f, m_ParticleSize);
+                if (oldParticleSize != m_ParticleSize)
                 {
-                    EditorPrefs.SetInt(k_ParticleDirectionKey, m_ParticleDirectionIndex);
+                    EditorPrefs.SetFloat(k_ParticleSizeKey, m_ParticleSize);
                 }
+
+                var oldParticleShapeIndex = m_ParticleShapeIndex;
+                m_ParticleShapeIndex = EditorGUILayout.Popup(m_ParticleShapeContent, m_ParticleShapeIndex, m_ParticleShapeOptions);
+                if (oldParticleShapeIndex != m_ParticleShapeIndex)
+                {
+                    EditorPrefs.SetInt(k_ParticleShapeKey, m_ParticleShapeIndex);
+                }
+
+                if (m_ParticleShapeIndex > 2)
+                {
+                    var oldParticleDirectionIndex = m_ParticleDirectionIndex;
+                    m_ParticleDirectionIndex = EditorGUILayout.Popup(m_ParticleDirectionContent, m_ParticleDirectionIndex, m_ParticleDirectionOptions);
+                    if (oldParticleDirectionIndex != m_ParticleDirectionIndex)
+                    {
+                        EditorPrefs.SetInt(k_ParticleDirectionKey, m_ParticleDirectionIndex);
+                    }
+                }
+                // POSITION MASKING
+                EditorGUILayout.LabelField("Masking (x/y/z)");
+                RenderMinMaxSlider(ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey, m_LowSpace.x, m_HighSpace.x);
+                RenderMinMaxSlider(ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey, m_LowSpace.y, m_HighSpace.y);
+                RenderMinMaxSlider(ref m_LowZ, ref m_HighZ, k_LowZKey, k_HighZKey, m_LowSpace.z, m_HighSpace.z);
             }
-            // POSITION MASKING
-            EditorGUILayout.LabelField("Masking (x/y/z)");
-            RenderMinMaxSlider(ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey, m_LowSpace.x, m_HighSpace.x);
-            RenderMinMaxSlider(ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey, m_LowSpace.y, m_HighSpace.y);
-            RenderMinMaxSlider(ref m_LowZ, ref m_HighZ, k_LowZKey, k_HighZKey, m_LowSpace.z, m_HighSpace.z);
-            EditorGUILayout.EndVertical();
 
             // TIME WINDOW
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Time", EditorStyles.boldLabel);
-            var oldStartTime = m_StartTime;
-            var oldEndTime = m_EndTime;
-            RenderMinMaxSlider(ref m_StartTime, ref m_EndTime, k_StartTimeKey, k_EndTimeKey, 0f, m_MaxTime);
-            var oldPlaySpeed = m_PlaySpeed;
-            m_PlaySpeed = EditorGUILayout.FloatField(m_PlaySpeedContent, m_PlaySpeed);
-            if (oldPlaySpeed != m_PlaySpeed)
+            using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorPrefs.SetFloat(k_PlaySpeedKey, m_PlaySpeed);
-            }
-            EditorGUILayout.BeginHorizontal();
-            GUIContent restartContent = m_RestartContent;
-            if (GUILayout.Button(restartContent))
-            {
-                Restart();
-                m_IsPlaying = false;
-            }
-
-            GUIContent playButtonContent = m_IsPlaying ? m_PauseContent : m_PlayContent;
-            if (GUILayout.Button(playButtonContent))
-            {
-                if (m_StartTime < m_MaxTime && m_EndTime == m_MaxTime)
+                EditorGUILayout.LabelField("Time", EditorStyles.boldLabel);
+                var oldStartTime = m_StartTime;
+                var oldEndTime = m_EndTime;
+                RenderMinMaxSlider(ref m_StartTime, ref m_EndTime, k_StartTimeKey, k_EndTimeKey, 0f, m_MaxTime);
+                var oldPlaySpeed = m_PlaySpeed;
+                m_PlaySpeed = EditorGUILayout.FloatField(m_PlaySpeedContent, m_PlaySpeed);
+                if (oldPlaySpeed != m_PlaySpeed)
                 {
-                    Restart();
+                    EditorPrefs.SetFloat(k_PlaySpeedKey, m_PlaySpeed);
                 }
-                m_IsPlaying = !m_IsPlaying;
-            }
-            EditorGUILayout.EndHorizontal();
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUIContent restartContent = m_RestartContent;
+                    if (GUILayout.Button(restartContent))
+                    {
+                        Restart();
+                        m_IsPlaying = false;
+                    }
 
-            bool forceTime = false;
-            if (oldStartTime != m_StartTime)
-            {
-                forceTime = true;
+                    GUIContent playButtonContent = m_IsPlaying ? m_PauseContent : m_PlayContent;
+                    if (GUILayout.Button(playButtonContent))
+                    {
+                        if (m_StartTime < m_MaxTime && m_EndTime == m_MaxTime)
+                        {
+                            Restart();
+                        }
+                        m_IsPlaying = !m_IsPlaying;
+                    }
+                }
+
+                bool forceTime = false;
+                if (oldStartTime != m_StartTime)
+                {
+                    forceTime = true;
+                }
+                if (oldEndTime != m_EndTime)
+                {
+                    forceTime = true;
+                }
+                Update(forceTime);
             }
-            if (oldEndTime != m_EndTime)
-            {
-                forceTime = true;
-            }
-            Update(forceTime);
-            EditorGUILayout.EndVertical();
 
             // REPORTING AND TIPS
             if (m_GameObject != null && m_GameObject.GetComponent<IHeatmapRenderer>() != null)
@@ -291,34 +297,35 @@ namespace UnityAnalyticsHeatmap
 
         protected void RenderMinMaxSlider(ref float lowValue, ref float highValue, string lowKey, string highKey, float minValue, float maxValue)
         {
-            EditorGUILayout.BeginHorizontal();
-            float oldLow = lowValue;
-            float oldHigh = highValue;
-
-            lowValue = EditorGUILayout.FloatField(lowValue, GUILayout.MaxWidth(50f));
-            highValue = EditorGUILayout.FloatField(highValue, GUILayout.Width(50f));
-            EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, minValue, maxValue);
-
-
-            highValue = Mathf.Max(lowValue, highValue);
-            lowValue = Mathf.Min(lowValue, highValue);
-
-            // Needed to solve small rounding error in the MinMaxSlider
-            highValue = (Mathf.Abs(oldHigh - highValue) < .0001f) ? oldHigh : highValue;
-            if (GUILayout.Button("Max"))
+            using (new EditorGUILayout.HorizontalScope())
             {
-                lowValue = minValue;
-                highValue = maxValue;
+                float oldLow = lowValue;
+                float oldHigh = highValue;
+
+                lowValue = EditorGUILayout.FloatField(lowValue, GUILayout.MaxWidth(50f));
+                highValue = EditorGUILayout.FloatField(highValue, GUILayout.Width(50f));
+                EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, minValue, maxValue);
+
+
+                highValue = Mathf.Max(lowValue, highValue);
+                lowValue = Mathf.Min(lowValue, highValue);
+
+                // Needed to solve small rounding error in the MinMaxSlider
+                highValue = (Mathf.Abs(oldHigh - highValue) < .0001f) ? oldHigh : highValue;
+                if (GUILayout.Button("Max"))
+                {
+                    lowValue = minValue;
+                    highValue = maxValue;
+                }
+                if (oldLow != lowValue)
+                {
+                    EditorPrefs.SetFloat(lowKey, lowValue);
+                }
+                if (oldHigh != highValue)
+                {
+                    EditorPrefs.SetFloat(highKey, highValue);
+                }
             }
-            if (oldLow != lowValue)
-            {
-                EditorPrefs.SetFloat(lowKey, lowValue);
-            }
-            if (oldHigh != highValue)
-            {
-                EditorPrefs.SetFloat(highKey, highValue);
-            }
-            EditorGUILayout.EndHorizontal();
         }
 
         public void SystemReset()
