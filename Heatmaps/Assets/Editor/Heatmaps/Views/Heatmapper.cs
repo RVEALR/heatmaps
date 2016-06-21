@@ -95,14 +95,11 @@ public class Heatmapper : EditorWindow
             m_RenderView.OnGUI();
         }
 
-        if (m_HeatMapInstance)
-        {
-            m_RenderView.SetGameObject(m_HeatMapInstance);
-        }
-        else
+        if (m_HeatMapInstance == null)
         {
             AttemptReconnectWithHeatmapInstance();
         }
+        m_RenderView.SetGameObject(m_HeatMapInstance);
         GUILayout.EndVertical();
         EditorGUILayout.EndScrollView();
     }
