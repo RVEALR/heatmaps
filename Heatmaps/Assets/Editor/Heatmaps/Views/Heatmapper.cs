@@ -43,65 +43,71 @@ public class Heatmapper : EditorWindow
 
     Vector2 m_ScrollPosition;
 
+    void OnEnable()
+    {
+        m_RenderView = HeatmapRendererInspector.Init(this);
+        m_AggregationView = AggregationInspector.Init(m_Aggregator);
+        m_ParserView = HeatmapDataParserInspector.Init(OnPointData);
+    }
+
     void OnGUI()
     {
-        m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
-        GUILayout.BeginVertical("box");
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Reset"))
+        if (Event.current.type == EventType.Layout)
         {
-            SystemReset();
-        }
-        if (GUILayout.Button("Documentation"))
-        {
-            Application.OpenURL("https://bitbucket.org/Unity-Technologies/heatmaps/wiki/Home");
-        }
-        GUILayout.EndHorizontal();
-        GUILayout.EndVertical();
-
-        GUILayout.BeginVertical("box");
-        if (m_AggregationView == null)
-        {
-            m_AggregationView = AggregationInspector.Init(m_Aggregator);
-        }
-        m_ShowAggregate = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), m_ShowAggregate, "Data", true);
-        if (m_ShowAggregate)
-        {
-            m_AggregationView.OnGUI();
-            GUILayout.BeginHorizontal();
-
-            if (GUILayout.Button("Process"))
+            if (m_HeatMapInstance == null)
             {
-                SystemProcess();
+                AttemptReconnectWithHeatmapInstance();
             }
-            GUILayout.EndHorizontal();
-        }
-        GUILayout.EndVertical();
-
-        GUILayout.BeginVertical("box");
-        if (m_ParserView == null)
-        {
-            m_ParserView = HeatmapDataParserInspector.Init(OnPointData);
-        }
-        if (m_RenderView == null)
-        {
-            m_RenderView = HeatmapRendererInspector.Init(this);
+            if (m_RenderView != null)
+            {
+                m_RenderView.SetGameObject(m_HeatMapInstance);
+            }
         }
 
-        m_ShowRender = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), m_ShowRender, "Render", true);
-        if (m_ShowRender && m_ParserView != null)
+        using (var scroll = new EditorGUILayout.ScrollViewScope(m_ScrollPosition))
         {
-            m_ParserView.OnGUI();
-            m_RenderView.OnGUI();
-        }
+            m_ScrollPosition = scroll.scrollPosition;
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Reset"))
+                    {
+                        SystemReset();
+                    }
+                    if (GUILayout.Button("Documentation"))
+                    {
+                        Application.OpenURL("https://bitbucket.org/Unity-Technologies/heatmaps/wiki/Home");
+                    }
+                }
+            }
 
-        if (m_HeatMapInstance == null)
-        {
-            AttemptReconnectWithHeatmapInstance();
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                m_ShowAggregate = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), m_ShowAggregate, "Data", true);
+                if (m_ShowAggregate)
+                {
+                    m_AggregationView.OnGUI();
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Process"))
+                        {
+                            SystemProcess();
+                        }
+                    }
+                }
+            }
+
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                m_ShowRender = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), m_ShowRender, "Render", true);
+                if (m_ShowRender && m_ParserView != null)
+                {
+                    m_ParserView.OnGUI();
+                    m_RenderView.OnGUI();
+                }
+            }
         }
-        m_RenderView.SetGameObject(m_HeatMapInstance);
-        GUILayout.EndVertical();
-        EditorGUILayout.EndScrollView();
     }
 
     void Update()

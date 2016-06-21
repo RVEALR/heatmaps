@@ -61,7 +61,8 @@ namespace UnityAnalyticsHeatmap
         bool m_Tips = false;
 
         GameObject m_GameObject;
-
+        SerializedObject m_SerializedGradient = null;
+        SerializedProperty m_ColorGradient = null;
 
         Texture2D darkSkinPlayIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/play_dark.png") as Texture2D;
         Texture2D darkSkinPauseIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/pause_dark.png") as Texture2D;
@@ -76,6 +77,7 @@ namespace UnityAnalyticsHeatmap
         private GUIContent m_ParticleDirectionContent = new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point");
         private GUIContent m_PlaySpeedContent = new GUIContent("Play Speed", "Speed at which playback occurs");
         private GUIContent m_TipsContent = new GUIContent("Hot tips", "When enabled, see individual point information on rollover. Caution: can be costly! Also note, submap must be selected to see hot tips.");
+        private GUIContent m_TipsTextContent = new GUIContent("Points (displayed/total): 0 / 0");
         private GUIContent m_RestartContent;
         private GUIContent m_PlayContent;
         private GUIContent m_PauseContent;
@@ -125,23 +127,19 @@ namespace UnityAnalyticsHeatmap
 
         public void OnGUI()
         {
-            SerializedObject serializedGradient = null;
-            SerializedProperty colorGradient = null;
-            if (m_GameObject != null)
-            {
-                serializedGradient = new SerializedObject(m_GameObject.GetComponent<GradientContainer>());
-            }
-
             using(new EditorGUILayout.VerticalScope("box"))
             {
-                if (serializedGradient != null)
+                if (m_GameObject == null)
                 {
-                    colorGradient = serializedGradient.FindProperty("ColorGradient");
+                    EditorGUILayout.LabelField("No heatmap. Can't show gradient.", EditorStyles.boldLabel);
+                }
+                else if (m_ColorGradient != null)
+                {
                     EditorGUI.BeginChangeCheck();
-                    EditorGUILayout.PropertyField(colorGradient, false);
+                    EditorGUILayout.PropertyField(m_ColorGradient, false);
                     if(EditorGUI.EndChangeCheck())
                     {
-                        serializedGradient.ApplyModifiedProperties();
+                        m_SerializedGradient.ApplyModifiedProperties();
                     }
                 }
             }
@@ -182,11 +180,11 @@ namespace UnityAnalyticsHeatmap
             }
 
             // TIME WINDOW
+            var oldStartTime = m_StartTime;
+            var oldEndTime = m_EndTime;
             using (new EditorGUILayout.VerticalScope("box"))
             {
                 EditorGUILayout.LabelField("Time", EditorStyles.boldLabel);
-                var oldStartTime = m_StartTime;
-                var oldEndTime = m_EndTime;
                 RenderMinMaxSlider(ref m_StartTime, ref m_EndTime, k_StartTimeKey, k_EndTimeKey, 0f, m_MaxTime);
                 var oldPlaySpeed = m_PlaySpeed;
                 m_PlaySpeed = EditorGUILayout.FloatField(m_PlaySpeedContent, m_PlaySpeed);
@@ -196,8 +194,7 @@ namespace UnityAnalyticsHeatmap
                 }
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    GUIContent restartContent = m_RestartContent;
-                    if (GUILayout.Button(restartContent))
+                    if (GUILayout.Button(m_RestartContent))
                     {
                         Restart();
                         m_IsPlaying = false;
@@ -213,42 +210,46 @@ namespace UnityAnalyticsHeatmap
                         m_IsPlaying = !m_IsPlaying;
                     }
                 }
-
-                bool forceTime = false;
-                if (oldStartTime != m_StartTime)
-                {
-                    forceTime = true;
-                }
-                if (oldEndTime != m_EndTime)
-                {
-                    forceTime = true;
-                }
-                Update(forceTime);
             }
+            bool forceTime = false;
+            if (oldStartTime != m_StartTime)
+            {
+                forceTime = true;
+            }
+            if (oldEndTime != m_EndTime)
+            {
+                forceTime = true;
+            }
+            Update(forceTime);
 
             // REPORTING AND TIPS
-            if (m_GameObject != null && m_GameObject.GetComponent<IHeatmapRenderer>() != null)
+            EditorGUILayout.LabelField(m_TipsTextContent);
+            bool oldTips = m_Tips;
+            m_Tips = EditorGUILayout.Toggle(m_TipsContent, m_Tips);
+            if (oldTips != m_Tips)
             {
-                int total = m_GameObject.GetComponent<IHeatmapRenderer>().totalPoints;
-                int current = m_GameObject.GetComponent<IHeatmapRenderer>().currentPoints;
-                GUILayout.Label("Points (displayed/total): " + current + " / " + total);
-                bool oldTips = m_Tips;
-                m_Tips = EditorGUILayout.Toggle(m_TipsContent, m_Tips);
-                if (oldTips != m_Tips)
-                {
-                    EditorPrefs.SetBool(k_ShowTipsKey, m_Tips);
-                }
+                EditorPrefs.SetBool(k_ShowTipsKey, m_Tips);
             }
 
-            // PASS VALUES TO RENDERER
-            if (m_GameObject != null)
+            if (Event.current.type == EventType.Layout)
             {
-                IHeatmapRenderer r = m_GameObject.GetComponent<IHeatmapRenderer>() as IHeatmapRenderer;
-                r.UpdateGradient(SafeGradientValue(colorGradient ));
-                r.pointSize = m_ParticleSize;
-                r.activateTips = m_Tips;
-                r.UpdateRenderMask(m_LowX, m_HighX, m_LowY, m_HighY, m_LowZ, m_HighZ);
-                r.UpdateRenderStyle(m_ParticleShapeIds[m_ParticleShapeIndex], m_ParticleDirectionIds[m_ParticleDirectionIndex]);
+                if (m_GameObject != null && m_GameObject.GetComponent<IHeatmapRenderer>() != null)
+                {
+                    int total = m_GameObject.GetComponent<IHeatmapRenderer>().totalPoints;
+                    int current = m_GameObject.GetComponent<IHeatmapRenderer>().currentPoints;
+                    m_TipsTextContent = new GUIContent("Points (displayed/total): " + current + " / " + total);
+                }
+
+                // PASS VALUES TO RENDERER
+                if (m_GameObject != null)
+                {
+                    IHeatmapRenderer r = m_GameObject.GetComponent<IHeatmapRenderer>() as IHeatmapRenderer;
+                    r.UpdateGradient(SafeGradientValue(m_ColorGradient ));
+                    r.pointSize = m_ParticleSize;
+                    r.activateTips = m_Tips;
+                    r.UpdateRenderMask(m_LowX, m_HighX, m_LowY, m_HighY, m_LowZ, m_HighZ);
+                    r.UpdateRenderStyle(m_ParticleShapeIds[m_ParticleShapeIndex], m_ParticleDirectionIds[m_ParticleDirectionIndex]);
+                }
             }
         }
 
@@ -397,6 +398,11 @@ namespace UnityAnalyticsHeatmap
         public void SetGameObject(GameObject go)
         {
             m_GameObject = go;
+            if (m_GameObject != null)
+            {
+                m_SerializedGradient = new SerializedObject(m_GameObject.GetComponent<GradientContainer>());
+                m_ColorGradient = m_SerializedGradient.FindProperty("ColorGradient");
+            }
         }
     }
 }
