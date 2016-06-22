@@ -125,9 +125,7 @@ namespace UnityAnalyticsHeatmap
                 bool hasData = false;
                 List<int> reportList = new List<int>();
 
-                //var histograms = new Dictionary<Tuplish, Dictionary<string, List<float>>>();
                 Dictionary<Tuplish, List<Dictionary<string, float>>> outputData = new Dictionary<Tuplish, List<Dictionary<string, float>>>();
-
 
                 foreach (var generated in histograms)
                 {

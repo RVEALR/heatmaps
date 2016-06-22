@@ -130,8 +130,9 @@ public class Heatmapper : EditorWindow
 
             if (m_RenderView != null)
             {
-                m_RenderView.SetLimits(m_HeatData);
                 m_RenderView.SetGameObject(m_HeatMapInstance);
+                m_RenderView.SetLimits(m_HeatData);
+
                 m_RenderView.Update(true);
             }
 
