@@ -71,6 +71,7 @@ public class RawDataInspector : EditorWindow
     private GUIContent m_ContinueJobContent = new GUIContent(">", "Continue job");
     private GUIContent m_DownloadJobContent = new GUIContent("Download", "Download job files");
     private GUIContent m_GetJobsContent = new GUIContent("Get Jobs", "Load the manifest of job files");
+    private GUIContent m_DownloadAllContent = new GUIContent("Download All", "Download the files for all jobs");
 
     private GUIContent m_FailedContent;
     private GUIContent m_CompleteContent;
@@ -328,6 +329,10 @@ public class RawDataInspector : EditorWindow
 
     void OnGUIFetchView()
     {
+        if (Event.current.type == EventType.Layout)
+        {
+            m_RawDataClient.TestFilesAreLocal(m_Jobs);
+        }
         string oldKey = m_SecretKey;
         m_AppId = EditorGUILayout.TextField(m_UpidContent, m_AppId);
         RestoreAppId();
@@ -395,13 +400,19 @@ public class RawDataInspector : EditorWindow
         m_ScrollPosition = EditorGUILayout.BeginScrollView(m_ScrollPosition);
         using (new GUILayout.VerticalScope("box"))
         {
-            if (GUILayout.Button(m_GetJobsContent))
+            using (new EditorGUILayout.HorizontalScope())
             {
-                m_RawDataClient.GetJobs(GetJobsCompletionHandler);
+                if (GUILayout.Button(m_GetJobsContent))
+                {
+                    m_RawDataClient.GetJobs(GetJobsCompletionHandler);
+                }
+                if (GUILayout.Button(m_DownloadAllContent))
+                {
+                    m_RawDataClient.DownloadAll(m_Jobs);
+                }
             }
             if (m_Jobs != null)
             {
-                // Draw the layout
                 for (int a = m_Jobs.Count-1; a > -1; a--)
                 {
                     var job = m_Jobs[a];
@@ -449,10 +460,13 @@ public class RawDataInspector : EditorWindow
                             {
                                 GUILayout.Label("Downloaded", GUILayout.Width(downloadedWidth));
                             }
+                            else if (job.result != null && job.result.size == 0)
+                            {
+                                GUILayout.Label("No Data", GUILayout.Width(downloadedWidth));
+                            }
                             else if (GUILayout.Button(m_DownloadJobContent, GUILayout.Width(downloadButtonWidth)))
                             {
                                 m_RawDataClient.Download(job);
-                                job.isLocal = true;
                             }
                             if (GUILayout.Button(m_ContinueJobContent, GUILayout.Width(continueButtonWidth)))
                             {
@@ -1445,15 +1459,6 @@ public class RawDataInspector : EditorWindow
             if (System.IO.Directory.Exists(savePath))
             {
                 System.IO.Directory.Delete(savePath, true);
-            }
-            // Clear all local jobs since they've been destroyed
-            if (m_Jobs != null)
-            {
-                for (int a = 0; a < m_Jobs.Count; a++)
-                {
-                    var job = m_Jobs[a];
-                    job.isLocal = false;
-                }
             }
         }
     }

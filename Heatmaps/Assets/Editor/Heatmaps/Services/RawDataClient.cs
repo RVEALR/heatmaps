@@ -188,7 +188,7 @@ namespace UnityAnalytics
                 {
                     string text = stream.ReadToEnd();
                     list = GenerateList(text);
-                    TestLocalFiles(list);
+                    TestFilesAreLocal(list);
                     if (m_GetJobsCompletionHandler != null)
                     {
                         m_GetJobsCompletionHandler(true, list);
@@ -276,7 +276,7 @@ namespace UnityAnalytics
                     string responsebody =  client.DownloadString(url);
                     SaveFile(k_ManifestFileName, responsebody);
                     var list = GenerateList(responsebody);
-                    TestLocalFiles(list);
+                    TestFilesAreLocal(list);
                     if (m_GetJobsCompletionHandler != null)
                     {
                         m_GetJobsCompletionHandler(true, list);
@@ -318,8 +318,12 @@ namespace UnityAnalytics
             return reportRecordList;
         }
 
-        private void TestLocalFiles(List<RawDataReport> list)
+        public void TestFilesAreLocal(List<RawDataReport> list)
         {
+            if (list == null)
+            {
+                return;
+            }
             for (var a = 0; a < list.Count; a++)
             {
                 list[a].isLocal = FilesHaveLoaded(list[a]);
@@ -334,7 +338,12 @@ namespace UnityAnalytics
             }
             for (var a = 0; a < report.result.fileList.Count; a++)
             {
-                if (!FileHasLoaded(report.result.fileList[a]))
+                string fileName = report.result.fileList[a].name;
+                if (fileName.Contains("headers.gz"))
+                {
+                    fileName = report.request.dataset + "_" + report.result.fileList[a].name;
+                }
+                if (!FileHasLoaded(fileName))
                 {
                     return false;
                 }
@@ -342,9 +351,9 @@ namespace UnityAnalytics
             return true;
         }
 
-        public bool FileHasLoaded(RawDataFile file)
+        public bool FileHasLoaded(string name)
         {
-            string path = PathFromFileName(file.name);
+            string path = PathFromFileName(name);
             return File.Exists(path);
         }
 
@@ -363,17 +372,29 @@ namespace UnityAnalytics
             File.WriteAllText(PathFromFileName(outputFileName), outputData);
         }
 
-        public void Download(RawDataReport job)
+        public void DownloadAll(List<RawDataReport> jobs)
         {
-            for(int a = 0; a < job.result.fileList.Count; a++)
+            for (int a = 0; a < jobs.Count; a++)
             {
-                string file = job.result.fileList[a].url;
+                var job = jobs[a];
+                if (!FilesHaveLoaded(job))
+                {
+                    Download(jobs[a]);
+                }
+            }
+        }
+
+        public void Download(RawDataReport report)
+        {
+            for(int a = 0; a < report.result.fileList.Count; a++)
+            {
+                string file = report.result.fileList[a].url;
                 using(WebClient client = new WebClient())
                 {
-                    string fileName = job.result.fileList[a].name;
+                    string fileName = report.result.fileList[a].name;
                     if (fileName.Contains("headers.gz"))
                     {
-                        fileName = job.request.dataset + "_" + job.result.fileList[a].name;
+                        fileName = report.request.dataset + "_" + report.result.fileList[a].name;
                     }
                     string savePath = PathFromFileName(fileName);
                     client.DownloadFile(file, savePath);
@@ -386,8 +407,6 @@ namespace UnityAnalytics
             string credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes(m_AppId + ":" + m_SecretKey));
             client.Headers.Add("Content-Type", "application/json");
             client.Headers.Add(HttpRequestHeader.Authorization, string.Format("Basic {0}", credentials));
-
-
         }
     }
 
