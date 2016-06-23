@@ -208,11 +208,12 @@ namespace UnityAnalytics
             {
                 for (var a = 0; a < manifest.Count; a++)
                 {
-                    var evt = (UnityAnalyticsEventType)Enum.Parse(typeof(UnityAnalyticsEventType), manifest[a].request.dataset);
-                    if (eventList.Contains(evt) && manifest[a].status == RawDataReport.Completed)
+                    var report = manifest[a];
+                    var evt = (UnityAnalyticsEventType)Enum.Parse(typeof(UnityAnalyticsEventType), report.request.dataset);
+                    if (eventList.Contains(evt) && report.status == RawDataReport.Completed && report.result.size > 0 && FilesHaveLoaded(report))
                     {
-                        DateTime reportDate = manifest[a].createdAt;
-                        var fileList = manifest[a].result.fileList;
+                        DateTime reportDate = report.createdAt;
+                        var fileList = report.result.fileList;
                         for (var b = 0; b < fileList.Count; b++)
                         {
                             if (fileList[b].name.Contains("headers.gz"))
@@ -224,7 +225,6 @@ namespace UnityAnalytics
                             {
                                 var path = PathFromFileName(fileList[b].name);
                                 KeyValuePair<DateTime, string> kv = new KeyValuePair<DateTime, string>(reportDate, path);
-
                                 // Look for any matching date, but take the one from the more recent report
                                 if (resultsAsDict.ContainsKey(fileDate))
                                 {
