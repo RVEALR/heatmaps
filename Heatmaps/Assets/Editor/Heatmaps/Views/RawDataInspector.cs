@@ -237,7 +237,12 @@ public class RawDataInspector : EditorWindow
                 m_RawDataClient.GetJobs(GetJobsCompletionHandler);
                 m_ValidManifest = true;
             }
+            #if UNITY_5_3_OR_NEWER
             titleContent = new GUIContent("Raw Data");
+            #else
+            title = "Raw Data";
+            #endif
+
             m_FailedContent = new GUIContent(failedIcon, "Status: Failed");
             m_CompleteContent = new GUIContent(completeIcon, "Status: Completed");
             m_RunningContent = new GUIContent(runningIcon, "Status: Running");
