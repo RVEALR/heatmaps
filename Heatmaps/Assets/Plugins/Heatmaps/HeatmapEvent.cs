@@ -29,6 +29,14 @@ namespace UnityAnalyticsHeatmap
     {
         private static Dictionary<string, object> s_Dictionary = new Dictionary<string, object>();
 
+        private const string k_SenderPercentKey = "unity.analytics.heatmaps_sender_percent";
+        private const string k_IsSenderKey = "unity.analytics.heatmaps_sender";
+        private const float defaultSenderPercent = 1f;
+
+        private static bool m_HasComputedIfUserIsSender = false;
+        private static bool m_IsSender = false;
+        private static float m_RandomSenderPercent = defaultSenderPercent;
+
         /// <summary>
         /// Send the event with position and an optional dictionary.
         /// </summary>
@@ -123,9 +131,70 @@ namespace UnityAnalyticsHeatmap
         /// </summary>
         protected static analyticsResultNamespace.AnalyticsResult Commit(string eventName)
         {
-            analyticsResultNamespace.AnalyticsResult result = analyticsEventNamespace.CustomEvent("Heatmap." + eventName, s_Dictionary);
-            s_Dictionary.Clear();
+            analyticsResultNamespace.AnalyticsResult result = analyticsResultNamespace.AnalyticsResult.AnalyticsDisabled;
+            if (isHeatmapUser)
+            {
+                result = analyticsEventNamespace.CustomEvent("Heatmap." + eventName, s_Dictionary);
+                s_Dictionary.Clear();
+            }
             return result;
+        }
+
+        public static float senderPercent
+        {
+            get
+            {
+                return m_RandomSenderPercent;
+            }
+            set
+            {
+                m_RandomSenderPercent = value;
+            }
+        }
+
+        public static bool isHeatmapUser
+        {
+            get
+            {
+                if (Debug.isDebugBuild)
+                {
+                    m_IsSender = true;
+                }
+                else
+                {
+                    if (!m_HasComputedIfUserIsSender)
+                    {
+                        if (PlayerPrefs.HasKey(k_SenderPercentKey) && PlayerPrefs.HasKey(k_IsSenderKey))
+                        {
+                            float storedPercent = PlayerPrefs.GetFloat(k_SenderPercentKey);
+                            bool storedSender = PlayerPrefs.GetInt(k_IsSenderKey) == 1 ? true : false;
+                            if (senderPercent == storedPercent)
+                            {
+                                m_IsSender = storedSender;
+                            }
+                            else
+                            {
+                                m_IsSender = RandomSender();
+                            }
+                        }
+                        else
+                        {
+                            m_IsSender = RandomSender();
+                        }
+                        m_HasComputedIfUserIsSender = true;
+                    }
+                }
+                return m_IsSender;
+            }
+        }
+
+        protected static bool RandomSender()
+        {
+            bool doSend = UnityEngine.Random.Range(0f, 100f) < senderPercent ? true : false;
+            int value = doSend ? 1 : 0;
+            PlayerPrefs.SetInt(k_IsSenderKey, value);
+            PlayerPrefs.SetFloat(k_SenderPercentKey, senderPercent);
+            return doSend;
         }
 
         /// <summary>
