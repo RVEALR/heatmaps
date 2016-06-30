@@ -185,7 +185,7 @@ namespace UnityAnalyticsHeatmap
             string path = System.IO.Path.Combine(m_DataPath, "RawData");
             path = System.IO.Path.Combine(path, "custom_headers.gz");
             string tsv = IonicGZip.DecompressFile(path);
-            tsv = tsv.Replace(System.Environment.NewLine, "");
+            tsv = tsv.Replace("\n", "");
             List<string> rowData = new List<string>(tsv.Split('\t'));
             for (var a = 0; a < headerKeys.Length; a++)
             {
