@@ -32,6 +32,8 @@ using System.Collections.Specialized;
 using System.Text;
 using UnityEngine;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
 
 namespace UnityAnalytics
 {
@@ -404,6 +406,13 @@ namespace UnityAnalytics
 
         protected void Authorization(WebClient client)
         {
+            #if UNITY_EDITOR_WIN
+            // Bypassing SSL security in Windows to work around a CURL bug.
+            // This is insecure and should be fixed when the Engine supports SSL.
+            ServicePointManager.ServerCertificateValidationCallback = delegate(System.Object obj, X509Certificate certificate, X509Chain chain, SslPolicyErrors errors) {
+            return true;
+            };
+            #endif
             string credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes(m_AppId + ":" + m_SecretKey));
             client.Headers.Add("Content-Type", "application/json");
             client.Headers.Add(HttpRequestHeader.Authorization, string.Format("Basic {0}", credentials));
