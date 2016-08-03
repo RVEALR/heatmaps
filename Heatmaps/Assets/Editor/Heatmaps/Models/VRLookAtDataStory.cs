@@ -13,12 +13,12 @@ namespace UnityAnalyticsHeatmap
             description = "Imagine this data as part of a VR game. Your question: as they move through my game, ";
             description += "are users looking where I want them to look?";
             whatToTry = "Generate this data, then click Process in the Heatmapper. In the render setting under 'Shape', ";
-            whatToTry += "pick 'Point to Point'. Observe how you can see not just where the user was in the virtual world, ";
+            whatToTry += "pick 'Point to Point' (you may also want to set particle size to around 10). Observe how you can see not just where the user was in the virtual world, ";
             whatToTry += "but also what they were looking at.\n\n";
             whatToTry += "This is done by sending two Vector3s. The first is the position of the player. The second ";
             whatToTry += "is the position of a collider to which we raycast. The same technique could be used in a first-person ";
             whatToTry += "shooter to find the things the player shot.\n\n";
-            whatToTry += "Now look at the 'Masking' subsection. This allows you to trim away data based on its position. ";
+            whatToTry += "This map is pretty busy. Look at the 'Masking' controls. These allow you to trim away data based on its position. ";
             whatToTry += "Note how the Y axis has no handles. This is because all the Y data in this demo is at ";
             whatToTry += "the same ordinate. Try tweaking the X and Z values to isolate out and inspect a single source position.";
 

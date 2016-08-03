@@ -16,23 +16,29 @@ namespace UnityAnalyticsHeatmap
             genre = "2D Maze Game";
             description = "In the second half of our maze game exploration, your question is: where in my game does my framerate drop? ";
             description += "We're sending the same PlayerPosition event, but this time " ;
-            description += "we're sending 'fps' as a parameter. We can chart it and get an idea of where the game might be slowing down.";
-            whatToTry = "Generate this data. In the Heatmapper, process it. In the 'Render' section, check that your shape is 'Cube' or 'Square'. ";
+            description += "we're sending 'fps' as a parameter. We can chart this value and get an idea of where the game might be slowing down.";
+
+            whatToTry = "Generate this data. In the Heatmapper, process it. In the 'Render' section, check that your particle shape is 'Cube' or 'Square'. ";
             whatToTry += "Now check 'Remap color to field'. In the textfield ";
-            whatToTry += "that appears, enter the value 'fps'. Set 'Remap Operation' to 'Lowest Wins'. Now process again.\n\n";
+            whatToTry += "that appears, enter the value 'fps'. Set 'Remap Operation' to 'Min'. Now process again.\n\n";
+
             whatToTry += "Observe how color now represents places with higher and lower FPS. ";
             whatToTry += "Remember that color on the right side of the gradient represents HIGHER density, and since you've re-mapped fps ";
             whatToTry += "the color on the right will display HIGH fps. Also look at the possible Remap operations. ";
             whatToTry += "When mapping FPS, we probably care most about the lowest FPS scores (i.e., where our game is going slow), ";
-            whatToTry += "so 'Lowest Wins' makes a lot of sense. But we can also operate incrementally, cumlatively, etc., ";
+            whatToTry += "so 'Min' makes a lot of sense. But we can also operate incrementally, cumlatively, etc., ";
             whatToTry += "depending on what's most important for the variable we're mapping.\n\n";
+
             whatToTry += "Remap operations:\n";
             whatToTry += "* Increment: Add exactly one each time we see a point at this location\n";
             whatToTry += "* Cumulative: Add all remap values together\n";
-            whatToTry += "* First Wins: Use the first value we see\n";
-            whatToTry += "* Last Wins: Use the last value we see\n";
-            whatToTry += "* Min Wins: Use the lowest of all values\n";
-            whatToTry += "* Max Wins: Use the highest of all values\n";
+            whatToTry += "* Average: The mean value (use percentile 50 if you want to see median)\n";
+            whatToTry += "* Min: Use the lowest of all values\n";
+            whatToTry += "* Max: Use the highest of all values\n";
+            whatToTry += "* First: Use the first value we see\n";
+            whatToTry += "* Last: Use the last value we see\n";
+            whatToTry += "* Percentile: Find the percentile within the values (0 = Min, 50 = Median, 100 = Max)\n";
+
             sampleCode = "using UnityAnalyticsHeatmap;\n";
             sampleCode += "using System.Collections.Generic;\n\n";
             sampleCode += "// The fps and gameTurn variables are examples.\n";

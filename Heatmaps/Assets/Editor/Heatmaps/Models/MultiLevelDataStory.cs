@@ -15,17 +15,20 @@ namespace UnityAnalyticsHeatmap
             description = "This demo shows how you can separate events by level. In fact, you can separate by ";
             description += "pretty much ANYTHING.";
             whatToTry = "Generate this data, which shows player position in a 2D maze game. Open the Heatmapper. ";
-            whatToTry += "Ensure your space smoothing is 1 and particle size is .75. Uncheck 'time' and click the Process button. ";
-            whatToTry += "Under 'Time' set the end time and 'Play Speed' to 1. Click 'Play'.\n\n";
-            whatToTry += "Now, there's a LOT of data here and the action looks very messy. That's because what you're seeing is actually ";
-            whatToTry += "data from MANY levels on top of each other. Click the 'Separate on Field' button and replace the words ";
+            whatToTry += "Ensure your space smoothing is 1 and particle size is .75 (Particle shape should be 'Cube'). Set 'Time' to '#', value of '1', and click the Process button. ";
+            whatToTry += "Now under Render > Time set the end time to '1' and 'Play Speed' to .5. Click the 'Play' button.\n\n";
+
+            whatToTry += "Now, there's a lot of data here and the action looks very messy. That's because what you're seeing is actually ";
+            whatToTry += "data from MANY levels on top of each other. Under 'Separate', select the 'On Custom Field' checkbox and replace the words ";
             whatToTry += "'Field Name' with 'level' (case matters!). Now Process again. ";
             whatToTry += "Again, set the end time to 1 and press 'Play'. Hey presto! You can see the clear shape ";
-            whatToTry += "of players navigating a single maze level. Did you see the 'Option' dropdown appear? Click that dropdown. ";
+            whatToTry += "of players navigating a single maze level. Did you see the additional dropdown appear (it mentions 'level')? Click that dropdown. ";
             whatToTry += "You can now choose to view each level's worth of data individually.\n\n";
-            whatToTry += "Under 'Aggregate', uncheck 'Unique Devices' and click Process. Open the 'Option' list to see how it has changed. ";
-            whatToTry += "Not only are the levels separated, so are the individual devices. You can use this to see how individual ";
+
+            whatToTry += "Under 'Separate', check 'Users' and click Process. Notice you have yet another dropdown. ";
+            whatToTry += "Not only are the levels now separated, so are the individual users. You can use this to see how individual ";
             whatToTry += "players play.";
+
             sampleCode = "using UnityAnalyticsHeatmap;\n";
             sampleCode += "using System.Collections.Generic;\n\n";
             sampleCode += "// The level and gameTurn variables are examples.\n";

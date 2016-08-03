@@ -15,8 +15,8 @@ namespace UnityAnalyticsHeatmap
             whatToTry = "Generate this data, then click Process in the Heatmapper. In the render setting under 'Shape', ";
             whatToTry += "pick 'Point to Point' and a particle size around 2. Observe how you can see not ";
             whatToTry += "just where the user was in the virtual world, ";
-            whatToTry += "but also how fast they were going. You can see that users have a lot more trouble on one side ";
-            whatToTry += "of the track.\n\n";
+            whatToTry += "but also how fast they were going. Looking at the 'Crash' event, you can see that ";
+            whatToTry += "users have a lot more trouble on one side of the track.\n\n";
             whatToTry += "This demo uses the same basic technique as VR Look At (sending two Vector3s), but instead of ";
             whatToTry += "using a collider to determine the 'destination' position, we simply calculate based on velocity.";
 

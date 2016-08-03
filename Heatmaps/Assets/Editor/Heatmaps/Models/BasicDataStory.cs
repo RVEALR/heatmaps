@@ -14,7 +14,7 @@ namespace UnityAnalyticsHeatmap
             whatToTry = "Generate this data, then open the Heatmapper and click the Process button. ";
             whatToTry += "First, notice the numbers at the bottom of the Heatmapper ('Points displayed/total') ";
             whatToTry += "These give you an idea of how much data you should expect to see displayed.\n\n";
-            whatToTry += "Notice that the generated heatmap has three colors. Click on the color gradient to 'tune' the ";
+            whatToTry += "Notice that the generated heatmap has a three-color gradient. Click on the color gradient to 'tune' the ";
             whatToTry += "colors. Play with the gradient and see how that changes the look of the heatmap. You can even change the alphas.\n\n";
             whatToTry += "Now, under 'Particle', change the size and shape settings and again observe how this affects the display.\n\n";
             whatToTry += "Finally, check the box 'Hot tips' at the bottom of the Heatmapper. In the scene, click on any heatmap point. ";

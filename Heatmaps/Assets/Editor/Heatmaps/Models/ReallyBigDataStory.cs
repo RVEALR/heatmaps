@@ -16,21 +16,22 @@ namespace UnityAnalyticsHeatmap
             whatToTry += "area and you're probably zoomed in. Second, check the Particle size. Try setting size to around 25, ";
             whatToTry += "then zoom out so you can see all the points. ";
             whatToTry += "Notice that this data is a bit sparse because of the scale of the map. ";
-            whatToTry += "Under 'Aggregate', change the value of 'Space Smooth' to 500 and re-process. ";
+            whatToTry += "Under 'Smooth/Unionize', change the value of 'Space' to 500 and re-process. ";
             whatToTry += "Adjust the particle size to 250. Now you can see the general areas where ";
             whatToTry += "kills have occurred and the map becomes more useful.\n\n";
 
-            whatToTry += "Under Render, Find the 'Option' dropdown. If you click it, you'll see in addition to 'CombatKills' ";
+            whatToTry += "Under Render, Find the dropdown. If you click it, you'll see that, in addition to 'CombatKills', ";
             whatToTry += "there's an option for 'PlayerPosition'. Choose that and instead of seeing kills, you'll see where in this sim ";
             whatToTry += "your players have gone. While space smooth of 500 was good for kills, it's likely too coarse for player position. ";
-            whatToTry += "Re-adjust space smoothing and particle size to 10. ";
-            whatToTry += "Uncheck the 'Direction' checkbox and Process again. ";
+            whatToTry += "Re-adjust space smoothing and particle size to 30. That looks better.\n\n";
+
+            whatToTry += "Under 'Smooth/Unionize', select '#' for 'Rotation' (check the value is 1) and Process again. ";
+            whatToTry += "Once again, select PlayerPosition from the dropdown. ";
             whatToTry += "Now, under Particle 'Shape' pick 'Arrow'. What you're now seeing is not simply WHERE the player went, ";
             whatToTry += "but what direction they flew.\n\n";
 
-            whatToTry += "Under 'Smooth', select '#' for 'Time', then Process again. ";
-            whatToTry += "You might try bringing the particle size up to around 25. In the Render section ";
-            whatToTry += "under 'Time' note the start and end values. Change the end value to 1, change 'Play Speed' to 0.1 and ";
+            whatToTry += "Under 'Smooth/Unionize', select '#' for 'Time', then Process again. In the Render section ";
+            whatToTry += "under 'Time' note the start and end values. Change the end value to 1, change 'Play Speed' to 0.05 and ";
             whatToTry += "press the 'Play' button to watch the airplanes fly! With a little practice, you can even scrub the timeline.";
 
             sampleCode = "using UnityAnalyticsHeatmap;\n\n";
