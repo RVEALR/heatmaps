@@ -13,6 +13,8 @@ using UnityEngine;
 public class Heatmapper : EditorWindow
 {
 
+
+
     [MenuItem("Window/Unity Analytics/Heatmapper #%h")]
     static void HeatmapperMenuOption()
     {
@@ -33,12 +35,13 @@ public class Heatmapper : EditorWindow
     // Data handlers
     HeatmapAggregator m_Aggregator;
 
+
     GameObject m_HeatMapInstance;
 
     bool m_ShowAggregate = false;
     bool m_ShowRender = false;
 
-    HeatPoint[] m_HeatData;
+    HeatmapViewModel m_ViewModel = new HeatmapViewModel();
     string m_DataPath = "";
 
     Vector2 m_ScrollPosition;
@@ -121,7 +124,7 @@ public class Heatmapper : EditorWindow
             m_RenderView.Update();
         }
 
-        if (m_HeatData != null)
+        if (m_ViewModel.m_HeatData != null)
         {
             if (m_HeatMapInstance == null)
             {
@@ -131,12 +134,12 @@ public class Heatmapper : EditorWindow
             if (m_RenderView != null)
             {
                 m_RenderView.SetGameObject(m_HeatMapInstance);
-                m_RenderView.SetLimits(m_HeatData);
+                m_RenderView.SetLimits(m_ViewModel.m_HeatData);
 
                 m_RenderView.Update(true);
             }
 
-            m_HeatData = null;
+            m_ViewModel.m_HeatData = null;
         }
     }
 
@@ -175,7 +178,7 @@ public class Heatmapper : EditorWindow
     void OnPointData(HeatPoint[] heatData)
     {
         // Creating this data allows the renderer to use it on the next Update pass
-        m_HeatData = heatData;
+        m_ViewModel.m_HeatData = heatData;
     }
 
     /// <summary>

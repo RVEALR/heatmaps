@@ -43,7 +43,6 @@ namespace UnityAnalyticsHeatmap
         const float k_DefaultTime = 10f;
         const float k_DefaultRotation = 15f;
 
-        string m_RawDataPath = "";
         string m_DataPath = "";
         bool m_UseCustomDataPath = true;
 
@@ -125,7 +124,6 @@ namespace UnityAnalyticsHeatmap
             m_Aggregator = aggregator;
 
             // Restore cached paths
-            m_RawDataPath = EditorPrefs.GetString(k_UrlKey);
             m_UseCustomDataPath = EditorPrefs.GetBool(k_UseCustomDataPathKey);
             m_DataPath = EditorPrefs.GetString(k_DataPathKey);
 
@@ -189,8 +187,6 @@ namespace UnityAnalyticsHeatmap
         public void Fetch(AggregationHandler handler, bool localOnly)
         {
             m_AggregationHandler = handler;
-
-            EditorPrefs.SetString(k_UrlKey, m_RawDataPath);
             DateTime start, end;
             try
             {

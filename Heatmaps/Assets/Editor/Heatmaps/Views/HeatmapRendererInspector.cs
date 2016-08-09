@@ -33,6 +33,10 @@ namespace UnityAnalyticsHeatmap
 
         Heatmapper m_Heatmapper;
 
+        IHeatmapRenderer[] m_Renderers = new IHeatmapRenderer[]{ new HeatmapMeshRenderer(), new HeatmapShaderRenderer() };
+        GUIContent[] m_RendererOptions = new GUIContent[]{ new GUIContent("Mesh Renderer"), new GUIContent("Shader Renderer") };
+        int m_RendererIndex = 0;
+
         float m_StartTime = 0f;
         float m_EndTime = 1f;
         float m_MaxTime = 1f;
@@ -127,6 +131,9 @@ namespace UnityAnalyticsHeatmap
 
         public void OnGUI()
         {
+            m_RendererIndex = EditorGUILayout.Popup(m_RendererIndex, m_RendererOptions);
+
+
             using(new EditorGUILayout.VerticalScope("box"))
             {
                 if (m_GameObject == null)
