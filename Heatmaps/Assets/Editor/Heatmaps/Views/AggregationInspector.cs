@@ -249,9 +249,16 @@ namespace UnityAnalyticsHeatmap
 
             GUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(m_DatesContent, GUILayout.Width(35));
-            m_StartDate = EditorGUILayout.TextField(m_StartDate);
-            EditorGUILayout.LabelField("-", GUILayout.Width(10));
-            m_EndDate = EditorGUILayout.TextField(m_EndDate);
+
+            // HERE
+            Rect startRect = EditorGUILayout.GetControlRect(false);
+            m_StartDate = AnalyticsDatePicker.DatePicker(startRect, m_StartDate);
+            Rect endRect = EditorGUILayout.GetControlRect(false);
+            m_EndDate = AnalyticsDatePicker.DatePicker(endRect, m_EndDate);
+
+
+//            EditorGUILayout.LabelField("-", GUILayout.Width(10));
+//            m_EndDate = EditorGUILayout.TextField(m_EndDate);
             GUILayout.EndHorizontal();
 
 
