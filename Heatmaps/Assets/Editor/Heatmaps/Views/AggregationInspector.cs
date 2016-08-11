@@ -247,19 +247,13 @@ namespace UnityAnalyticsHeatmap
 
             m_Aggregator.SetDataPath(m_DataPath);
 
-            GUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(m_DatesContent, GUILayout.Width(35));
-
-            // HERE
-            Rect startRect = EditorGUILayout.GetControlRect(false);
-            m_StartDate = AnalyticsDatePicker.DatePicker(startRect, m_StartDate);
-            Rect endRect = EditorGUILayout.GetControlRect(false);
-            m_EndDate = AnalyticsDatePicker.DatePicker(endRect, m_EndDate);
-
-
-//            EditorGUILayout.LabelField("-", GUILayout.Width(10));
-//            m_EndDate = EditorGUILayout.TextField(m_EndDate);
-            GUILayout.EndHorizontal();
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField(m_DatesContent, GUILayout.Width(35));
+                m_StartDate = AnalyticsDatePicker.DatePicker(m_StartDate);
+                EditorGUILayout.LabelField("-", GUILayout.Width(10));
+                m_EndDate = AnalyticsDatePicker.DatePicker(m_EndDate);
+            }
 
 
             // SMOOTHERS (SPACE, ROTATION, TIME)
