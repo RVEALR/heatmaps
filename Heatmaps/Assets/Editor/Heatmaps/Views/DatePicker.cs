@@ -50,9 +50,9 @@ namespace UnityAnalyticsHeatmap
                 {
                     GUIUtility.hotControl = 0;
                     s_DoDropDown = false;
-                    DatePicker window = ScriptableObject.CreateInstance<DatePicker>();
+                    DatePickerWindow window = ScriptableObject.CreateInstance<DatePickerWindow>();
                     Vector2 p = EditorGUIUtility.GUIToScreenPoint(new Vector2(controlRect.x, controlRect.y+controlRect.height));
-                    window.ShowPopup(new Rect(p.x, p.y-winSize.y, winSize.x, winSize.y), winSize, value);
+                    window.ShowAsDropDown(new Rect(p.x, p.y-winSize.y, winSize.x, winSize.y), winSize, value);
                     s_CachedControlId = controlID;
                 }
                 break;
@@ -69,16 +69,16 @@ namespace UnityAnalyticsHeatmap
         }
     }
 
-    public class DatePicker : EditorWindow
+    public class DatePickerWindow : EditorWindow
     {
         public string value;
-        private DatePickerModel model = new DatePickerModel();
+        private DatePickerModel model;
         private bool doCommit = false;
-        private GUILayoutOption itemWidth = GUILayout.Width(35f);
+        private GUILayoutOption itemWidth;
 
         private static GUIStyle fieldStyle;
         private static GUIStyle dateStyle;
-        private static RectOffset dateFieldRectOffset = new RectOffset(0, 0, 2, 0);
+        private static RectOffset dateFieldRectOffset;
 
         private static string[] m_MonthsOfTheYear = new string[12]
         {"January", "February", "March", "April",
@@ -89,6 +89,13 @@ namespace UnityAnalyticsHeatmap
         {
             base.ShowAsDropDown(buttonRect, windowSize);
             value = dateValue;
+            itemWidth = GUILayout.Width(35f);
+        }
+
+        void OnEnable()
+        {
+            model = new DatePickerModel();
+            dateFieldRectOffset = new RectOffset(0, 0, 2, 0);
         }
 
         void OnGUI()
@@ -142,7 +149,6 @@ namespace UnityAnalyticsHeatmap
                             }
                             else if (dt == model.m_Date)
                             {
-                                
                                 EditorGUILayout.LabelField(dt.ToString(), fieldStyle, itemWidth);
                             }
                             else if (GUILayout.Button(dt.ToString(), itemWidth))
@@ -156,24 +162,24 @@ namespace UnityAnalyticsHeatmap
                 }
             }
             value = model.dateString;
-
             if (doCommit || Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Return)
             {
                 Commit();
             }
         }
 
-
-        int count = 0;
+        void OnInspectorUpdate()
+        {
+            if (AnalyticsDatePicker.s_CachedValue != null)
+            {
+                Close();
+            }
+        }
 
         void Commit()
         {
-            Debug.Log("COMMIT");
-            count ++;
             AnalyticsDatePicker.s_CachedValue = value;
-            if (count > 5 || Event.current.type == EventType.MouseUp || Event.current.type == EventType.KeyUp) {
-                Close();
-            }
+            doCommit = false;
         }
     }
 
