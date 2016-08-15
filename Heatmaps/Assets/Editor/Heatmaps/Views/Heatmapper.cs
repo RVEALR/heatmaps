@@ -91,12 +91,9 @@ public class Heatmapper : EditorWindow
                 if (m_ShowAggregate)
                 {
                     m_AggregationView.OnGUI();
-                    using (new EditorGUILayout.HorizontalScope())
+                    if (GUILayout.Button("Process"))
                     {
-                        if (GUILayout.Button("Process"))
-                        {
-                            SystemProcess();
-                        }
+                        SystemProcess();
                     }
                 }
             }

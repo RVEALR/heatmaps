@@ -38,6 +38,7 @@ namespace UnityAnalyticsHeatmap
         const string k_RemapColorKey = "UnityAnalyticsHeatmapRemapColorKey";
         const string k_RemapOptionIndexKey = "UnityAnalyticsHeatmapRemapOptionIndexKey";
         const string k_RemapColorFieldKey = "UnityAnalyticsHeatmapRemapColorFieldKey";
+        const string k_PercentileKey = "UnityAnalyticsHeatmapRemapPercentileKey";
 
         const float k_DefaultSpace = 10f;
         const float k_DefaultTime = 10f;
@@ -54,19 +55,17 @@ namespace UnityAnalyticsHeatmap
 
         HeatmapAggregator m_Aggregator;
 
-        private GUIContent[] m_SmootherOptionsContent;
-        Texture2D darkSkinUnionIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/union_dark.png") as Texture2D;
-        Texture2D darkSkinNumberIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/number_dark.png") as Texture2D;
-        Texture2D darkSkinNoneIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/none_dark.png") as Texture2D;
 
-        Texture2D lightSkinUnionIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/union_light.png") as Texture2D;
-        Texture2D lightSkinNumberIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/number_light.png") as Texture2D;
-        Texture2D lightSkinNoneIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/none_light.png") as Texture2D;
 
         private GUIContent m_UseCustomDataPathContent = new GUIContent("Use custom data path", "By default, will use Application.persistentDataPath");
         private GUIContent m_DataPathContent = new GUIContent("Input path", "Where to retrieve data (defaults to Application.persistentDataPath");
         private GUIContent m_DatesContent = new GUIContent("Dates", "ISO-8601 datetimes (YYYY-MM-DD)");
-        private GUIContent m_AddFieldContent = new GUIContent("+", "Add field");
+        private GUIContent m_SeparateUsersContent = new GUIContent("Users", "Separate each user into their own list. NOTE: Separating user IDs can be quite slow!");
+        private GUIContent m_SeparateSessionsContent = new GUIContent("Sessions", "Separate each session into its own list. NOTE: Separating unique sessions can be astonishingly slow!");
+        private GUIContent m_SeparateDebugContent = new GUIContent("Is Debug", "Separate debug devices from non-debug devices");
+        private GUIContent m_SeparatePlatformContent = new GUIContent("Platform", "Separate data based on platform");
+        private GUIContent m_SeparateCustomFieldContent = new GUIContent("On Custom Field", "Separate based on one or more parameter fields");
+
         private GUIContent m_RemapColorContent = new GUIContent("Remap color to field", "By default, heatmap color is determined by event density. Checking this box allows you to remap to a specific field (e.g., use to identify fps drops.)");
         private GUIContent m_RemapColorFieldContent = new GUIContent("Field","Name the field to remap");
         private GUIContent m_RemapOptionIndexContent = new GUIContent("Remap operation", "How should the remapped variable aggregate?");
@@ -74,13 +73,19 @@ namespace UnityAnalyticsHeatmap
 
         string m_StartDate = "";
         string m_EndDate = "";
+        bool m_ValidDates = true;
+
+        GUIStyle m_ValidDateStyle;
+        GUIStyle m_InvalidDateStyle;
+
+
         float m_Space = k_DefaultSpace;
         float m_Time = k_DefaultTime;
         float m_Rotation = k_DefaultRotation;
 
-        const int SMOOTH_VALUE = 0;
-        const int SMOOTH_NONE = 1;
-        const int SMOOTH_UNION = 2;
+        public const int SMOOTH_VALUE = 0;
+        public const int SMOOTH_NONE = 1;
+        public const int SMOOTH_UNION = 2;
 
         int m_SmoothSpaceToggle = SMOOTH_VALUE;
         int m_SmoothTimeToggle = SMOOTH_UNION;
@@ -142,6 +147,7 @@ namespace UnityAnalyticsHeatmap
             m_RemapColor = EditorPrefs.GetBool(k_RemapColorKey);
             m_RemapColorField = EditorPrefs.GetString(k_RemapColorFieldKey);
             m_RemapOptionIndex = EditorPrefs.GetInt(k_RemapOptionIndexKey);
+            m_Percentile = EditorPrefs.GetFloat(k_PercentileKey);
 
             // Restore list of arbitrary separation fields
             string loadedArbitraryFields = EditorPrefs.GetString(k_ArbitraryFieldsKey);
@@ -156,22 +162,6 @@ namespace UnityAnalyticsHeatmap
             }
             m_ArbitraryFields = new List<string>(arbitraryFieldsList);
 
-
-            var unionIcon = lightSkinUnionIcon;
-            var smoothIcon = lightSkinNumberIcon;
-            var noneIcon = lightSkinNoneIcon;
-            if (EditorPrefs.GetInt("UserSkin") == 1)
-            {
-                unionIcon = darkSkinUnionIcon;
-                smoothIcon = darkSkinNumberIcon;
-                noneIcon = darkSkinNoneIcon;
-            }
-
-            m_SmootherOptionsContent = new GUIContent[] {
-                new GUIContent(smoothIcon, "Smooth to value"),
-                new GUIContent(noneIcon, "No smoothing"),
-                new GUIContent(unionIcon, "Unify all")
-            };
         }
 
         public static AggregationInspector Init(HeatmapAggregator aggregator)
@@ -213,188 +203,89 @@ namespace UnityAnalyticsHeatmap
 
         public void OnGUI()
         {
-            GUILayout.BeginVertical("box");
-            GUILayout.BeginHorizontal();
-            bool oldUseCustomDataPath = m_UseCustomDataPath;
-            m_UseCustomDataPath = EditorGUILayout.Toggle(m_UseCustomDataPathContent, m_UseCustomDataPath);
-            if (oldUseCustomDataPath != m_UseCustomDataPath)
+            if (m_ValidDateStyle == null)
             {
-                EditorPrefs.SetBool(k_UseCustomDataPathKey, m_UseCustomDataPath);
+                m_ValidDateStyle = new GUIStyle("box");
+                m_InvalidDateStyle = new GUIStyle("box");
+                m_InvalidDateStyle.normal.textColor = Color.red;
             }
-            if (GUILayout.Button("Open Folder"))
-            {
-                EditorUtility.RevealInFinder(m_DataPath);
-            }
-            GUILayout.EndHorizontal();
 
-            if (!m_UseCustomDataPath)
+            using (new GUILayout.VerticalScope())
             {
-                m_DataPath = Application.persistentDataPath;
-            }
-            else
-            {
-                string oldDataPath = m_DataPath;
-                m_DataPath = EditorGUILayout.TextField(m_DataPathContent, m_DataPath);
-                if (string.IsNullOrEmpty(m_DataPath))
+                using (new GUILayout.HorizontalScope())
                 {
-                    m_DataPath = Application.persistentDataPath;
+                    m_UseCustomDataPath = EditorGUIBinding.Toggle(m_UseCustomDataPathContent, m_UseCustomDataPath, UseCustomDataPathChange);
+                    if (GUILayout.Button("Open Folder"))
+                    {
+                        EditorUtility.RevealInFinder(m_DataPath);
+                    }
                 }
-                if (oldDataPath != m_DataPath )
+                if (m_UseCustomDataPath)
                 {
-                    EditorPrefs.SetString(k_DataPathKey, m_DataPath);
+                    m_DataPath = EditorGUIBinding.TextField(m_DataPathContent, m_DataPath, DataPathChange);
+                }
+
+                EditorGUILayout.LabelField(m_DatesContent, EditorStyles.boldLabel, GUILayout.Width(35));
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUIStyle dateFieldStyle = m_ValidDates ? m_ValidDateStyle : m_InvalidDateStyle;
+                    m_StartDate = AnalyticsDatePicker.DatePicker(m_StartDate, dateFieldStyle, StartDateChange, DateFailure, DateValidationStart);
+                    EditorGUILayout.LabelField("-", GUILayout.Width(10));
+                    m_EndDate = AnalyticsDatePicker.DatePicker(m_EndDate, dateFieldStyle, EndDateChange, DateFailure, DateValidationEnd);
                 }
             }
-
-            m_Aggregator.SetDataPath(m_DataPath);
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.LabelField(m_DatesContent, GUILayout.Width(35));
-                m_StartDate = AnalyticsDatePicker.DatePicker(m_StartDate);
-                EditorGUILayout.LabelField("-", GUILayout.Width(10));
-                m_EndDate = AnalyticsDatePicker.DatePicker(m_EndDate);
-            }
-
 
             // SMOOTHERS (SPACE, ROTATION, TIME)
-            GUILayout.BeginVertical("box");
-            GUILayout.Label("Smooth/Unionize", EditorStyles.boldLabel);
-            GUILayout.BeginHorizontal();
-            // SPACE
-            SmootherControl(ref m_SmoothSpaceToggle, ref m_Space, "Space", "Divider to smooth out x/y/z data", k_SmoothSpaceKey, k_SpaceKey, 2);
-            // ROTATION
-            SmootherControl(ref m_SmoothRotationToggle, ref m_Rotation, "Rotation", "Divider to smooth out angular data", k_SmoothRotationKey, k_RotationKey);
-            // TIME
-            SmootherControl(ref m_SmoothTimeToggle, ref m_Time, "Time", "Divider to smooth out passage of game time", k_SmoothTimeKey, k_KeyToTime);
-            GUILayout.EndHorizontal();
-            GUILayout.EndVertical();
+            using (new GUILayout.VerticalScope())
+            {
+                GUILayout.Label("Smooth/Unionize", EditorStyles.boldLabel);
+                using (new GUILayout.HorizontalScope())
+                {
+                    // SPACE
+                    AnalyticsSmootherControl.SmootherControl(ref m_SmoothSpaceToggle, ref m_Space, "Space", "Divider to smooth out x/y/z data", k_SmoothSpaceKey, k_SpaceKey, 2);
+                    // ROTATION
+                    AnalyticsSmootherControl.SmootherControl(ref m_SmoothRotationToggle, ref m_Rotation, "Rotation", "Divider to smooth out angular data", k_SmoothRotationKey, k_RotationKey);
+                    // TIME
+                    AnalyticsSmootherControl.SmootherControl(ref m_SmoothTimeToggle, ref m_Time, "Time", "Divider to smooth out passage of game time", k_SmoothTimeKey, k_KeyToTime);
+                }
+            }
 
             // SEPARATION
             GUILayout.Label("Separate", EditorStyles.boldLabel);
-            GUILayout.BeginHorizontal();
-            GroupControl(ref m_SeparateUsers,
-                "Users", "Separate each user into their own list. NOTE: Separating user IDs can be quite slow!",
-                k_SeparateUsersKey);
-            GroupControl(ref m_SeparateSessions,
-                "Sessions", "Separate each session into its own list. NOTE: Separating unique sessions can be astonishly slow!",
-                k_SeparateSessionKey);
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GroupControl(ref m_SeparateDebug,
-                "Is Debug", "Separate debug devices from non-debug devices",
-                k_SeparateDebugKey);
-            GroupControl(ref m_SeparatePlatform,
-                "Platform", "Separate data based on platform",
-                k_SeparatePlatformKey);
-            GUILayout.EndHorizontal();
-
-
-            GroupControl(ref m_SeparateCustomField,
-                "On Custom Field", "Separate based on one or more parameter fields",
-                k_SeparateCustomKey);
-
+            using (new GUILayout.HorizontalScope())
+            {
+                m_SeparateUsers = EditorGUIBinding.Toggle(m_SeparateUsersContent, m_SeparateUsers, SeparateUsersChange);
+                m_SeparateSessions = EditorGUIBinding.Toggle(m_SeparateSessionsContent, m_SeparateSessions, SeparateSessionsChange);
+            }
+            using (new GUILayout.HorizontalScope())
+            {
+                m_SeparateDebug = EditorGUIBinding.Toggle(m_SeparateDebugContent, m_SeparateDebug, SeparateDebugChange);
+                m_SeparatePlatform = EditorGUIBinding.Toggle(m_SeparatePlatformContent, m_SeparatePlatform, SeparatePlatformChange);
+            }
+            m_SeparateCustomField = EditorGUIBinding.Toggle(m_SeparateCustomFieldContent, m_SeparateCustomField, SeparateCustomFieldChange);
 
             if (m_SeparateCustomField)
             {
-                string oldArbitraryFieldsString = string.Join("|", m_ArbitraryFields.ToArray());
-                if (m_ArbitraryFields.Count == 0)
+                m_ArbitraryFields = AnalyticsTextFieldList.TextFieldList(m_ArbitraryFields, CustomFieldsChange);
+            }
+
+            // COLOR REMAPPING
+            using (new GUILayout.VerticalScope("box"))
+            {
+                m_RemapColor = EditorGUIBinding.Toggle(m_RemapColorContent, m_RemapColor, RemapChange);
+                if (m_RemapColor)
                 {
-                    m_ArbitraryFields.Add("Field name");
-                }
-                for (var a = 0; a < m_ArbitraryFields.Count; a++)
-                {
-                    GUILayout.BeginHorizontal();
-                    if (GUILayout.Button("-", GUILayout.MaxWidth(20f)))
+                    m_RemapColorField = EditorGUIBinding.TextField(m_RemapColorFieldContent, m_RemapColorField, RemapFieldChange);
+                    m_RemapOptionIndex = EditorGUIBinding.Popup(m_RemapOptionIndexContent, m_RemapOptionIndex, m_RemapOptions, RemapOptionIndexChange);
+                    if (m_RemapOptionIds[m_RemapOptionIndex] == AggregationMethod.Percentile)
                     {
-                        m_ArbitraryFields.RemoveAt(a);
-                        break;
+                        m_Percentile = EditorGUIBinding.FloatField(m_PercentileContent, m_Percentile, PercentileChange);
+                        m_Percentile = Mathf.Clamp(m_Percentile, 0f, 100f);
                     }
-                    m_ArbitraryFields[a] = EditorGUILayout.TextField(m_ArbitraryFields[a]);
-                    if (a == m_ArbitraryFields.Count-1 && GUILayout.Button(m_AddFieldContent))
-                    {
-                        m_ArbitraryFields.Add("Field name");
-                    }
-                    GUILayout.EndHorizontal();
-                }
-                string currentArbitraryFieldsString = string.Join("|", m_ArbitraryFields.ToArray());
-                if (oldArbitraryFieldsString != currentArbitraryFieldsString)
-                {
-                    EditorPrefs.SetString(k_ArbitraryFieldsKey, currentArbitraryFieldsString);
                 }
             }
-            GUILayout.EndVertical();
-
-            GUILayout.BeginVertical("Box");
-            bool oldRemapColor = m_RemapColor;
-            m_RemapColor = EditorGUILayout.Toggle(m_RemapColorContent, m_RemapColor);
-            if (oldRemapColor != m_RemapColor)
-            {
-                EditorPrefs.SetBool(k_RemapColorKey, m_RemapColor);
-            }
-            if (m_RemapColor)
-            {
-                string oldRemapField = m_RemapColorField;
-                int oldOptionIndex = m_RemapOptionIndex;
-                m_RemapColorField = EditorGUILayout.TextField(m_RemapColorFieldContent, m_RemapColorField);
-                m_RemapOptionIndex = EditorGUILayout.Popup(m_RemapOptionIndexContent, m_RemapOptionIndex, m_RemapOptions);
-
-                if (m_RemapOptionIds[m_RemapOptionIndex] == AggregationMethod.Percentile)
-                {
-                    m_Percentile = Mathf.Clamp(EditorGUILayout.FloatField(m_PercentileContent, m_Percentile), 0, 100f);
-                }
-                if (oldRemapField != m_RemapColorField)
-                {
-                    EditorPrefs.SetString(k_RemapColorFieldKey, m_RemapColorField);
-                }
-                if (oldOptionIndex != m_RemapOptionIndex)
-                {
-                    EditorPrefs.SetInt(k_RemapOptionIndexKey, m_RemapOptionIndex);
-                }
-            }
-            GUILayout.EndVertical();
         }
 
-        void SmootherControl(ref int toggler, ref float value, string label, string tooltip, string toggleKey, string valueKey, int endIndex = -1)
-        {
-            GUILayout.BeginVertical();
-
-            var options = endIndex == -1 ? m_SmootherOptionsContent : 
-                m_SmootherOptionsContent.Take(endIndex).ToArray();
-
-            int oldToggler = toggler;
-            toggler = GUILayout.Toolbar(
-                toggler, options, GUILayout.MaxWidth(100));
-            float oldValue = value;
-
-            float lw = EditorGUIUtility.labelWidth;
-            EditorGUIUtility.labelWidth = 50;
-            float fw = EditorGUIUtility.fieldWidth;
-            EditorGUIUtility.fieldWidth = 20;
-            EditorGUI.BeginDisabledGroup(toggler != SMOOTH_VALUE);
-            value = EditorGUILayout.FloatField(new GUIContent(label, tooltip), value);
-            value = Mathf.Max(0, value);
-            EditorGUI.EndDisabledGroup();
-            EditorGUIUtility.labelWidth = lw;
-            EditorGUIUtility.fieldWidth = fw;
-
-            if (oldValue != value || oldToggler != toggler)
-            {
-                EditorPrefs.SetInt(toggleKey, toggler);
-                EditorPrefs.SetFloat(valueKey, value);
-            }
-            GUILayout.EndVertical();
-        }
-
-        void GroupControl(ref bool groupParam, string label, string tooltip, string key)
-        {
-            bool oldValue = groupParam;
-            groupParam = EditorGUILayout.Toggle(new GUIContent(label, tooltip), groupParam);
-            if (groupParam != oldValue)
-            {
-                EditorPrefs.SetBool(key, groupParam);
-            }
-        }
 
         void ProcessAggregation(List<string> fileList)
         {
@@ -500,5 +391,118 @@ namespace UnityAnalyticsHeatmap
         {
             m_AggregationHandler(jsonPath);
         }
+
+        #region change handlers
+        void UseCustomDataPathChange(bool value)
+        {
+            EditorPrefs.SetBool(k_UseCustomDataPathKey, value);
+            DataPathChange(m_DataPath);
+        }
+
+        void DataPathChange(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                m_DataPath = Application.persistentDataPath;
+            }
+            EditorPrefs.SetString(k_DataPathKey, value);
+            m_Aggregator.SetDataPath(m_DataPath);
+        }
+
+        void StartDateChange(string value)
+        {
+            m_ValidDates = true;
+        }
+
+        void EndDateChange(string value)
+        {
+            m_ValidDates = true;
+        }
+
+        void DateFailure()
+        {
+            m_ValidDates = false;
+        }
+
+        bool DateValidationStart(string value)
+        {
+            return DateValidation(value, m_EndDate);
+        }
+
+        bool DateValidationEnd(string value)
+        {
+            return DateValidation(m_StartDate, value);
+        }
+
+        bool DateValidation(string start, string end)
+        {
+            DateTime startDate;
+            DateTime endDate;
+            try
+            {
+                startDate = DateTime.Parse(start);
+                endDate = DateTime.Parse(end);
+            }
+            catch
+            {
+                return false;
+            }
+            var now = DateTime.UtcNow;
+            var today = new DateTime(now.Year, now.Month, now.Day + 1);
+            return startDate < endDate && endDate <= today;
+        }
+
+        void SeparateUsersChange(bool value)
+        {
+            EditorPrefs.SetBool(k_SeparateUsersKey, value);
+        }
+
+        void SeparateSessionsChange(bool value)
+        {
+            EditorPrefs.SetBool(k_SeparateSessionKey, value);
+        }
+
+        void SeparateDebugChange(bool value)
+        {
+            EditorPrefs.SetBool(k_SeparateDebugKey, value);
+        }
+
+        void SeparatePlatformChange(bool value)
+        {
+            EditorPrefs.SetBool(k_SeparatePlatformKey, value);
+        }
+
+        void SeparateCustomFieldChange(bool value)
+        {
+            EditorPrefs.SetBool(k_SeparateCustomKey, value);
+        }
+
+        void CustomFieldsChange(List<string> list)
+        {
+            string currentArbitraryFieldsString = string.Join("|", list.ToArray());
+            EditorPrefs.SetString(k_ArbitraryFieldsKey, currentArbitraryFieldsString);
+        }
+
+        void RemapChange(bool value)
+        {
+            EditorPrefs.SetBool(k_RemapColorKey, value);
+        }
+
+        void RemapFieldChange(string value)
+        {
+            EditorPrefs.SetString(k_RemapColorFieldKey, value);
+        }
+
+        void RemapOptionIndexChange(int value)
+        {
+            EditorPrefs.SetInt(k_RemapOptionIndexKey, value);
+        }
+
+        void PercentileChange(float value)
+        {
+            EditorPrefs.SetFloat(k_PercentileKey, m_Percentile);
+        }
+
+        #endregion
     }
 }
