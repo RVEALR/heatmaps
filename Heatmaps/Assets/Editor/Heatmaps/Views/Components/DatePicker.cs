@@ -9,23 +9,27 @@ namespace UnityAnalyticsHeatmap
 
         private static GUIStyle fieldStyle;
         private static Vector2 fieldOffset = new Vector2(0, -2f);
-
         private static Vector2 winSize = new Vector2(300f, 175f);
 
         public static string s_CachedValue;
         private static int s_CachedControlId;
         private static bool s_DoDropDown = false;
 
-        public static string DatePicker(string value)
+        public static string DatePicker(string value,
+            GUIStyle fieldStyle,
+            EditorGUIBinding.TextFieldChangeHandler change,
+            EditorGUIBinding.TextFieldFailureHandler failure = null,
+            EditorGUIBinding.TextFieldValidationHandler validate = null)
         {
-            fieldStyle = new GUIStyle("box");
             int controlID = GUIUtility.GetControlID (FocusType.Keyboard);
             Rect controlRect = EditorGUILayout.GetControlRect(false);
 
-
             fieldStyle.contentOffset = fieldOffset;
             fieldStyle.clipping = TextClipping.Overflow;
+
+            EditorGUI.BeginChangeCheck();
             EditorGUI.LabelField(controlRect, value, fieldStyle);
+            DatePickerWindow window = null;
 
             switch (Event.current.GetTypeForControl(controlID))
             {
@@ -44,16 +48,15 @@ namespace UnityAnalyticsHeatmap
                     Event.current.Use();
                 }
                 break;
-
             case EventType.Repaint:
                 if (GUIUtility.hotControl == controlID && s_DoDropDown)
                 {
-                    GUIUtility.hotControl = 0;
                     s_DoDropDown = false;
-                    DatePickerWindow window = ScriptableObject.CreateInstance<DatePickerWindow>();
-                    Vector2 p = EditorGUIUtility.GUIToScreenPoint(new Vector2(controlRect.x, controlRect.y+controlRect.height));
-                    window.ShowAsDropDown(new Rect(p.x, p.y-winSize.y, winSize.x, winSize.y), winSize, value);
                     s_CachedControlId = controlID;
+                    GUIUtility.hotControl = 0;
+                    Vector2 position = EditorGUIUtility.GUIToScreenPoint(new Vector2(controlRect.x, controlRect.y+controlRect.height));
+                    window = ScriptableObject.CreateInstance<DatePickerWindow>();
+                    window.ShowAsDropDown(new Rect(position.x, position.y-winSize.y, winSize.x, winSize.y), winSize, value);
                 }
                 break;
             }
@@ -63,9 +66,31 @@ namespace UnityAnalyticsHeatmap
                 value = s_CachedValue;
                 s_CachedControlId = 0;
                 s_CachedValue = null;
+                GUI.changed = true;
+            }
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                DatePickerApplyChangeHandlers(value, change, failure, validate);
             }
 
             return value;
+        }
+
+        private static void DatePickerApplyChangeHandlers(string text,
+            EditorGUIBinding.TextFieldChangeHandler change,
+            EditorGUIBinding.TextFieldFailureHandler failure,
+            EditorGUIBinding.TextFieldValidationHandler validate)
+        {
+            bool validated = (validate == null) ? true : validate(text);
+            if (validated)
+            {
+                change(text);
+            }
+            else if (!validated && failure != null)
+            {
+                failure();
+            }
         }
     }
 
@@ -96,22 +121,22 @@ namespace UnityAnalyticsHeatmap
         {
             model = new DatePickerModel();
             dateFieldRectOffset = new RectOffset(0, 0, 2, 0);
-        }
 
-        void OnGUI()
-        {
             if (fieldStyle == null)
             {
                 fieldStyle = new GUIStyle();
                 fieldStyle.alignment = TextAnchor.MiddleCenter;
 
-                dateStyle = new GUIStyle("box");
+                dateStyle = new GUIStyle();
                 dateStyle.alignment = TextAnchor.MiddleCenter;
                 dateStyle.margin = dateFieldRectOffset;
                 dateStyle.stretchWidth = true;
                 dateStyle.clipping = TextClipping.Overflow;
             }
+        }
 
+        void OnGUI()
+        {
             value = EditorGUILayout.TextField(value);
             if (string.IsNullOrEmpty(value))
                 return;
@@ -232,7 +257,8 @@ namespace UnityAnalyticsHeatmap
             {
                 return _dateString;
             }
-            private set {
+            private set
+            {
                 _dateString = value;
             }
         }
