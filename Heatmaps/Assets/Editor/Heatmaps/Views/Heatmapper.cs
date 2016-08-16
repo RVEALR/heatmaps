@@ -23,34 +23,29 @@ public class Heatmapper : EditorWindow
 
     public Heatmapper()
     {
-        m_DataPath = "";
-        m_Aggregator = new HeatmapAggregator(m_DataPath);
     }
 
     // Views
     AggregationInspector m_AggregationView;
-    HeatmapDataParserInspector m_ParserView;
     HeatmapRendererInspector m_RenderView;
 
-    // Data handlers
-    HeatmapAggregator m_Aggregator;
-
+    // Data handler
+    HeatmapDataProcessor m_Controller = new HeatmapDataProcessor();
 
     GameObject m_HeatMapInstance;
 
     bool m_ShowAggregate = false;
     bool m_ShowRender = false;
 
-    HeatmapViewModel m_ViewModel = new HeatmapViewModel();
-    string m_DataPath = "";
-
     Vector2 m_ScrollPosition;
 
     void OnEnable()
     {
         m_RenderView = HeatmapRendererInspector.Init(this);
-        m_AggregationView = AggregationInspector.Init(m_Aggregator);
-        m_ParserView = HeatmapDataParserInspector.Init(OnPointData);
+        m_AggregationView = AggregationInspector.Init(m_Controller);
+
+        m_Controller.RestoreSettings();
+        m_AggregationView.OnEnable();
     }
 
     void OnGUI()
@@ -101,9 +96,9 @@ public class Heatmapper : EditorWindow
             using (new EditorGUILayout.VerticalScope("box"))
             {
                 m_ShowRender = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), m_ShowRender, "Render", true);
-                if (m_ShowRender && m_ParserView != null)
+                if (m_ShowRender && m_RenderView != null)
                 {
-                    m_ParserView.OnGUI();
+//                    m_ParserView.OnGUI();
                     m_RenderView.OnGUI();
                 }
             }
@@ -121,7 +116,7 @@ public class Heatmapper : EditorWindow
             m_RenderView.Update();
         }
 
-        if (m_ViewModel.m_HeatData != null)
+        if (m_Controller.m_ViewModel.m_HeatData != null)
         {
             if (m_HeatMapInstance == null)
             {
@@ -131,12 +126,12 @@ public class Heatmapper : EditorWindow
             if (m_RenderView != null)
             {
                 m_RenderView.SetGameObject(m_HeatMapInstance);
-                m_RenderView.SetLimits(m_ViewModel.m_HeatData);
+                m_RenderView.SetLimits(m_Controller.m_ViewModel.m_HeatData);
 
                 m_RenderView.Update(true);
             }
 
-            m_ViewModel.m_HeatData = null;
+            m_Controller.m_ViewModel.m_HeatData = null;
         }
     }
 
@@ -146,10 +141,7 @@ public class Heatmapper : EditorWindow
         {
             CreateHeatmapInstance();
         }
-        if (m_AggregationView != null)
-        {
-            m_AggregationView.Fetch(OnAggregation, true);
-        }
+        m_Controller.Fetch(true);
     }
 
     void SystemReset()
@@ -167,16 +159,16 @@ public class Heatmapper : EditorWindow
         }
     }
 
-    void OnAggregation(string jsonPath)
-    {
-        m_ParserView.SetDataPath(jsonPath);
-    }
-
-    void OnPointData(HeatPoint[] heatData)
-    {
-        // Creating this data allows the renderer to use it on the next Update pass
-        m_ViewModel.m_HeatData = heatData;
-    }
+//    void OnAggregation(string jsonPath)
+//    {
+//        m_ParserView.SetDataPath(jsonPath);
+//    }
+//
+//    void OnPointData(HeatPoint[] heatData)
+//    {
+//        // Creating this data allows the renderer to use it on the next Update pass
+//        m_Controller.m_ViewModel.m_HeatData = heatData;
+//    }
 
     /// <summary>
     /// Creates the heat map instance.

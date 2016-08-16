@@ -15,47 +15,21 @@ namespace UnityAnalyticsHeatmap
 {
     public class AggregationInspector
     {
-        const string k_UrlKey = "UnityAnalyticsHeatmapDataExportUrlKey";
-        const string k_DataPathKey = "UnityAnalyticsHeatmapDataPathKey";
+        
+
         const string k_UseCustomDataPathKey = "UnityAnalyticsHeatmapUsePersistentDataPathKey";
 
-        const string k_SpaceKey = "UnityAnalyticsHeatmapAggregationSpace";
-        const string k_KeyToTime = "UnityAnalyticsHeatmapAggregationTime";
-        const string k_RotationKey = "UnityAnalyticsHeatmapAggregationRotation";
-        const string k_SmoothSpaceKey = "UnityAnalyticsHeatmapAggregationAggregateSpace";
-        const string k_SmoothTimeKey = "UnityAnalyticsHeatmapAggregationAggregateTime";
-        const string k_SmoothRotationKey = "UnityAnalyticsHeatmapAggregationAggregateRotation";
 
-        const string k_SeparateUsersKey = "UnityAnalyticsHeatmapAggregationAggregateUserIDs";
-        const string k_SeparateSessionKey = "UnityAnalyticsHeatmapAggregationAggregateSessionIDs";
-        const string k_SeparateDebugKey = "UnityAnalyticsHeatmapAggregationAggregateDebug";
-        const string k_SeparatePlatformKey = "UnityAnalyticsHeatmapAggregationAggregatePlatform";
-        const string k_SeparateCustomKey = "UnityAnalyticsHeatmapAggregationAggregateCustom";
 
-        const string k_ArbitraryFieldsKey = "UnityAnalyticsHeatmapAggregationArbitraryFields";
-        const string k_EventsKey = "UnityAnalyticsHeatmapAggregationEvents";
 
-        const string k_RemapColorKey = "UnityAnalyticsHeatmapRemapColorKey";
-        const string k_RemapOptionIndexKey = "UnityAnalyticsHeatmapRemapOptionIndexKey";
-        const string k_RemapColorFieldKey = "UnityAnalyticsHeatmapRemapColorFieldKey";
-        const string k_PercentileKey = "UnityAnalyticsHeatmapRemapPercentileKey";
 
-        const float k_DefaultSpace = 10f;
-        const float k_DefaultTime = 10f;
-        const float k_DefaultRotation = 15f;
+
+
 
         string m_DataPath = "";
         bool m_UseCustomDataPath = true;
 
-        Dictionary<string, HeatPoint[]> m_HeatData;
-
-        public delegate void AggregationHandler(string jsonPath);
-
-        AggregationHandler m_AggregationHandler;
-
-        HeatmapAggregator m_Aggregator;
-
-
+        HeatmapDataProcessor m_Processor;
 
         private GUIContent m_UseCustomDataPathContent = new GUIContent("Use custom data path", "By default, will use Application.persistentDataPath");
         private GUIContent m_DataPathContent = new GUIContent("Input path", "Where to retrieve data (defaults to Application.persistentDataPath");
@@ -66,7 +40,7 @@ namespace UnityAnalyticsHeatmap
         private GUIContent m_SeparatePlatformContent = new GUIContent("Platform", "Separate data based on platform");
         private GUIContent m_SeparateCustomFieldContent = new GUIContent("On Custom Field", "Separate based on one or more parameter fields");
 
-        private GUIContent m_RemapColorContent = new GUIContent("Remap color to field", "By default, heatmap color is determined by event density. Checking this box allows you to remap to a specific field (e.g., use to identify fps drops.)");
+        private GUIContent m_RemapColorContent = new GUIContent("Color to field", "By default, heatmap color is determined by event density. Checking this box allows you to remap to a specific field (e.g., use to identify fps drops.)");
         private GUIContent m_RemapColorFieldContent = new GUIContent("Field","Name the field to remap");
         private GUIContent m_RemapOptionIndexContent = new GUIContent("Remap operation", "How should the remapped variable aggregate?");
         private GUIContent m_PercentileContent = new GUIContent("Percentile", "A value between 0 and 100");
@@ -79,17 +53,13 @@ namespace UnityAnalyticsHeatmap
         GUIStyle m_InvalidDateStyle;
 
 
-        float m_Space = k_DefaultSpace;
-        float m_Time = k_DefaultTime;
-        float m_Rotation = k_DefaultRotation;
+        float m_Space;
+        float m_Time;
+        float m_Rotation;
 
-        public const int SMOOTH_VALUE = 0;
-        public const int SMOOTH_NONE = 1;
-        public const int SMOOTH_UNION = 2;
-
-        int m_SmoothSpaceToggle = SMOOTH_VALUE;
-        int m_SmoothTimeToggle = SMOOTH_UNION;
-        int m_SmoothRotationToggle = SMOOTH_UNION;
+        int m_SmoothSpaceToggle = HeatmapDataProcessor.SMOOTH_VALUE;
+        int m_SmoothTimeToggle = HeatmapDataProcessor.SMOOTH_UNION;
+        int m_SmoothRotationToggle = HeatmapDataProcessor.SMOOTH_UNION;
 
         bool m_SeparateUsers = false;
         bool m_SeparateSessions = false;
@@ -111,62 +81,17 @@ namespace UnityAnalyticsHeatmap
             new GUIContent("Last"),
             new GUIContent("Percentile")
         };
-        AggregationMethod[] m_RemapOptionIds = new AggregationMethod[]{
-            AggregationMethod.Increment,
-            AggregationMethod.Cumulative,
-            AggregationMethod.Average,
-            AggregationMethod.Min,
-            AggregationMethod.Max,
-            AggregationMethod.First,
-            AggregationMethod.Last,
-            AggregationMethod.Percentile
-        };
 
         List<string> m_ArbitraryFields = new List<string>{ };
 
-        public AggregationInspector(HeatmapAggregator aggregator)
+        public AggregationInspector(HeatmapDataProcessor processor)
         {
-            m_Aggregator = aggregator;
-
-            // Restore cached paths
-            m_UseCustomDataPath = EditorPrefs.GetBool(k_UseCustomDataPathKey);
-            m_DataPath = EditorPrefs.GetString(k_DataPathKey);
-
-            // Set dates based on today (should this be cached?)
-            m_EndDate = String.Format("{0:yyyy-MM-dd}", DateTime.UtcNow);
-            m_StartDate = String.Format("{0:yyyy-MM-dd}", DateTime.UtcNow.Subtract(new TimeSpan(5, 0, 0, 0)));
-
-            // Restore other options
-            m_Space = EditorPrefs.GetFloat(k_SpaceKey) == 0 ? k_DefaultSpace : EditorPrefs.GetFloat(k_SpaceKey);
-            m_Time = EditorPrefs.GetFloat(k_KeyToTime) == 0 ? k_DefaultTime : EditorPrefs.GetFloat(k_KeyToTime);
-            m_Rotation = EditorPrefs.GetFloat(k_RotationKey) == 0 ? k_DefaultRotation : EditorPrefs.GetFloat(k_RotationKey);
-            m_SmoothSpaceToggle = EditorPrefs.GetInt(k_SmoothSpaceKey);
-            m_SmoothTimeToggle = EditorPrefs.GetInt(k_SmoothTimeKey);
-            m_SmoothRotationToggle = EditorPrefs.GetInt(k_SmoothRotationKey);
-            m_SeparateUsers = EditorPrefs.GetBool(k_SeparateUsersKey);
-            m_RemapColor = EditorPrefs.GetBool(k_RemapColorKey);
-            m_RemapColorField = EditorPrefs.GetString(k_RemapColorFieldKey);
-            m_RemapOptionIndex = EditorPrefs.GetInt(k_RemapOptionIndexKey);
-            m_Percentile = EditorPrefs.GetFloat(k_PercentileKey);
-
-            // Restore list of arbitrary separation fields
-            string loadedArbitraryFields = EditorPrefs.GetString(k_ArbitraryFieldsKey);
-            string[] arbitraryFieldsList;
-            if (string.IsNullOrEmpty(loadedArbitraryFields))
-            {
-                arbitraryFieldsList = new string[]{ };
-            }
-            else
-            {
-                arbitraryFieldsList = loadedArbitraryFields.Split('|');
-            }
-            m_ArbitraryFields = new List<string>(arbitraryFieldsList);
-
+            m_Processor = processor;
         }
 
-        public static AggregationInspector Init(HeatmapAggregator aggregator)
+        public static AggregationInspector Init(HeatmapDataProcessor processor)
         {
-            return new AggregationInspector(aggregator);
+            return new AggregationInspector(processor);
         }
 
         public void SystemReset()
@@ -174,31 +99,32 @@ namespace UnityAnalyticsHeatmap
             //TODO
         }
 
-        public void Fetch(AggregationHandler handler, bool localOnly)
+        public void OnEnable()
         {
-            m_AggregationHandler = handler;
-            DateTime start, end;
-            try
-            {
-                start = DateTime.Parse(m_StartDate).ToUniversalTime();
-            }
-            catch
-            {
-                throw new Exception("The start date is not properly formatted. Correct format is YYYY-MM-DD.");
-            }
-            try
-            {
-                // Add one day to include the whole of that day
-                end = DateTime.Parse(m_EndDate).ToUniversalTime().Add(new TimeSpan(24, 0, 0));
-            }
-            catch
-            {
-                throw new Exception("The end date is not properly formatted. Correct format is YYYY-MM-DD.");
-            }
+            // Restore cached paths
+            m_UseCustomDataPath = EditorPrefs.GetBool(k_UseCustomDataPathKey);
 
-            RawDataClient.GetInstance().m_DataPath = m_DataPath;
-            var fileList = RawDataClient.GetInstance().GetFiles(new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end);
-            ProcessAggregation(fileList);
+            m_DataPath = m_Processor.m_RawDataPath;
+            m_EndDate = m_Processor.m_EndDate;
+            m_StartDate = m_Processor.m_StartDate;
+            m_Space = m_Processor.m_Space;
+            m_Time = m_Processor.m_Time;
+            m_Rotation = m_Processor.m_Rotation;
+            m_SmoothSpaceToggle = m_Processor.m_SmoothSpaceToggle;
+            m_SmoothTimeToggle = m_Processor.m_SmoothTimeToggle;
+            m_SmoothRotationToggle = m_Processor.m_SmoothRotationToggle;
+
+            m_SeparateUsers = m_Processor.m_SeparateUsers;
+            m_SeparatePlatform = m_Processor.m_SeparatePlatform;
+            m_SeparateDebug = m_Processor.m_SeparateDebug;
+            m_SeparateSessions = m_Processor.m_SeparateSessions;
+            m_SeparateCustomField = m_Processor.m_SeparateCustomField;
+
+            m_RemapColor = m_Processor.m_RemapDensity;
+            m_RemapColorField = m_Processor.m_RemapColorField;
+            m_RemapOptionIndex = m_Processor.m_RemapOptionIndex;
+            m_Percentile = m_Processor.m_Percentile;
+            m_ArbitraryFields = m_Processor.m_SeparationFields;
         }
 
         public void OnGUI()
@@ -242,11 +168,14 @@ namespace UnityAnalyticsHeatmap
                 using (new GUILayout.HorizontalScope())
                 {
                     // SPACE
-                    AnalyticsSmootherControl.SmootherControl(ref m_SmoothSpaceToggle, ref m_Space, "Space", "Divider to smooth out x/y/z data", k_SmoothSpaceKey, k_SpaceKey, 2);
+                    AnalyticsSmootherControl.SmootherControl(ref m_SmoothSpaceToggle,
+                        ref m_Space, "Space", "Divider to smooth out x/y/z data", SpaceChange, 2);
                     // ROTATION
-                    AnalyticsSmootherControl.SmootherControl(ref m_SmoothRotationToggle, ref m_Rotation, "Rotation", "Divider to smooth out angular data", k_SmoothRotationKey, k_RotationKey);
+                    AnalyticsSmootherControl.SmootherControl(ref m_SmoothRotationToggle,
+                        ref m_Rotation, "Rotation", "Divider to smooth out angular data", TimeChange);
                     // TIME
-                    AnalyticsSmootherControl.SmootherControl(ref m_SmoothTimeToggle, ref m_Time, "Time", "Divider to smooth out passage of game time", k_SmoothTimeKey, k_KeyToTime);
+                    AnalyticsSmootherControl.SmootherControl(ref m_SmoothTimeToggle, ref m_Time,
+                        "Time", "Divider to smooth out passage of game time", RotationChange);
                 }
             }
 
@@ -270,126 +199,21 @@ namespace UnityAnalyticsHeatmap
             }
 
             // COLOR REMAPPING
-            using (new GUILayout.VerticalScope("box"))
+            GUILayout.Label("Remap", EditorStyles.boldLabel);
+            using (new GUILayout.VerticalScope())
             {
                 m_RemapColor = EditorGUIBinding.Toggle(m_RemapColorContent, m_RemapColor, RemapChange);
                 if (m_RemapColor)
                 {
                     m_RemapColorField = EditorGUIBinding.TextField(m_RemapColorFieldContent, m_RemapColorField, RemapFieldChange);
                     m_RemapOptionIndex = EditorGUIBinding.Popup(m_RemapOptionIndexContent, m_RemapOptionIndex, m_RemapOptions, RemapOptionIndexChange);
-                    if (m_RemapOptionIds[m_RemapOptionIndex] == AggregationMethod.Percentile)
+                    if (HeatmapDataProcessor.m_RemapOptionIds[m_RemapOptionIndex] == AggregationMethod.Percentile)
                     {
                         m_Percentile = EditorGUIBinding.FloatField(m_PercentileContent, m_Percentile, PercentileChange);
                         m_Percentile = Mathf.Clamp(m_Percentile, 0f, 100f);
                     }
                 }
             }
-        }
-
-
-        void ProcessAggregation(List<string> fileList)
-        {
-            if (fileList.Count == 0)
-            {
-                Debug.LogWarning("No matching data found.");
-            }
-            else
-            {
-                DateTime start, end;
-                try
-                {
-                    start = DateTime.Parse(m_StartDate).ToUniversalTime();
-                }
-                catch
-                {
-                    start = DateTime.Parse("2000-01-01").ToUniversalTime();
-                }
-                try
-                {
-                    end = DateTime.Parse(m_EndDate).ToUniversalTime().Add(new TimeSpan(24,0,0));
-                }
-                catch
-                {
-                    end = DateTime.UtcNow;
-                }
-                if (m_RemapColor && string.IsNullOrEmpty(m_RemapColorField))
-                {
-                    Debug.LogWarning("You have selected 'Remap color to field' but haven't specified a field name. No remapping can occur.");
-                }
-
-                // When these are the same, points where these values match will be aggregated to the same point
-                var aggregateOn = new List<string>(){ "x", "y", "z", "t", "rx", "ry", "rz", "dx", "dy", "dz", "z" };
-                // Specify groupings for unique lists
-                var groupOn = new List<string>(){ "eventName" };
-
-                // userID is optional
-                if (m_SeparateUsers)
-                {
-                    aggregateOn.Add("userID");
-                    groupOn.Add("userID");
-                }
-                if (m_SeparateSessions)
-                {
-                    aggregateOn.Add("sessionID");
-                    groupOn.Add("sessionID");
-                }
-                if (m_SeparateDebug)
-                {
-                    aggregateOn.Add("debug");
-                    groupOn.Add("debug");
-                }
-                if (m_SeparatePlatform)
-                {
-                    aggregateOn.Add("platform");
-                    groupOn.Add("platform");
-                }
-                // Arbitrary Fields are included if specified
-                if (m_SeparateCustomField)
-                {
-                    aggregateOn.AddRange(m_ArbitraryFields);
-                    groupOn.AddRange(m_ArbitraryFields);
-                }
-
-                // Specify smoothing properties (must be a subset of aggregateOn)
-                var smoothOn = new Dictionary<string, float>();
-                // Smooth space
-                if (m_SmoothSpaceToggle == SMOOTH_VALUE || m_SmoothSpaceToggle == SMOOTH_NONE)
-                {
-                    float spaceSmoothValue = (m_SmoothSpaceToggle == SMOOTH_NONE) ? 0f : m_Space;
-                    smoothOn.Add("x", spaceSmoothValue);
-                    smoothOn.Add("y", spaceSmoothValue);
-                    smoothOn.Add("z", spaceSmoothValue);
-                    smoothOn.Add("dx", spaceSmoothValue);
-                    smoothOn.Add("dy", spaceSmoothValue);
-                    smoothOn.Add("dz", spaceSmoothValue);
-                }
-                // Smooth rotation
-                if (m_SmoothRotationToggle == SMOOTH_VALUE || m_SmoothRotationToggle == SMOOTH_NONE)
-                {
-                    float rotationSmoothValue = (m_SmoothRotationToggle == SMOOTH_NONE) ? 0f : m_Rotation;
-                    smoothOn.Add("rx", rotationSmoothValue);
-                    smoothOn.Add("ry", rotationSmoothValue);
-                    smoothOn.Add("rz", rotationSmoothValue);
-                }
-                // Smooth time
-                if (m_SmoothTimeToggle == SMOOTH_VALUE || m_SmoothTimeToggle == SMOOTH_NONE)
-                {
-                    float timeSmoothValue = (m_SmoothTimeToggle == SMOOTH_NONE) ? 0f : m_Time;
-                    smoothOn.Add("t", timeSmoothValue);
-                }
-
-                string remapToField = m_RemapColor ? m_RemapColorField : "";
-                int remapOption = m_RemapColor ? m_RemapOptionIndex : 0;
-
-                m_Aggregator.Process(aggregationHandler, fileList, start, end,
-                    aggregateOn, smoothOn, groupOn,
-                    remapToField, m_RemapOptionIds[remapOption], m_Percentile);
-            }
-        }
-
-        void aggregationHandler(string jsonPath)
-        {
-            m_AggregationHandler(jsonPath);
         }
 
         #region change handlers
@@ -405,18 +229,19 @@ namespace UnityAnalyticsHeatmap
             {
                 m_DataPath = Application.persistentDataPath;
             }
-            EditorPrefs.SetString(k_DataPathKey, value);
-            m_Aggregator.SetDataPath(m_DataPath);
+            m_Processor.m_RawDataPath = value;
         }
 
         void StartDateChange(string value)
         {
             m_ValidDates = true;
+            m_Processor.m_StartDate = value;
         }
 
         void EndDateChange(string value)
         {
             m_ValidDates = true;
+            m_Processor.m_EndDate = value;
         }
 
         void DateFailure()
@@ -452,55 +277,70 @@ namespace UnityAnalyticsHeatmap
             return startDate < endDate && endDate <= today;
         }
 
+        void SpaceChange(int option, float space)
+        {
+            m_Processor.m_Space = space;
+            m_Processor.m_SmoothSpaceToggle = option;
+        }
+        void RotationChange(int option, float space)
+        {
+            m_Processor.m_Rotation = option;
+            m_Processor.m_SmoothRotationToggle = option;
+        }
+        void TimeChange(int option, float space)
+        {
+            m_Processor.m_Time = option;
+            m_Processor.m_SmoothTimeToggle = option;
+        }
+
         void SeparateUsersChange(bool value)
         {
-            EditorPrefs.SetBool(k_SeparateUsersKey, value);
+            m_Processor.m_SeparateUsers = value;
         }
 
         void SeparateSessionsChange(bool value)
         {
-            EditorPrefs.SetBool(k_SeparateSessionKey, value);
+            m_Processor.m_SeparateSessions = value;
         }
 
         void SeparateDebugChange(bool value)
         {
-            EditorPrefs.SetBool(k_SeparateDebugKey, value);
+            m_Processor.m_SeparateDebug = value;
         }
 
         void SeparatePlatformChange(bool value)
         {
-            EditorPrefs.SetBool(k_SeparatePlatformKey, value);
+            m_Processor.m_SeparatePlatform = value;
         }
 
         void SeparateCustomFieldChange(bool value)
         {
-            EditorPrefs.SetBool(k_SeparateCustomKey, value);
+            m_Processor.m_SeparateCustomField = value;
         }
 
         void CustomFieldsChange(List<string> list)
         {
-            string currentArbitraryFieldsString = string.Join("|", list.ToArray());
-            EditorPrefs.SetString(k_ArbitraryFieldsKey, currentArbitraryFieldsString);
+            m_Processor.m_SeparationFields = list;
         }
 
         void RemapChange(bool value)
         {
-            EditorPrefs.SetBool(k_RemapColorKey, value);
+            m_Processor.m_RemapDensity = value;
         }
 
         void RemapFieldChange(string value)
         {
-            EditorPrefs.SetString(k_RemapColorFieldKey, value);
+            m_Processor.m_RemapColorField = value;
         }
 
         void RemapOptionIndexChange(int value)
         {
-            EditorPrefs.SetInt(k_RemapOptionIndexKey, value);
+            m_Processor.m_RemapOptionIndex = value;
         }
 
         void PercentileChange(float value)
         {
-            EditorPrefs.SetFloat(k_PercentileKey, m_Percentile);
+            m_Processor.m_Percentile = value;
         }
 
         #endregion
