@@ -73,8 +73,14 @@ namespace UnityAnalyticsHeatmap
         /// <param name="path">A location from which to load the data.</param>
         protected void LoadResource(string path)
         {
-            TextAsset ta = Resources.Load(path) as TextAsset;
-            ConsumeHeatmapData(ta.text);
+            if (File.Exists(path))
+            {
+                using(var stream = new StreamReader(path))
+                {
+                    string text = stream.ReadToEnd();
+                    ConsumeHeatmapData(text);
+                }
+            }
         }
 
         /// <summary>
