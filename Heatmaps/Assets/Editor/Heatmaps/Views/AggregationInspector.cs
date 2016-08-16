@@ -15,15 +15,7 @@ namespace UnityAnalyticsHeatmap
 {
     public class AggregationInspector
     {
-        
-
         const string k_UseCustomDataPathKey = "UnityAnalyticsHeatmapUsePersistentDataPathKey";
-
-
-
-
-
-
 
 
         string m_DataPath = "";
@@ -84,6 +76,12 @@ namespace UnityAnalyticsHeatmap
 
         List<string> m_ArbitraryFields = new List<string>{ };
 
+        int m_DebounceCount = 0;
+        const int k_DebounceInitValue = 60;
+        delegate void DebounceDelegate();
+        DebounceDelegate m_Debouncer;
+        delegate void DebounceMethodDelegate(int option, float value);
+
         public AggregationInspector(HeatmapDataProcessor processor)
         {
             m_Processor = processor;
@@ -125,6 +123,18 @@ namespace UnityAnalyticsHeatmap
             m_RemapOptionIndex = m_Processor.m_RemapOptionIndex;
             m_Percentile = m_Processor.m_Percentile;
             m_ArbitraryFields = m_Processor.m_SeparationFields;
+        }
+
+        public void Update()
+        {
+            if (m_DebounceCount > 0)
+            {
+                m_DebounceCount --;
+            }
+            else if (m_Debouncer != null)
+            {
+                TriggerDebouncer();
+            }
         }
 
         public void OnGUI()
@@ -172,10 +182,10 @@ namespace UnityAnalyticsHeatmap
                         ref m_Space, "Space", "Divider to smooth out x/y/z data", SpaceChange, 2);
                     // ROTATION
                     AnalyticsSmootherControl.SmootherControl(ref m_SmoothRotationToggle,
-                        ref m_Rotation, "Rotation", "Divider to smooth out angular data", TimeChange);
+                        ref m_Rotation, "Rotation", "Divider to smooth out angular data", RotationChange);
                     // TIME
                     AnalyticsSmootherControl.SmootherControl(ref m_SmoothTimeToggle, ref m_Time,
-                        "Time", "Divider to smooth out passage of game time", RotationChange);
+                        "Time", "Divider to smooth out passage of game time", TimeChange);
                 }
             }
 
@@ -214,6 +224,22 @@ namespace UnityAnalyticsHeatmap
                     }
                 }
             }
+        }
+
+        bool Debounce(DebounceMethodDelegate func, int option, float value)
+        {
+            bool available = (m_DebounceCount > 0);
+            m_Debouncer = () => {
+                func(option, value);
+            };
+            m_DebounceCount = k_DebounceInitValue;
+            return available;
+        }
+
+        void TriggerDebouncer()
+        {
+            m_Debouncer();
+            m_Debouncer = null;
         }
 
         #region change handlers
@@ -277,20 +303,29 @@ namespace UnityAnalyticsHeatmap
             return startDate < endDate && endDate <= today;
         }
 
-        void SpaceChange(int option, float space)
+        void SpaceChange(int option, float value)
         {
-            m_Processor.m_Space = space;
-            m_Processor.m_SmoothSpaceToggle = option;
+            if (!Debounce(SpaceChange, option, value))
+            {
+                m_Processor.m_Space = value;
+                m_Processor.m_SmoothSpaceToggle = option;
+            }
         }
-        void RotationChange(int option, float space)
+        void RotationChange(int option, float value)
         {
-            m_Processor.m_Rotation = option;
-            m_Processor.m_SmoothRotationToggle = option;
+            if (!Debounce(RotationChange, option, value))
+            {
+                m_Processor.m_Rotation = value;
+                m_Processor.m_SmoothRotationToggle = option;
+            }
         }
-        void TimeChange(int option, float space)
+        void TimeChange(int option, float value)
         {
-            m_Processor.m_Time = option;
-            m_Processor.m_SmoothTimeToggle = option;
+            if (!Debounce(TimeChange, option, value))
+            {
+                m_Processor.m_Time = value;
+                m_Processor.m_SmoothTimeToggle = option;
+            }
         }
 
         void SeparateUsersChange(bool value)

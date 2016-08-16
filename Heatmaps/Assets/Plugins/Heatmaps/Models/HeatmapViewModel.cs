@@ -10,6 +10,11 @@ namespace UnityAnalyticsHeatmap
     public class HeatmapViewModel
     {
         /// <summary>
+        /// The list of raw data files
+        /// </summary>
+        public List<string> m_RawDataFileList = new List<string>();
+
+        /// <summary>
         /// The complete dictionary of heatmaps from the currently loaded data set.
         /// </summary>
         public Dictionary<string, HeatPoint[]> m_Heatmaps;

@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityAnalytics;
 using UnityEditor;
+using System.Collections;
 
 namespace UnityAnalyticsHeatmap
 {
@@ -97,6 +98,7 @@ namespace UnityAnalyticsHeatmap
             set{
                 _space = value;
                 EditorPrefs.SetFloat(k_SpaceKey, _space);
+                ProcessAggregation();
             }
         }
         int _smoothRotationToggle;
@@ -119,6 +121,7 @@ namespace UnityAnalyticsHeatmap
             set {
                 _rotation = value;
                 EditorPrefs.SetFloat(k_RotationKey, _rotation);
+                ProcessAggregation();
             }
         }
         int _smoothTimeToggle;
@@ -141,6 +144,7 @@ namespace UnityAnalyticsHeatmap
             set {
                 _time = value;
                 EditorPrefs.SetFloat(k_KeyToTime, _time);
+                ProcessAggregation();
             }
         }
 
@@ -153,7 +157,7 @@ namespace UnityAnalyticsHeatmap
             set{
                 _separateUsers = value;
                 EditorPrefs.SetBool(k_SeparateUsersKey, _separateUsers);
-
+                ProcessAggregation();
             }
         }
         bool _separateSessions = false;
@@ -164,6 +168,7 @@ namespace UnityAnalyticsHeatmap
             set{
                 _separateSessions = value;
                 EditorPrefs.SetBool(k_SeparateSessionKey, _separateSessions);
+                ProcessAggregation();
             }
         }
         bool _separatePlatform;
@@ -175,6 +180,7 @@ namespace UnityAnalyticsHeatmap
             set {
                 _separatePlatform = value;
                 EditorPrefs.SetBool(k_SeparateSessionKey, _separatePlatform);
+                ProcessAggregation();
             }
         }
         bool _separateDebug;
@@ -186,6 +192,7 @@ namespace UnityAnalyticsHeatmap
             set {
                 _separateDebug = value;
                 EditorPrefs.SetBool(k_SeparateDebugKey, _separateDebug);
+                ProcessAggregation();
             }
         }
         bool _separateCustomField;
@@ -197,6 +204,7 @@ namespace UnityAnalyticsHeatmap
             set {
                 _separateCustomField = value;
                 EditorPrefs.SetBool(k_SeparateCustomKey, _separateCustomField);
+                ProcessAggregation();
             }
         }
 
@@ -210,6 +218,7 @@ namespace UnityAnalyticsHeatmap
                 _separationFields = value;
                 string currentArbitraryFieldsString = string.Join("|", _separationFields.ToArray());
                 EditorPrefs.SetString(k_ArbitraryFieldsKey, currentArbitraryFieldsString);
+                ProcessAggregation();
             }
         }
 
@@ -222,6 +231,7 @@ namespace UnityAnalyticsHeatmap
             set {
                 _remapDensity = value;
                 EditorPrefs.SetBool(k_RemapColorKey, _remapDensity);
+                ProcessAggregation();
             }
         }
         string _remapColorField;
@@ -234,6 +244,7 @@ namespace UnityAnalyticsHeatmap
             set {
                 _remapColorField = value;
                 EditorPrefs.SetString(k_RemapColorFieldKey, _remapColorField);
+                ProcessAggregation();
             }
         }
         int _remapOptionIndex;
@@ -245,6 +256,7 @@ namespace UnityAnalyticsHeatmap
             set {
                 _remapOptionIndex = value;
                 EditorPrefs.SetInt(k_RemapOptionIndexKey, _remapOptionIndex);
+                ProcessAggregation();
             }
         }
         float _percentile;
@@ -256,8 +268,23 @@ namespace UnityAnalyticsHeatmap
             set {
                 _percentile = value;
                 EditorPrefs.SetFloat(k_PercentileKey, _percentile);
+                ProcessAggregation();
             }
         }
+
+        List<int> _heatmapOptions;
+        public List<int> m_HeatmapOptions
+        {
+            get {
+                return _heatmapOptions;
+            }
+            set {
+                _heatmapOptions = value;
+            }
+        }
+        public int m_HeatmapOptionIndex;
+        public List<List<string>> m_SeparatedLists;
+        public string[] m_OptionKeys;
 
         public delegate void AggregationHandler(string jsonPath);
         public delegate void PointHandler(HeatPoint[] heatData);
@@ -317,7 +344,10 @@ namespace UnityAnalyticsHeatmap
             m_SeparationFields = new List<string>(arbitraryFieldsList);
         }
 
-        public void Fetch(bool localOnly)
+        /// <summary>
+        /// Fetch the files within the currently specified date range.
+        /// </summary>
+        public void Fetch()
         {
             DateTime start, end;
             try
@@ -339,13 +369,13 @@ namespace UnityAnalyticsHeatmap
             }
 
             RawDataClient.GetInstance().m_DataPath = m_RawDataPath;
-            var fileList = RawDataClient.GetInstance().GetFiles(new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end);
-            ProcessAggregation(fileList);
+            m_ViewModel.m_RawDataFileList = RawDataClient.GetInstance().GetFiles(new UnityAnalyticsEventType[]{ UnityAnalyticsEventType.custom }, start, end);
+            ProcessAggregation();
         }
 
-        void ProcessAggregation(List<string> fileList)
+        void ProcessAggregation()
         {
-            if (fileList.Count == 0)
+            if (m_ViewModel.m_RawDataFileList.Count == 0)
             {
                 Debug.LogWarning("No matching data found.");
             }
@@ -437,7 +467,7 @@ namespace UnityAnalyticsHeatmap
                 string remapToField = m_RemapDensity ? m_RemapColorField : "";
                 int remapOption = m_RemapDensity ? m_RemapOptionIndex : 0;
 
-                m_Aggregator.Process(OnAggregation, fileList, start, end,
+                m_Aggregator.Process(OnAggregation, m_ViewModel.m_RawDataFileList, start, end,
                     aggregateOn, smoothOn, groupOn,
                     remapToField, m_RemapOptionIds[remapOption], m_Percentile);
             }
@@ -454,80 +484,87 @@ namespace UnityAnalyticsHeatmap
             m_ViewModel.m_SeparationOptions = options;
             if (m_ViewModel.m_Heatmaps != null)
             {
-                OnPointData(m_ViewModel.m_Heatmaps[options[0]]);
+                m_HeatmapOptionIndex = PickBestOption(options);
+                ParseOptionList(options);
+                OnPointData(m_ViewModel.m_Heatmaps[options[m_HeatmapOptionIndex]]);
             }
-
-
-//            if (m_ViewModel.m_Heatmaps != null)
-//            {
-//                if (m_OptionKeys != null)
-//                {
-//                    string opt = m_OptionIndex > m_OptionKeys.Length ? "" : m_OptionKeys[m_OptionIndex];
-//                    ArrayList list = new ArrayList(options);
-//                    int idx = list.IndexOf(opt);
-//                    m_OptionIndex = idx == -1 ? 0 : idx;
-//                }
-//                else
-//                {
-//                    m_OptionIndex = 0;
-//                }
-//                ParseOptionList(options);
-//                m_OptionKeys = options;
-//                Dispatch();
-//            }
         }
 
-//        void ParseOptionList(string[] options)
-//        {
-//            string[] oldKey = BuildKey().Split('~');
-//            m_SeparatedLists = new List<List<string>>();
-//            m_Options = new List<int>();
-//
-//            foreach(string opt in options)
-//            {
-//                string[] parts = opt.Split('~');
-//
-//                for (int a = 0; a < parts.Length; a++)
-//                {
-//                    if (m_SeparatedLists.Count <= a)
-//                    {
-//                        m_SeparatedLists.Add(new List<string>());
-//                    }
-//                    if (m_SeparatedLists[a].IndexOf(parts[a]) == -1)
-//                    {
-//                        m_SeparatedLists[a].Add(parts[a]);
-//                    }
-//                }
-//            }
-//            for (int a = 0; a < m_SeparatedLists.Count; a++)
-//            {
-//                // Restore old indices when possible
-//                int index = 0;
-//                if (oldKey.Length > a)
-//                {
-//                    index = m_SeparatedLists[a].IndexOf(oldKey[a]);
-//                    index = Math.Max(0, index);
-//                }
-//                m_Options.Add(index);
-//            }
-//        }
-//
-//        string BuildKey()
-//        {
-//            string retv = "";
-//            if (m_SeparatedLists != null)
-//            {
-//                for (int a = 0; a < m_SeparatedLists.Count; a++)
-//                {
-//                    retv += m_SeparatedLists[a][m_Options[a]];
-//                    if (a < m_SeparatedLists.Count - 1)
-//                    {
-//                        retv += "~";
-//                    }
-//                }
-//            }
-//            return retv;
-//        }
+        int PickBestOption(string[] options)
+        {
+            int bestOption = 0;
+            if (m_HeatmapOptions != null)
+            {
+                string opt = m_HeatmapOptionIndex > options.Length ? "" : m_OptionKeys[m_HeatmapOptionIndex];
+                ArrayList list = new ArrayList(options);
+                int idx = list.IndexOf(opt);
+                bestOption = idx == -1 ? 0 : idx;
+            }
+            return bestOption;
+        }
+
+        void ParseOptionList(string[] options)
+        {
+            string[] oldKey = BuildKey().Split('~');
+            m_SeparatedLists = new List<List<string>>();
+            m_HeatmapOptions = new List<int>();
+
+            foreach(string opt in options)
+            {
+                string[] parts = opt.Split('~');
+
+                for (int a = 0; a < parts.Length; a++)
+                {
+                    if (m_SeparatedLists.Count <= a)
+                    {
+                        m_SeparatedLists.Add(new List<string>());
+                    }
+                    if (m_SeparatedLists[a].IndexOf(parts[a]) == -1)
+                    {
+                        m_SeparatedLists[a].Add(parts[a]);
+                    }
+                }
+            }
+            for (int a = 0; a < m_SeparatedLists.Count; a++)
+            {
+                // Restore old indices when possible
+                int index = 0;
+                if (oldKey.Length > a)
+                {
+                    index = m_SeparatedLists[a].IndexOf(oldKey[a]);
+                    index = Math.Max(0, index);
+                }
+                m_HeatmapOptions.Add(index);
+            }
+            m_OptionKeys = options;
+        }
+
+        string BuildKey()
+        {
+            string retv = "";
+            if (m_SeparatedLists != null)
+            {
+                for (int a = 0; a < m_SeparatedLists.Count; a++)
+                {
+                    retv += m_SeparatedLists[a][m_HeatmapOptions[a]];
+                    if (a < m_SeparatedLists.Count - 1)
+                    {
+                        retv += "~";
+                    }
+                }
+            }
+            return retv;
+        }
+
+        public void SelectList()
+        {
+            string key = BuildKey();
+            if (m_ViewModel.m_Heatmaps != null &&
+                m_ViewModel.m_Heatmaps.ContainsKey(key))
+            {
+                OnPointData(m_ViewModel.m_Heatmaps[key]);
+            }
+        }
 
         void OnPointData(HeatPoint[] heatData)
         {

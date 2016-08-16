@@ -9,6 +9,7 @@ using System.Collections;
 using UnityEditor;
 using UnityEngine;
 using System.Reflection;
+using System.Collections.Generic;
 
 namespace UnityAnalyticsHeatmap
 {
@@ -32,6 +33,7 @@ namespace UnityAnalyticsHeatmap
         const string k_ShowTipsKey = "UnityAnalyticsHeatmapShowRendererTooltips";
 
         Heatmapper m_Heatmapper;
+        HeatmapDataProcessor m_Processor;
 
         IHeatmapRenderer[] m_Renderers = new IHeatmapRenderer[]{ new HeatmapMeshRenderer(), new HeatmapShaderRenderer() };
         GUIContent[] m_RendererOptions = new GUIContent[]{ new GUIContent("Mesh Renderer"), new GUIContent("Shader Renderer") };
@@ -122,9 +124,10 @@ namespace UnityAnalyticsHeatmap
             m_PauseContent = new GUIContent(pauseIcon, "Pause");
         }
 
-        public static HeatmapRendererInspector Init(Heatmapper heatmapper)
+        public static HeatmapRendererInspector Init(Heatmapper heatmapper, HeatmapDataProcessor processor)
         {
             var inspector = new HeatmapRendererInspector();
+            inspector.m_Processor = processor;
             inspector.m_Heatmapper = heatmapper;
             return inspector;
         }
@@ -132,9 +135,15 @@ namespace UnityAnalyticsHeatmap
         public void OnGUI()
         {
             m_RendererIndex = EditorGUILayout.Popup(m_RendererIndex, m_RendererOptions);
+            using (new EditorGUILayout.VerticalScope())
+            {
+                EditorGUILayout.LabelField("Data set options", EditorStyles.boldLabel);
+                m_Processor.m_HeatmapOptions = AnalyticsListGroup.ListGroup(m_Processor.m_HeatmapOptions,
+                    m_Processor.m_SeparatedLists, OptionsChange);
+            }
 
 
-            using(new EditorGUILayout.VerticalScope("box"))
+            using(new EditorGUILayout.VerticalScope())
             {
                 if (m_GameObject == null)
                 {
@@ -410,6 +419,11 @@ namespace UnityAnalyticsHeatmap
                 m_SerializedGradient = new SerializedObject(m_GameObject.GetComponent<GradientContainer>());
                 m_ColorGradient = m_SerializedGradient.FindProperty("ColorGradient");
             }
+        }
+
+        public void OptionsChange(List<int> value)
+        {
+            m_Processor.SelectList();
         }
     }
 }
