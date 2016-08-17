@@ -81,7 +81,7 @@ namespace UnityAnalyticsHeatmap
         private GUIContent m_ParticleSizeContent = new GUIContent("Size", "The display size of an individual data point");
         private GUIContent m_ParticleShapeContent = new GUIContent("Shape", "The display shape of an individual data point");
         private GUIContent m_ParticleDirectionContent = new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point");
-        private GUIContent m_PlaySpeedContent = new GUIContent("Play Speed", "Speed at which playback occurs");
+        private GUIContent m_PlaySpeedContent = new GUIContent("Play speed", "Speed at which playback occurs");
         private GUIContent m_TipsContent = new GUIContent("Hot tips", "When enabled, see individual point information on rollover. Caution: can be costly! Also note, submap must be selected to see hot tips.");
         private GUIContent m_TipsTextContent = new GUIContent("Points (displayed/total): 0 / 0");
         private GUIContent m_RestartContent;
@@ -142,9 +142,11 @@ namespace UnityAnalyticsHeatmap
                     m_Processor.m_SeparatedLists, OptionsChange);
             }
 
-
+            // PARTICLE SIZE/SHAPE
             using(new EditorGUILayout.VerticalScope())
             {
+                EditorGUILayout.LabelField("Render options", EditorStyles.boldLabel);
+
                 if (m_GameObject == null)
                 {
                     EditorGUILayout.LabelField("No heatmap. Can't show gradient.", EditorStyles.boldLabel);
@@ -158,12 +160,8 @@ namespace UnityAnalyticsHeatmap
                         m_SerializedGradient.ApplyModifiedProperties();
                     }
                 }
-            }
 
-            // PARTICLE SIZE/SHAPE
-            using (new EditorGUILayout.VerticalScope("box"))
-            {
-                EditorGUILayout.LabelField("Particle", EditorStyles.boldLabel);
+
                 var oldParticleSize = m_ParticleSize;
                 m_ParticleSize = EditorGUILayout.FloatField(m_ParticleSizeContent, m_ParticleSize);
                 m_ParticleSize = Mathf.Max(0.05f, m_ParticleSize);
@@ -385,20 +383,29 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        public void SetMaxTime(float maxTime)
+        void SetMaxTime(float maxTime)
         {
-            m_EndTime = m_MaxTime = maxTime;
-            m_StartTime = 0f;
+            m_MaxTime = maxTime;
+            if (m_StartTime == 0 && m_EndTime == 0)
+            {
+                m_EndTime = m_MaxTime;
+                m_StartTime = 0f;
+            }
+            else
+            {
+                m_EndTime = Mathf.Clamp(m_EndTime, 0f, m_MaxTime);
+                m_StartTime = Mathf.Clamp(m_StartTime, 0f, m_MaxTime);
+            }
         }
 
         public void SetSpaceLimits(Vector3 lowSpace, Vector3 highSpace)
         {
-            m_LowX = lowSpace.x;
-            m_LowY = lowSpace.y;
-            m_LowZ = lowSpace.z;
-            m_HighX = highSpace.x;
-            m_HighY = highSpace.y;
-            m_HighZ = highSpace.z;
+            m_LowX = Mathf.Clamp(m_LowX, lowSpace.x, highSpace.x);
+            m_LowY = Mathf.Clamp(m_LowY, lowSpace.y, highSpace.y);
+            m_LowZ = Mathf.Clamp(m_LowZ, lowSpace.z, highSpace.z);
+            m_HighX = Mathf.Clamp(m_HighX, lowSpace.x, highSpace.x);
+            m_HighY = Mathf.Clamp(m_HighY, lowSpace.y, highSpace.y);
+            m_HighZ = Mathf.Clamp(m_HighZ, lowSpace.z, highSpace.z);
 
             m_LowSpace = lowSpace;
             m_HighSpace = highSpace;
