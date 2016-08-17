@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using UnityAnalyticsHeatmap;
 using UnityEditor;
 using UnityEngine;
+using System;
 
 public class Heatmapper : EditorWindow
 {
@@ -165,17 +166,32 @@ public class Heatmapper : EditorWindow
         SystemProcess();
     }
 
+    public void SwapRenderer(Type renderer)
+    {
+        AttemptReconnectWithHeatmapInstance();
+        if (m_HeatMapInstance)
+        {
+            m_HeatMapInstance.transform.parent = null;
+            DestroyImmediate(m_HeatMapInstance);
+        }
+        CreateHeatmapInstance(renderer);
+        m_Processor.Fetch();
+    }
+
     /// <summary>
     /// Creates the heat map instance.
     /// </summary>
-    /// We've hard-coded the Component here. Everywhere else, we use the interface.
-    /// If you want to write a custom Renderer, this is the place to sub it in.
     void CreateHeatmapInstance()
+    {
+        CreateHeatmapInstance(typeof(HeatmapMeshRenderer));
+    }
+
+    void CreateHeatmapInstance (Type t)
     {
         m_HeatMapInstance = new GameObject();
         m_HeatMapInstance.tag = "EditorOnly";
         m_HeatMapInstance.name = "UnityAnalytics__Heatmap";
-        m_HeatMapInstance.AddComponent<HeatmapMeshRenderer>();
+        m_HeatMapInstance.AddComponent(t);
         m_HeatMapInstance.GetComponent<IHeatmapRenderer>().allowRender = true;
     }
 

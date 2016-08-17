@@ -35,7 +35,7 @@ namespace UnityAnalyticsHeatmap
         Heatmapper m_Heatmapper;
         HeatmapDataProcessor m_Processor;
 
-        IHeatmapRenderer[] m_Renderers = new IHeatmapRenderer[]{ new HeatmapMeshRenderer(), new HeatmapShaderRenderer() };
+        Type[] m_Renderers = new Type[]{ typeof(HeatmapMeshRenderer), typeof(HeatmapShaderRenderer) };
         GUIContent[] m_RendererOptions = new GUIContent[]{ new GUIContent("Mesh Renderer"), new GUIContent("Shader Renderer") };
         int m_RendererIndex = 0;
 
@@ -134,7 +134,7 @@ namespace UnityAnalyticsHeatmap
 
         public void OnGUI()
         {
-            m_RendererIndex = EditorGUILayout.Popup(m_RendererIndex, m_RendererOptions);
+            m_RendererIndex = EditorGUIBinding.Popup(m_RendererIndex, m_RendererOptions, RendererChange);
             using (new EditorGUILayout.VerticalScope())
             {
                 EditorGUILayout.LabelField("Data set options", EditorStyles.boldLabel);
@@ -428,9 +428,16 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        public void OptionsChange(List<int> value)
+        #region change handlers
+        void RendererChange(int value)
+        {
+            m_Heatmapper.SwapRenderer(m_Renderers[value]);
+        }
+
+        void OptionsChange(List<int> value)
         {
             m_Processor.SelectList();
         }
+        #endregion
     }
 }
