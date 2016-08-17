@@ -49,6 +49,11 @@ public class Heatmapper : EditorWindow
         SystemProcess();
     }
 
+    void OnFocus()
+    {
+        SystemProcess();
+    }
+
     void OnGUI()
     {
         if (Event.current.type == EventType.Layout)
