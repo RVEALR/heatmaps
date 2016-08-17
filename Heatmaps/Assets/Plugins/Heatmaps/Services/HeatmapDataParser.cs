@@ -24,6 +24,11 @@ namespace UnityAnalyticsHeatmap
 {
     public class HeatmapDataParser
     {
+        public const int k_AsResource = 0;
+        public const int k_AsStream = 1;
+        public const int k_AsData = 2;
+
+
         public delegate void ParseHandler(Dictionary<string, HeatPoint[]> heatData, string[] options);
 
         ParseHandler m_ParseHandler;
@@ -38,18 +43,22 @@ namespace UnityAnalyticsHeatmap
         /// <param name="path">A location from which to load the data.</param>
         /// <param name="handler">A method handler to which we return the data.</param>
         /// <param name="asResource">If set to <c>true</c> the path is assumed to be a Resource location rather than a URI.</param>
-        public void LoadData(string path, ParseHandler handler, bool asResource = false)
+        public void LoadData(string path, ParseHandler handler, int method = k_AsData)
         {
             m_ParseHandler = handler;
             if (!string.IsNullOrEmpty(path))
             {
-                if (asResource)
+                switch (method)
                 {
-                    LoadResource(path);
-                }
-                else
-                {
-                    LoadStream(path);
+                    case k_AsData:
+                        ConsumeHeatmapData(path);
+                        break;
+                    case k_AsResource:
+                        LoadResource(path);
+                        break;
+                    case k_AsStream:
+                        LoadStream(path);
+                        break;
                 }
             }
         }
@@ -87,7 +96,7 @@ namespace UnityAnalyticsHeatmap
         /// Read the JSON data and convert into Lists of HeatPoint structs.
         /// </summary>
         /// <param name="text">The loaded data.</param>
-        protected void ConsumeHeatmapData(string text)
+        public void ConsumeHeatmapData(string text)
         {
             var heatData = new Dictionary<string, HeatPoint[]>();
             var keys = new ArrayList();

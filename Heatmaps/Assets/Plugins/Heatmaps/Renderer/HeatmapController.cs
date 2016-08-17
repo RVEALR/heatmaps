@@ -59,7 +59,7 @@ public class HeatmapController : MonoBehaviour
     void LoadData()
     {
         // Use the parser to load data
-        m_DataParser.LoadData(dataPath, parseHandler, true);
+        m_DataParser.LoadData(dataPath, parseHandler, HeatmapDataParser.k_AsResource);
     }
 
     /// <summary>

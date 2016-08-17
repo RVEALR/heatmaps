@@ -284,7 +284,6 @@ namespace UnityAnalyticsHeatmap
         }
         public int m_HeatmapOptionIndex;
         public List<List<string>> m_SeparatedLists;
-        public string[] m_OptionKeys;
 
         public delegate void AggregationHandler(string jsonPath);
         public delegate void PointHandler(HeatPoint[] heatData);
@@ -377,7 +376,7 @@ namespace UnityAnalyticsHeatmap
         {
             if (m_ViewModel.m_RawDataFileList.Count == 0)
             {
-                Debug.LogWarning("No matching data found.");
+                return;
             }
             else
             {
@@ -467,15 +466,15 @@ namespace UnityAnalyticsHeatmap
                 string remapToField = m_RemapDensity ? m_RemapColorField : "";
                 int remapOption = m_RemapDensity ? m_RemapOptionIndex : 0;
 
-                m_Aggregator.Process(OnAggregation, m_ViewModel.m_RawDataFileList, start, end,
+                m_Aggregator.Process(OnAggregated, m_ViewModel.m_RawDataFileList, start, end,
                     aggregateOn, smoothOn, groupOn,
                     remapToField, m_RemapOptionIds[remapOption], m_Percentile);
             }
         }
 
-        void OnAggregation(string jsonPath)
+        void OnAggregated(string jsonString)
         {
-            m_DataParser.LoadData(jsonPath, OnParsed, true);
+            m_DataParser.LoadData(jsonString, OnParsed, HeatmapDataParser.k_AsData);
         }
 
         void OnParsed(Dictionary<string, HeatPoint[]> data, string[] options)
@@ -486,7 +485,7 @@ namespace UnityAnalyticsHeatmap
             {
                 m_HeatmapOptionIndex = PickBestOption(options);
                 ParseOptionList(options);
-                OnPointData(m_ViewModel.m_Heatmaps[options[m_HeatmapOptionIndex]]);
+                SelectHeatmap(m_ViewModel.m_Heatmaps[options[m_HeatmapOptionIndex]]);
             }
         }
 
@@ -495,7 +494,7 @@ namespace UnityAnalyticsHeatmap
             int bestOption = 0;
             if (m_HeatmapOptions != null)
             {
-                string opt = m_HeatmapOptionIndex > options.Length ? "" : m_OptionKeys[m_HeatmapOptionIndex];
+                string opt = m_HeatmapOptionIndex > options.Length ? "" : m_ViewModel.m_SeparationOptions[m_HeatmapOptionIndex];
                 ArrayList list = new ArrayList(options);
                 int idx = list.IndexOf(opt);
                 bestOption = idx == -1 ? 0 : idx;
@@ -536,7 +535,6 @@ namespace UnityAnalyticsHeatmap
                 }
                 m_HeatmapOptions.Add(index);
             }
-            m_OptionKeys = options;
         }
 
         string BuildKey()
@@ -558,15 +556,36 @@ namespace UnityAnalyticsHeatmap
 
         public void SelectList()
         {
+            m_HeatmapOptionIndex = IndexFromOptions();
             string key = BuildKey();
             if (m_ViewModel.m_Heatmaps != null &&
                 m_ViewModel.m_Heatmaps.ContainsKey(key))
             {
-                OnPointData(m_ViewModel.m_Heatmaps[key]);
+                SelectHeatmap(m_ViewModel.m_Heatmaps[key]);
             }
         }
 
-        void OnPointData(HeatPoint[] heatData)
+        int IndexFromOptions()
+        {
+            int index = 0;
+            string key = "";
+            for (var a = 0; a < m_HeatmapOptions.Count; a++)
+            {
+                key += m_SeparatedLists[a][m_HeatmapOptions[a]];
+                if (a < m_HeatmapOptions.Count-1)
+                {
+                    key += "~";
+                }
+            }
+            if (m_ViewModel.m_Heatmaps.ContainsKey(key))
+            {
+                index = new List<string>(m_ViewModel.m_SeparationOptions).IndexOf(key);
+            }
+
+            return index;
+        }
+
+        void SelectHeatmap(HeatPoint[] heatData)
         {
             // Creating this data allows the renderer to use it on the next Update pass
             m_ViewModel.m_HeatData = heatData;

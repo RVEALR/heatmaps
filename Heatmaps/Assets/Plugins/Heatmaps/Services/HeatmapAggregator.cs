@@ -33,6 +33,8 @@ namespace UnityAnalyticsHeatmap
 {
     public class HeatmapAggregator
     {
+        public bool m_Verbose = false;
+
         string[] pointProperties = new string[]{ "x", "y", "z", "rx", "ry", "rz", "dx", "dy", "dz", "t" };
         string[] headerKeys = new string[]{
             "name",
@@ -164,11 +166,14 @@ namespace UnityAnalyticsHeatmap
                     var reportArray = reportList.Select(x => x.ToString()).ToArray();
 
                     //Output what happened
-                    string report = "Report of " + m_ReportFiles + " files:\n";
-                    report += "Total of " + reportList.Count + " groups numbering [" + string.Join(",", reportArray) + "]\n";
-                    report += "Total rows: " + m_ReportRows + "\n";
-                    report += "Total points analyzed: " + m_ReportLegalPoints;
-                    Debug.Log(report);
+                    if (m_Verbose)
+                    {
+                        string report = "Report of " + m_ReportFiles + " files:\n";
+                        report += "Total of " + reportList.Count + " groups numbering [" + string.Join(",", reportArray) + "]\n";
+                        report += "Total rows: " + m_ReportRows + "\n";
+                        report += "Total points analyzed: " + m_ReportLegalPoints;
+                        Debug.Log(report);
+                    }
 
                     SaveFile(outputFileName, outputData);
                 }
@@ -440,10 +445,10 @@ namespace UnityAnalyticsHeatmap
             }
 
             var json = MiniJSON.Json.Serialize(outputData);
-            string jsonPath = savePath + Path.DirectorySeparatorChar + outputFileName;
-            System.IO.File.WriteAllText(jsonPath, json);
+//            string jsonPath = savePath + Path.DirectorySeparatorChar + outputFileName;
+//            System.IO.File.WriteAllText(jsonPath, json);
 
-            m_CompletionHandler(jsonPath);
+            m_CompletionHandler(json);
         }
 
         protected float Divide(float value, float divisor)
