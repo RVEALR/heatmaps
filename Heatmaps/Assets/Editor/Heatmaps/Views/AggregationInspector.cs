@@ -28,9 +28,9 @@ namespace UnityAnalyticsHeatmap
         private GUIContent m_DatesContent = new GUIContent("Dates", "ISO-8601 datetimes (YYYY-MM-DD)");
         private GUIContent m_SeparateUsersContent = new GUIContent("Users", "Separate each user into their own list. NOTE: Separating user IDs can be quite slow!");
         private GUIContent m_SeparateSessionsContent = new GUIContent("Sessions", "Separate each session into its own list. NOTE: Separating unique sessions can be astonishingly slow!");
-        private GUIContent m_SeparateDebugContent = new GUIContent("Is Debug", "Separate debug devices from non-debug devices");
+        private GUIContent m_SeparateDebugContent = new GUIContent("Is debug", "Separate debug devices from non-debug devices");
         private GUIContent m_SeparatePlatformContent = new GUIContent("Platform", "Separate data based on platform");
-        private GUIContent m_SeparateCustomFieldContent = new GUIContent("On Custom Field", "Separate based on one or more parameter fields");
+        private GUIContent m_SeparateCustomFieldContent = new GUIContent("On custom field", "Separate based on one or more parameter fields");
 
         private GUIContent m_RemapColorContent = new GUIContent("Color to field", "By default, heatmap color is determined by event density. Checking this box allows you to remap to a specific field (e.g., use to identify fps drops.)");
         private GUIContent m_RemapColorFieldContent = new GUIContent("Field","Name the field to remap");
@@ -77,10 +77,11 @@ namespace UnityAnalyticsHeatmap
         List<string> m_ArbitraryFields = new List<string>{ };
 
         int m_DebounceCount = 0;
-        const int k_DebounceInitValue = 60;
+        const int k_DebounceInitValue = 30;
         delegate void DebounceDelegate();
         DebounceDelegate m_Debouncer;
-        delegate void DebounceMethodDelegate(int option, float value);
+        delegate void DebounceIntFloatMethodDelegate(int option, float value);
+        delegate void DebounceFloatMethodDelegate(float value);
 
         public AggregationInspector(HeatmapDataProcessor processor)
         {
@@ -226,7 +227,17 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        bool Debounce(DebounceMethodDelegate func, int option, float value)
+        bool Debounce(DebounceFloatMethodDelegate func, float value)
+        {
+            bool available = (m_DebounceCount > 0);
+            m_Debouncer = () => {
+                func(value);
+            };
+            m_DebounceCount = k_DebounceInitValue;
+            return available;
+        }
+
+        bool Debounce(DebounceIntFloatMethodDelegate func, int option, float value)
         {
             bool available = (m_DebounceCount > 0);
             m_Debouncer = () => {
@@ -262,12 +273,14 @@ namespace UnityAnalyticsHeatmap
         {
             m_ValidDates = true;
             m_Processor.m_StartDate = value;
+            m_Processor.Fetch();
         }
 
         void EndDateChange(string value)
         {
             m_ValidDates = true;
             m_Processor.m_EndDate = value;
+            m_Processor.Fetch();
         }
 
         void DateFailure()
@@ -375,7 +388,10 @@ namespace UnityAnalyticsHeatmap
 
         void PercentileChange(float value)
         {
-            m_Processor.m_Percentile = value;
+            if (!Debounce(PercentileChange, m_Percentile))
+            {
+                m_Processor.m_Percentile = m_Percentile;
+            }
         }
 
         #endregion
