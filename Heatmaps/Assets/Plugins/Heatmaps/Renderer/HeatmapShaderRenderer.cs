@@ -52,7 +52,8 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
     RenderDirection m_RenderDirection = RenderDirection.YZ;
 
     Shader m_Shader;
-    public Material[] m_Materials;
+    public Material m_Material;
+    public Texture2D m_Ramp;
     Gradient m_Gradient;
 
     int m_RenderState = k_NotRendering;
@@ -61,7 +62,7 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
 
     void Start()
     {
-        m_Shader = Shader.Find("Heatmaps/Particles/AlphaBlend");
+        m_Shader = Shader.Find("Heatmaps/Particles/Gaussian");
     }
 
     public void UpdatePointData(HeatPoint[] newData, float newMaxDensity)
@@ -83,16 +84,26 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
 
     public void UpdateGradient(Gradient gradient)
     {
-        if (m_Materials == null || m_Materials.Length == 0)
+        if (m_Material == null)
         {
-            m_Shader = Shader.Find("Heatmaps/Particles/AlphaBlend");
-            m_Materials = new Material[1];
-            m_Materials[0] = new Material(m_Shader);
+            m_Shader = Shader.Find("Heatmaps/Particles/Gaussian");
+            m_Material = new Material(m_Shader);
         }
         if (gradient == null || !CompareGradients(gradient, m_Gradient))
         {
             m_Gradient = gradient;
             m_RenderState = k_UpdateMaterials;
+            m_Ramp = new Texture2D(256, 256);
+
+            Color[] colors = new Color[256*256];
+            for (int a = 0; a < 256; a++)
+            {
+                for (int b = 0; b < 256; b++)
+                    colors[a + (b*a)] = PickGradientColor(a/256f);
+            }
+
+            Debug.Log("colors " + colors);
+            m_Ramp.SetPixels(colors);
         }
     }
 
@@ -226,6 +237,7 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
                         int verticesPerShape = GetVecticesForShape();
                         GameObject go = null;
                         Material[] materials = null;
+
                         for (int a = 0; a < m_Data.Length; a++)
                         {
                             if (m_Data[a].time >= m_StartTime && m_Data[a].time <= m_EndTime)
@@ -237,20 +249,25 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
                                 {
                                     if (go != null && materials != null)
                                     {
-                                        go.GetComponent<Renderer>().materials = materials;
+                                        go.GetComponent<Renderer>().material = m_Material;
                                     }
                                     go = m_GameObjects[currentSubmap];
-                                    materials = go.GetComponent<Renderer>().sharedMaterials;
+
+
+                                    //go.GetComponent<Renderer>().sharedMaterials;
                                 }
-                                materials = m_Materials;
+
+
+
+
                                 oldSubmap = currentSubmap;
                                 pt++;
                             }
                         }
-                        if (go != null && materials != null)
-                        {
-                            go.GetComponent<Renderer>().materials = materials;
-                        }
+//                        if (go != null && materials != null)
+//                        {
+//                            go.GetComponent<Renderer>().materials = materials;
+//                        }
 
                         CreatePoints();
                     }
@@ -268,6 +285,7 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
 
             var submaps = new List<List<HeatPoint>>();
             int currentSubmap = 0;
+
             int verticesPerShape = GetVecticesForShape();
 
             for (int a = 0; a < m_Data.Length; a++)
@@ -305,7 +323,8 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
                 for (int a = 0; a < addCount; a++)
                 {
                     int submapID = currentSubmaps + a;
-                    var go = new GameObject("Submap" + submapID);
+                    var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    go.name = "Submap" + submapID;
                     go.AddComponent<HeatmapSubmap>();
                     go.GetComponent<MeshFilter>().sharedMesh = new Mesh();
 
@@ -341,63 +360,90 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
 
     void RenderSubmap(GameObject go, List<HeatPoint> submap)
     {
-        var allTris = new List<int[]>();
-        var allVectors = new List<Vector3[]>();
-        var allColors = new List<Color32[]>();
-        Vector3[] vector3 = null;
-        var materials = new Material[submap.Count];
+//        var allTris = new List<int[]>();
+//        var allVectors = new List<Vector3[]>();
+//        var allColors = new List<Color32[]>();
+//        Vector3[] vector3 = null;
+//        var materials = new Material[submap.Count];
+        m_Material.SetInt("_Points_Length", submap.Count);
 
-        for (int a = 0; a < submap.Count; a++)
+
+
+        go.transform.localScale = new Vector3(Mathf.Abs(m_HighX - m_LowX), Mathf.Abs(m_HighY - m_LowY), Mathf.Abs(m_HighZ - m_LowZ));
+
+        Debug.Log("SETTING MATERIAL");
+        go.GetComponent<Renderer>().sharedMaterial = m_Material;
+        go.GetComponent<Renderer>().sharedMaterial.SetTexture("_HeatTex", m_Ramp);
+
+        //for (int a = 0; a < submap.Count; a++)
+        for (int a = 0; a < Math.Min(submap.Count, 20); a++)
         {
-            materials[a] = m_Materials[0];
+            
+
+           
             Vector3 position = submap[a].position;
-            Vector3 rotation = submap[a].rotation;
-            Vector3 destination = submap[a].destination;
+//            Vector3 rotation = submap[a].rotation;
+//            Vector3 destination = submap[a].destination;
 
-            switch (m_RenderStyle)
-            {
-                case RenderShape.Cube:
-                    vector3 = AddCubeVectorsToMesh(position.x, position.y, position.z);
-                    allVectors.Add(vector3);
-                    allTris.Add(AddCubeTrisToMesh(a * vector3.Length));
-                    break;
-                case RenderShape.Arrow:
-                    vector3 = AddArrowVectorsToMesh(position, rotation);
-                    allVectors.Add(vector3);
-                    allTris.Add(AddArrowTrisToMesh(a * vector3.Length));
-                    break;
-                case RenderShape.Square:
-                    vector3 = AddSquareVectorsToMesh(position.x, position.y, position.z);
-                    allVectors.Add(vector3);
-                    allTris.Add(AddSquareTrisToMesh(a * vector3.Length));
-                    break;
-                case RenderShape.Triangle:
-                    vector3 = AddTriVectorsToMesh(position.x, position.y, position.z);
-                    allVectors.Add(vector3);
-                    allTris.Add(AddTriTrisToMesh(a * vector3.Length));
-                    break;
-                case RenderShape.PointToPoint:
-                    vector3 = AddP2PVectorsToMesh(position, destination);
-                    allVectors.Add(vector3);
-                    allTris.Add(AddP2PTrisToMesh(a * vector3.Length));
-                    break;
-            }
-            allColors.Add(AddColorsToMesh(vector3.Length, submap[a]));
-        }
-        Vector3[] combinedVertices = allVectors.SelectMany(x => x).ToArray<Vector3>();
-        Mesh mesh = go.GetComponent<MeshFilter>().sharedMesh;
-        mesh.vertices = combinedVertices;
-        mesh.colors32 = allColors.SelectMany(x => x).ToArray<Color32>();
+//            switch (m_RenderStyle)
+//            {
+//                case RenderShape.Cube:
+//                    vector3 = AddCubeVectorsToMesh(position.x, position.y, position.z);
+//                    allVectors.Add(vector3);
+//                    allTris.Add(AddCubeTrisToMesh(a * vector3.Length));
+//                    break;
+//                case RenderShape.Arrow:
+//                    vector3 = AddArrowVectorsToMesh(position, rotation);
+//                    allVectors.Add(vector3);
+//                    allTris.Add(AddArrowTrisToMesh(a * vector3.Length));
+//                    break;
+//                case RenderShape.Square:
+//                    vector3 = AddSquareVectorsToMesh(position.x, position.y, position.z);
+//                    allVectors.Add(vector3);
+//                    allTris.Add(AddSquareTrisToMesh(a * vector3.Length));
+//                    break;
+//                case RenderShape.Triangle:
+//                    vector3 = AddTriVectorsToMesh(position.x, position.y, position.z);
+//                    allVectors.Add(vector3);
+//                    allTris.Add(AddTriTrisToMesh(a * vector3.Length));
+//                    break;
+//                case RenderShape.PointToPoint:
+//                    vector3 = AddP2PVectorsToMesh(position, destination);
+//                    allVectors.Add(vector3);
+//                    allTris.Add(AddP2PTrisToMesh(a * vector3.Length));
+//                    break;
+//            }
+//            allColors.Add(AddColorsToMesh(vector3.Length, submap[a]));
 
-        for (int j = 0; j < allTris.Count; j++)
-        {
-            int[] t = allTris[j];
-            mesh.SetTriangles(t, j);
+            Vector3 p = new Vector3(position.x/go.transform.localScale.x,
+                position.y/go.transform.localScale.y,
+                position.z/go.transform.localScale.z);
+            m_Material.SetVector("_Points" + a.ToString(), p);
+
+            Vector2 properties = new Vector2(submap[a].density * pointSize, submap[a].density);
+            m_Material.SetVector("_Properties" + a.ToString(), properties);
+
+
+
+
         }
-        go.GetComponent<Renderer>().materials = materials;
+//        Vector3[] combinedVertices = allVectors.SelectMany(x => x).ToArray<Vector3>();
+//        Mesh mesh = go.GetComponent<MeshFilter>().sharedMesh;
+//        mesh.vertices = combinedVertices;
+//        mesh.colors32 = allColors.SelectMany(x => x).ToArray<Color32>();
+
+//        for (int j = 0; j < allTris.Count; j++)
+//        {
+//            int[] t = allTris[j];
+//            mesh.SetTriangles(t, j);
+//        }
+
+
+
+
         go.GetComponent<HeatmapSubmap>().m_PointData = submap;
         go.GetComponent<HeatmapSubmap>().m_TrianglesPerShape = GetTrianglesForShape();
-        mesh.Optimize();
+//        mesh.Optimize();
 
         if (m_Tips)
         {
@@ -406,7 +452,7 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
                 go.AddComponent<MeshCollider>();
             }
 
-            go.GetComponent<MeshCollider>().sharedMesh = mesh;
+//            go.GetComponent<MeshCollider>().sharedMesh = mesh;
         }
     }
 

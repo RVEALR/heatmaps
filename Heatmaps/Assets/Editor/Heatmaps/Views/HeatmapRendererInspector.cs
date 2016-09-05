@@ -15,6 +15,8 @@ namespace UnityAnalyticsHeatmap
 {
     public class HeatmapRendererInspector
     {
+        const string k_Renderer = "UnityAnalyticsHeatmapRenderer";
+
         const string k_StartTimeKey = "UnityAnalyticsHeatmapStartTime";
         const string k_EndTimeKey = "UnityAnalyticsHeatmapEndTime";
         const string k_PlaySpeedKey = "UnityAnalyticsHeatmapPlaySpeed";
@@ -35,8 +37,8 @@ namespace UnityAnalyticsHeatmap
         Heatmapper m_Heatmapper;
         HeatmapDataProcessor m_Processor;
 
-        Type[] m_Renderers = new Type[]{ typeof(HeatmapMeshRenderer), typeof(HeatmapShaderRenderer) };
-        GUIContent[] m_RendererOptions = new GUIContent[]{ new GUIContent("Mesh Renderer"), new GUIContent("Shader Renderer") };
+        Type[] m_Renderers = new Type[]{ typeof(HeatmapMeshRenderer), typeof(InstancedHeatmapMeshRenderer) };
+        GUIContent[] m_RendererOptions = new GUIContent[]{ new GUIContent("Mesh Renderer"), new GUIContent("GPU Instanced Renderer (Requires 5.5+)") };
         int m_RendererIndex = 0;
 
         float m_StartTime = 0f;
@@ -91,6 +93,8 @@ namespace UnityAnalyticsHeatmap
 
         public HeatmapRendererInspector()
         {
+            m_RendererIndex = EditorPrefs.GetInt(k_Renderer, m_RendererIndex);
+
             m_StartTime = EditorPrefs.GetFloat(k_StartTimeKey, m_StartTime);
             m_EndTime = EditorPrefs.GetFloat(k_EndTimeKey, m_EndTime);
             m_PlaySpeed = EditorPrefs.GetFloat(k_PlaySpeedKey, m_PlaySpeed);
@@ -112,7 +116,7 @@ namespace UnityAnalyticsHeatmap
             var playIcon = lightSkinPlayIcon;
             var pauseIcon = lightSkinPauseIcon;
             var rwdIcon = lightSkinRewindIcon;
-            if (EditorPrefs.GetInt("UserSkin") == 1)
+            if (EditorGUIUtility.isProSkin)
             {
                 playIcon = darkSkinPlayIcon;
                 pauseIcon = darkSkinPauseIcon;
@@ -319,8 +323,15 @@ namespace UnityAnalyticsHeatmap
 
                 lowValue = EditorGUILayout.FloatField(lowValue, GUILayout.MaxWidth(50f));
                 highValue = EditorGUILayout.FloatField(highValue, GUILayout.Width(50f));
-                EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, minValue, maxValue);
 
+                // FIXME: this papers over a 5.5 beta bug, but is *not* desirable behavior
+                if (minValue == maxValue)
+                {
+                    minValue -= .1f;
+                    maxValue += .1f;
+                }
+
+                EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, minValue, maxValue);
 
                 highValue = Mathf.Max(lowValue, highValue);
                 lowValue = Mathf.Min(lowValue, highValue);
@@ -431,6 +442,7 @@ namespace UnityAnalyticsHeatmap
         #region change handlers
         void RendererChange(int value)
         {
+            EditorPrefs.SetInt(k_Renderer, value);
             m_Heatmapper.SwapRenderer(m_Renderers[value]);
         }
 

@@ -29,7 +29,7 @@ namespace UnityAnalyticsHeatmap
                 var unionIcon = lightSkinUnionIcon;
                 var smoothIcon = lightSkinNumberIcon;
                 var noneIcon = lightSkinNoneIcon;
-                if (EditorPrefs.GetInt("UserSkin") == 1)
+                if (EditorGUIUtility.isProSkin)
                 {
                     unionIcon = darkSkinUnionIcon;
                     smoothIcon = darkSkinNumberIcon;

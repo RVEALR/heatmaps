@@ -226,6 +226,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                         int verticesPerShape = GetVecticesForShape();
                         GameObject go = null;
                         Material[] materials = null;
+
                         for (int a = 0; a < m_Data.Length; a++)
                         {
                             if (m_Data[a].time >= m_StartTime && m_Data[a].time <= m_EndTime)
@@ -397,7 +398,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         go.GetComponent<Renderer>().materials = materials;
         go.GetComponent<HeatmapSubmap>().m_PointData = submap;
         go.GetComponent<HeatmapSubmap>().m_TrianglesPerShape = GetTrianglesForShape();
-        mesh.Optimize();
+        //mesh.Optimize();
 
         if (m_Tips)
         {
