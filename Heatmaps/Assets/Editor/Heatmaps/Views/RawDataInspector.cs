@@ -1094,12 +1094,6 @@ public class RawDataInspector : EditorWindow
             return;
         }
 
-        if (m_DeviceCount * m_SessionCount * m_EventCount > 10000)
-        {
-            Debug.LogWarningFormat("Your current settings would generate {0} points. That's more than the 10000 max we think is advisable.", m_DeviceCount * m_SessionCount * m_EventCount);
-            return;
-        }
-
         int linesPerFile = 1000;
         int currentFileLines = 0;
         DateTime now = DateTime.UtcNow;
@@ -1116,6 +1110,9 @@ public class RawDataInspector : EditorWindow
         // data, startSeconds, endSeconds
         List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
 
+        int totalPoints = m_DeviceCount * m_SessionCount * m_EventCount;
+        int currentPoint = 0;
+
         for (int a = 0; a < m_DeviceCount; a++)
         {
             string platform = platforms[UnityEngine.Random.Range(0, platforms.Count)];
@@ -1123,6 +1120,7 @@ public class RawDataInspector : EditorWindow
             {
                 for (int c = 0; c < m_EventCount; c++)
                 {
+                    EditorUtility.DisplayProgressBar("Generating points", "Please wait while we generate " + totalPoints + " points", (float)currentPoint/totalPoints);
                     TestCustomEvent customEvent = m_CustomEvents[UnityEngine.Random.Range(0, m_CustomEvents.Count)];
                     currentSeconds ++;
                     string evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
@@ -1140,8 +1138,10 @@ public class RawDataInspector : EditorWindow
                         data = "";
                         fileCount++;
                     }
+                    currentPoint ++;
                 }
             }
+            EditorUtility.ClearProgressBar();
         }
 
 
@@ -1182,12 +1182,6 @@ public class RawDataInspector : EditorWindow
                 }
             }
             Debug.LogWarningFormat("You must have at least one {0} to generate data.", missing);
-            return;
-        }
-
-        if (m_DeviceCount * m_SessionCount * m_EventCount > 10000)
-        {
-            Debug.LogWarningFormat("Your current settings would generate {0} points. That's more than the 10000 max we think is advisable.", m_DeviceCount * m_SessionCount * m_EventCount);
             return;
         }
 
@@ -1257,6 +1251,9 @@ public class RawDataInspector : EditorWindow
         // data, startSeconds, endSeconds
         List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
 
+        int totalPoints = m_DeviceCount * m_SessionCount * m_EventCount;
+        int currentPoint = 0;
+
         for (int a = 0; a < m_DeviceCount; a++)
         {
             string platform = platforms[UnityEngine.Random.Range(0, platforms.Count)];
@@ -1264,6 +1261,7 @@ public class RawDataInspector : EditorWindow
             {
                 for (int c = 0; c < m_EventCount; c++)
                 {
+                    EditorUtility.DisplayProgressBar("Generating points", "Please wait while we generate " + totalPoints + " points", (float)currentPoint/totalPoints);
                     currentSeconds ++;
                     TestCustomEvent customEvent = events[UnityEngine.Random.Range(0, events.Count)];
                     customEvent.SetParam("t", currentSeconds - startSeconds);
@@ -1287,8 +1285,10 @@ public class RawDataInspector : EditorWindow
                         currentFileLines = 0;
                         data = "";
                     }
+                    currentPoint ++;
                 }
             }
+            EditorUtility.ClearProgressBar();
         }
 
         SaveDemoData(result);
