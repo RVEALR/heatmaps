@@ -23,8 +23,8 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     const int k_RenderInProgress = 2;
     const int k_UpdateMaterials = 4;
     
-    // Unity limit of vectors per mesh
-    const int k_VerticesPerMesh = 1023;
+    // Unity limit of shapes which can be drawn in a single instancing
+    const int k_ShapesPerDraw = 1023;
     
     // Density Thresholds
     float m_HighThreshold;
@@ -58,10 +58,8 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     int m_ColorID;
     Mesh m_Mesh;
 
-    Matrix4x4[] m_Matrices;
-    MaterialPropertyBlock m_Properties;
-
-    bool runMode = false;
+    List<Matrix4x4[]> m_Matrices;
+    List<MaterialPropertyBlock> m_Properties;
 
     int _r = k_NotRendering;
     int m_RenderState
@@ -80,7 +78,6 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     {
         m_Shader = Shader.Find(k_ShaderName);
         allowRender = true;
-        runMode = true;
     }
     
     public void UpdatePointData(HeatPoint[] newData, float newMaxDensity)
@@ -88,8 +85,6 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         m_Data = newData;
         m_MaxDensity = newMaxDensity;
         m_RenderState = k_BeginRenderer;
-
-        Debug.Log("points");
     }
     
     public void UpdateColors(Color[] colors)
@@ -286,29 +281,41 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     {
         if (allowRender)
         {
-            if(m_RenderState == k_BeginRenderer || runMode)
+            if(m_RenderState == k_BeginRenderer)
             {
-                CreatePoints();
-                UpdateRender();
+//                m_RenderCursor = 0;
+                var map = FilterPoints();
+                PopulateMatrices(map);
                 m_RenderState = k_RenderInProgress;
             }
-            // FIXME:
-            currentPoints = m_RenderState;
+            UpdateRender();
         }
+    }
+
+//    int m_RenderCursor = 0;
+
+    void OnGUI()
+    {
+        //GUI.Label(new Rect(0,0,100,20f), "State: " + m_RenderState);
+        //UpdateRender();
     }
 
     void UpdateRender()
     {
         if (m_Matrices != null && m_Material != null)
         {
-            Graphics.DrawMeshInstanced(m_Mesh, 0, m_Material,
-                m_Matrices, m_Matrices.Count(),
-                m_Properties,
-                UnityEngine.Rendering.ShadowCastingMode.Off, false);
+            for (int a = 0; a < m_Matrices.Count; a++)
+            {
+                Matrix4x4[] matrixList = m_Matrices[a];
+                MaterialPropertyBlock prop = m_Properties[a];
+                Graphics.DrawMeshInstanced(m_Mesh, 0, m_Material,
+                    matrixList, matrixList.Length, prop,
+                    UnityEngine.Rendering.ShadowCastingMode.Off, false);
+            }
         }
     }
     
-    void CreatePoints()
+    List<HeatPoint> FilterPoints()
     {
         if (hasData())
         {
@@ -316,11 +323,7 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             currentPoints = 0;
 
             var map = new List<HeatPoint>();
-
-            // FIXME: obviously
-            int len = Math.Min(m_Data.Length, 1023);
-
-            for (int a = 0; a < len; a++)
+            for (int a = 0; a < m_Data.Length; a++)
             {
                 // FILTER FOR TIME & POSITION
                 var pt = m_Data[a];
@@ -333,45 +336,55 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                     map.Add(pt);
                 }
             }
-
-            RenderMap(map);
+            return map;
         }
+        return null;
     }
 
-    void RenderMap(List<HeatPoint> map)
+    void PopulateMatrices(List<HeatPoint> map)
     {
+        if (map == null)
+            return;
 
-        if (m_Properties == null)
-        {
-            m_Properties = new MaterialPropertyBlock();
-        }
-        else
-        {
-            m_Properties.Clear();
-        }
-
-
-        m_Matrices = new Matrix4x4[map.Count];
+        m_Properties = new List<MaterialPropertyBlock>();
+        m_Matrices = new List<Matrix4x4[]>();
         Vector3 scale = Vector3.one;
-        Vector4[] colors = new Vector4[map.Count];
+        List<Vector4[]> colors = new List<Vector4[]>();
+
+        int index = 0;
         for (int a = 0; a < map.Count; a++)
         {
-            Matrix4x4 m = Matrix4x4.identity;
+            int mod = a % k_ShapesPerDraw;
+            if (mod == 0)
+            {
+                m_Properties.Add(new MaterialPropertyBlock());
+                m_Matrices.Add(new Matrix4x4[k_ShapesPerDraw]);
+                colors.Add(new Vector4[k_ShapesPerDraw]);
+            }
+
+            Matrix4x4 matrix = Matrix4x4.identity;
             HeatPoint pt = map[a];
             Quaternion quaternion = Quaternion.Euler(pt.rotation);
-            m.SetTRS(pt.position, quaternion, scale);
-            m_Matrices[a] = m;
+            matrix.SetTRS(pt.position, quaternion, scale);
+            m_Matrices[index][mod] = matrix;
 
             float pct = (pt.density/m_MaxDensity);
-            colors[a] = GradientUtils.PickGradientColor(m_Gradient, pct);
+            colors[index][mod] = GradientUtils.PickGradientColor(m_Gradient, pct);
+
+            if (a+1 % k_ShapesPerDraw == 0)
+            {
+                index++;
+            }
         }
 
-        if (colors != null && colors.Length > 0)
+        for(int a = 0; a < m_Properties.Count; a++)
         {
-            m_Properties.SetVectorArray(m_ColorID, colors);
+            if (colors[a] != null && colors[a].Length > 0)
+            {
+                m_Properties[a].SetVectorArray(m_ColorID, colors[a]);
+            }
+            index++;
         }
-
-
 
 //        gameObject.GetComponent<Renderer>().materials = materials;
 //        gameObject.GetComponent<HeatmapSubmap>().m_PointData = map;
