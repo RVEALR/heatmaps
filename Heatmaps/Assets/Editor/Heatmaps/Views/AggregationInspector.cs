@@ -76,12 +76,8 @@ namespace UnityAnalyticsHeatmap
 
         List<string> m_ArbitraryFields = new List<string>{ };
 
-        int m_DebounceCount = 0;
-        const int k_DebounceInitValue = 30;
-        delegate void DebounceDelegate();
-        DebounceDelegate m_Debouncer;
-        delegate void DebounceIntFloatMethodDelegate(int option, float value);
-        delegate void DebounceFloatMethodDelegate(float value);
+        int m_FetchCount = 0;
+        const int k_FetchInitValue = 30;
 
         public AggregationInspector(HeatmapDataProcessor processor)
         {
@@ -128,14 +124,7 @@ namespace UnityAnalyticsHeatmap
 
         public void Update()
         {
-            if (m_DebounceCount > 0)
-            {
-                m_DebounceCount --;
-            }
-            else if (m_Debouncer != null)
-            {
-                TriggerDebouncer();
-            }
+            HandleFetch();
         }
 
         public void OnGUI()
@@ -227,33 +216,6 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        bool Debounce(DebounceFloatMethodDelegate func, float value)
-        {
-            bool available = (m_DebounceCount > 0);
-            m_Debouncer = () => {
-                func(value);
-            };
-            m_DebounceCount = k_DebounceInitValue;
-            return available;
-        }
-
-        bool Debounce(DebounceIntFloatMethodDelegate func, int option, float value)
-        {
-            bool available = (m_DebounceCount > 0);
-            m_Debouncer = () => {
-                func(option, value);
-            };
-            m_DebounceCount = k_DebounceInitValue;
-            return available;
-        }
-
-        void TriggerDebouncer()
-        {
-            m_Debouncer();
-            m_Debouncer = null;
-        }
-
-        #region change handlers
         void UseCustomDataPathChange(bool value)
         {
             EditorPrefs.SetBool(k_UseCustomDataPathKey, value);
@@ -267,20 +229,21 @@ namespace UnityAnalyticsHeatmap
                 m_DataPath = Application.persistentDataPath;
             }
             m_Processor.m_RawDataPath = value;
+            ScheduleFetch();
         }
 
         void StartDateChange(string value)
         {
             m_ValidDates = true;
             m_Processor.m_StartDate = value;
-            m_Processor.Fetch();
+            ScheduleFetch();
         }
 
         void EndDateChange(string value)
         {
             m_ValidDates = true;
             m_Processor.m_EndDate = value;
-            m_Processor.Fetch();
+            ScheduleFetch();
         }
 
         void DateFailure()
@@ -318,82 +281,106 @@ namespace UnityAnalyticsHeatmap
 
         void SpaceChange(int option, float value)
         {
-            if (!Debounce(SpaceChange, option, value))
-            {
-                m_Processor.m_Space = value;
-                m_Processor.m_SmoothSpaceToggle = option;
-            }
+            m_Processor.m_SmoothSpaceToggle = option;
+            m_Processor.m_Space = value;
+            ScheduleFetch();
         }
+
         void RotationChange(int option, float value)
         {
-            if (!Debounce(RotationChange, option, value))
-            {
-                m_Processor.m_Rotation = value;
-                m_Processor.m_SmoothRotationToggle = option;
-            }
+            m_Processor.m_Rotation = value;
+            m_Processor.m_SmoothRotationToggle = option;
+            ScheduleFetch();
         }
+
         void TimeChange(int option, float value)
         {
-            if (!Debounce(TimeChange, option, value))
-            {
-                m_Processor.m_Time = value;
-                m_Processor.m_SmoothTimeToggle = option;
-            }
+            m_Processor.m_Time = value;
+            m_Processor.m_SmoothTimeToggle = option;
+            ScheduleFetch();
         }
 
         void SeparateUsersChange(bool value)
         {
             m_Processor.m_SeparateUsers = value;
+            ScheduleFetch();
         }
 
         void SeparateSessionsChange(bool value)
         {
             m_Processor.m_SeparateSessions = value;
+            ScheduleFetch();
         }
 
         void SeparateDebugChange(bool value)
         {
             m_Processor.m_SeparateDebug = value;
+            ScheduleFetch();
         }
 
         void SeparatePlatformChange(bool value)
         {
             m_Processor.m_SeparatePlatform = value;
+            ScheduleFetch();
         }
 
         void SeparateCustomFieldChange(bool value)
         {
             m_Processor.m_SeparateCustomField = value;
+            ScheduleFetch();
         }
 
         void CustomFieldsChange(List<string> list)
         {
             m_Processor.m_SeparationFields = list;
+            ScheduleFetch();
         }
 
         void RemapChange(bool value)
         {
             m_Processor.m_RemapDensity = value;
+            ScheduleFetch();
         }
 
         void RemapFieldChange(string value)
         {
             m_Processor.m_RemapColorField = value;
+            ScheduleFetch();
         }
 
         void RemapOptionIndexChange(int value)
         {
             m_Processor.m_RemapOptionIndex = value;
+            ScheduleFetch();
         }
 
         void PercentileChange(float value)
         {
-            if (!Debounce(PercentileChange, m_Percentile))
+            m_Processor.m_Percentile = m_Percentile;
+            ScheduleFetch();
+        }
+
+
+        void ScheduleFetch()
+        {
+            m_FetchCount = k_FetchInitValue;
+        }
+
+        void HandleFetch()
+        {
+            if (m_FetchCount > 0)
             {
-                m_Processor.m_Percentile = m_Percentile;
+                m_FetchCount --;
+                if (m_FetchCount == 0)
+                {
+                    CommitFetch();
+                }
             }
         }
 
-        #endregion
+        void CommitFetch()
+        {
+            m_Processor.Fetch();
+        }
     }
 }
