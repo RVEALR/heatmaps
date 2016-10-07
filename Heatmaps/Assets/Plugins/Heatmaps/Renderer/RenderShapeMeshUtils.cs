@@ -166,7 +166,7 @@ namespace UnityAnalyticsHeatmap
         {
             var tris = new int[]
                 {
-                    offset, offset + 2, offset + 1  // top
+                    offset, offset + 1, offset + 2  // top
                 };
             return tris;
         }
