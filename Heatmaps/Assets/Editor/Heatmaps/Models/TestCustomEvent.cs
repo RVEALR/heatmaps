@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System;
+using UnityEngine;
 
 public class TestCustomEvent : List<TestEventParam> {
     public string name = "Enter an event name";
@@ -55,6 +56,16 @@ public class TestCustomEvent : List<TestEventParam> {
     public string WriteEvent(int deviceId, int sessionId, double currentSeconds, string platform, bool isDebug = false)
     {
         return WriteEvent("device" + deviceId + "-DDDD-DDDD", "session" + sessionId + "-SSSS-SSSS", currentSeconds, platform, isDebug);
+    }
+
+    float m_ForceX = Mathf.Infinity;
+    float m_ForceY = Mathf.Infinity;
+    public string WriteEvent(int deviceId, int sessionId, double currentSeconds, string platform, float forceX, float forceY)
+    {
+        m_ForceX = forceX;
+        m_ForceY = forceY;
+
+        return WriteEvent("device" + deviceId + "-DDDD-DDDD", "session" + sessionId + "-SSSS-SSSS", currentSeconds, platform, false);
     }
 
     public string WriteEvent(string deviceId, string sessionId, double currentSeconds, string platform, bool isDebug = false)
@@ -116,6 +127,14 @@ public class TestCustomEvent : List<TestEventParam> {
                     break;
                 case TestEventParam.Num:
                     float num = UnityEngine.Random.Range(param.min, param.max);
+                    if (param.name == "x" && m_ForceX != Mathf.Infinity)
+                    {
+                        num = m_ForceX;
+                    }
+                    else if (param.name == "y" && m_ForceY != Mathf.Infinity)
+                    {
+                        num = m_ForceY;
+                    }
                     evt += Quotify(num.ToString());
                     break;
                 case TestEventParam.Bool:

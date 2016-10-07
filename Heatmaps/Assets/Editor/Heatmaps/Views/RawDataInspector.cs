@@ -179,6 +179,7 @@ public class RawDataInspector : EditorWindow
     List<TestCustomEvent> m_CustomEvents = new List<TestCustomEvent>();
 
     bool m_IncludeTime = true;
+    bool m_Randomize = true;
 
     bool m_IncludeX = true;
     float m_MinX = defaultMinSpace;
@@ -326,6 +327,9 @@ public class RawDataInspector : EditorWindow
                 }
                 if (GUILayout.Button("Generate"))
                 {
+                    // "Easter egg": generate organized data instead of random by holding Cmd or Ctrl
+                    // Only implemented for Heatmap random
+                    m_Randomize = !(Event.current.control || Event.current.command);
                     GenerateData();
                 }
             }
@@ -642,7 +646,7 @@ public class RawDataInspector : EditorWindow
                 DrawFloatRange(ref m_MinZ, ref m_MaxZ, k_MinZ, k_MaxZ);
             }
         }
-        
+
         m_Rotational = GUILayout.SelectionGrid(m_Rotational, new string[] {"None", "Rotation", "Destination"}, 3);
         EditorPrefs.SetInt(k_RotationKey, m_Rotational);
         
@@ -971,58 +975,6 @@ public class RawDataInspector : EditorWindow
             code += ");\n";
         }
 
-//            string testEventName = "someEvent";
-//            if (m_EventNames != null && m_EventNames.Count > 0) {
-//                testEventName = m_EventNames[0];
-//            }
-//            string eventName = "\"" + testEventName + "\"";
-//            string transformText = "";
-//            string time = "";
-//            string dict = "";
-//
-//            if (m_Rotational == ROTATION)
-//            {
-//                transformText += "transform";
-//            }
-//            else if (m_IncludeZ)
-//            {
-//                transformText += "transform.position";
-//            }
-//            else
-//            {
-//                transformText += "new Vector2(transform.position.x, transform.position.y)";
-//            }
-//            if (m_Rotational == DESTINATION)
-//            {
-//                transformText += ",otherGameObject.transform.position";
-//            }
-//
-//            if (m_IncludeTime)
-//            {
-//                time = ",Time.timesinceLevelLoad";
-//            }
-//           
-//                dict = ",new Dictionary<string,object>(){";
-//                if (m_IncludeLevel)
-//                {
-//                    dict += "{\"level\", levelId}";
-//                }
-//                if (m_IncludeLevel && m_IncludeFPS)
-//                {
-//                    dict += ",";
-//                }
-//                if (m_IncludeFPS)
-//                {
-//                    dict += "{\"fps\", fps}";
-//                }
-//                dict += "}";
-//            
-//            code += eventName + "," + transformText + time + dict + ");";
-
-
-
-
-
         var g = new GUIStyle(GUI.skin.textArea);
         g.wordWrap = true;
         EditorGUILayout.TextArea(code, g);
@@ -1263,6 +1215,9 @@ public class RawDataInspector : EditorWindow
                 {
                     EditorUtility.DisplayProgressBar("Generating points", "Please wait while we generate " + totalPoints + " points", (float)currentPoint/totalPoints);
                     currentSeconds ++;
+
+
+
                     TestCustomEvent customEvent = events[UnityEngine.Random.Range(0, events.Count)];
                     customEvent.SetParam("t", currentSeconds - startSeconds);
                     if (m_IncludeLevel)
@@ -1270,7 +1225,20 @@ public class RawDataInspector : EditorWindow
                         int level = (int)(UnityEngine.Random.Range(m_MinLevel, m_MaxLevel));
                         customEvent.SetParam("level", (float)level, (float)level);
                     }
-                    string evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
+
+                    string evt;
+                    if (m_Randomize)
+                    {
+                        evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
+                    }
+                    else
+                    {
+                        var width = (m_MaxX - m_MinX);
+                        var forceX = m_MinX + ((float)currentPoint % width);
+                        var forceY = m_MinY + Mathf.Floor(currentPoint / width);
+                        evt = customEvent.WriteEvent(a, b, currentSeconds, platform, forceX, forceY);
+                    }
+
                     data += evt;
                     currentFileLines ++;
 
