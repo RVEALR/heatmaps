@@ -47,7 +47,6 @@ public class Heatmapper : EditorWindow
         m_AggregationView = AggregationInspector.Init(m_Processor);
         m_Processor.RestoreSettings();
         m_AggregationView.OnEnable();
-        SystemProcess();
     }
 
     void OnFocus()
