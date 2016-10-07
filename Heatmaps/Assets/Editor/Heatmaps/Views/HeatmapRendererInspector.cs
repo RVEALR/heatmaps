@@ -262,7 +262,7 @@ namespace UnityAnalyticsHeatmap
                 if (m_GameObject != null)
                 {
                     IHeatmapRenderer r = m_GameObject.GetComponent<IHeatmapRenderer>() as IHeatmapRenderer;
-                    r.UpdateGradient(SafeGradientValue(m_ColorGradient ));
+                    r.UpdateGradient(SafeGradientValue(m_ColorGradient));
                     r.pointSize = m_ParticleSize;
                     r.activateTips = m_Tips;
                     r.UpdateRenderMask(m_LowX, m_HighX, m_LowY, m_HighY, m_LowZ, m_HighZ);
@@ -323,13 +323,6 @@ namespace UnityAnalyticsHeatmap
 
                 lowValue = EditorGUILayout.FloatField(lowValue, GUILayout.MaxWidth(50f));
                 highValue = EditorGUILayout.FloatField(highValue, GUILayout.Width(50f));
-
-                // FIXME: this papers over a 5.5 beta bug, but is *not* desirable behavior
-                if (minValue == maxValue)
-                {
-                    minValue -= .1f;
-                    maxValue += .1f;
-                }
 
                 EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, minValue, maxValue);
 
