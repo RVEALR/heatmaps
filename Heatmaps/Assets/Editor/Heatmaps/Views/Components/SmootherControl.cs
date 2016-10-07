@@ -49,8 +49,8 @@ namespace UnityAnalyticsHeatmap
                     s_SmootherOptionsContent.Take(endIndex).ToArray();
 
                 EditorGUI.BeginChangeCheck();
-                toggler = GUILayout.Toolbar(
-                    toggler, options, GUILayout.MaxWidth(100));
+                int oldToggle = toggler;
+                toggler = GUILayout.Toolbar(toggler, options, GUILayout.MaxWidth(100));
 
                 float lw = EditorGUIUtility.labelWidth;
                 EditorGUIUtility.labelWidth = 50;
@@ -63,7 +63,7 @@ namespace UnityAnalyticsHeatmap
                 EditorGUIUtility.labelWidth = lw;
                 EditorGUIUtility.fieldWidth = fw;
 
-                if (EditorGUI.EndChangeCheck())
+                if (EditorGUI.EndChangeCheck() || oldToggle != toggler)
                 {
                     change(toggler, value);
                 }
