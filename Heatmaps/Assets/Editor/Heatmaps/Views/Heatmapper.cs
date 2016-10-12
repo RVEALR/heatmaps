@@ -42,6 +42,7 @@ public class Heatmapper : EditorWindow
 
     void OnEnable()
     {
+        EnsureHeatmapInstance();
         m_Processor = new HeatmapDataProcessor();
         m_RenderView = HeatmapRendererInspector.Init(this, m_Processor);
         m_AggregationView = AggregationInspector.Init(m_Processor);
@@ -58,10 +59,7 @@ public class Heatmapper : EditorWindow
     {
         if (Event.current.type == EventType.Layout)
         {
-            if (m_HeatMapInstance == null)
-            {
-                AttemptReconnectWithHeatmapInstance();
-            }
+            EnsureHeatmapInstance();
             if (m_RenderView != null)
             {
                 m_RenderView.SetGameObject(m_HeatMapInstance);
@@ -108,44 +106,27 @@ public class Heatmapper : EditorWindow
 
     void Update()
     {
-        if (m_HeatMapInstance != null)
-        {
-            m_HeatMapInstance.GetComponent<IHeatmapRenderer>().RenderHeatmap();
-        }
-        if (m_RenderView != null)
-        {
-            m_RenderView.Update();
-        }
+        EnsureHeatmapInstance();
+        m_HeatMapInstance.GetComponent<IHeatmapRenderer>().RenderHeatmap();
         if (m_AggregationView != null)
         {
             m_AggregationView.Update();
         }
-
-        if (m_Processor.m_ViewModel.m_HeatData != null)
+        if (m_RenderView != null)
         {
-            if (m_HeatMapInstance == null)
+            bool hasNewData = m_Processor.m_ViewModel.m_HeatData != null;
+            if (hasNewData)
             {
-                CreateHeatmapInstance();
-            }
-
-            if (m_RenderView != null)
-            {
-                m_RenderView.SetGameObject(m_HeatMapInstance);
                 m_RenderView.SetLimits(m_Processor.m_ViewModel.m_HeatData);
-
-                m_RenderView.Update(true);
             }
-
+            m_RenderView.Update(hasNewData);
             m_Processor.m_ViewModel.m_HeatData = null;
         }
     }
 
     void SystemProcess()
     {
-        if (m_HeatMapInstance == null)
-        {
-            CreateHeatmapInstance();
-        }
+        EnsureHeatmapInstance();
         m_Processor.Fetch();
     }
 
@@ -157,41 +138,28 @@ public class Heatmapper : EditorWindow
         if (m_RenderView != null) {
             m_RenderView.SystemReset();
         }
-        if (m_HeatMapInstance)
-        {
-            m_HeatMapInstance.transform.parent = null;
-            DestroyImmediate(m_HeatMapInstance);
-        }
+        CreateHeatmapInstance(true);
         SystemProcess();
     }
 
     public void SwapRenderer(Type renderer)
     {
         AttemptReconnectWithHeatmapInstance();
-        if (m_HeatMapInstance)
-        {
-            m_HeatMapInstance.transform.parent = null;
-            DestroyImmediate(m_HeatMapInstance);
-        }
         CreateHeatmapInstance(renderer);
         m_Processor.Fetch();
     }
 
-    /// <summary>
-    /// Creates the heat map instance.
-    /// </summary>
-    void CreateHeatmapInstance()
+    void EnsureHeatmapInstance()
     {
-        CreateHeatmapInstance(typeof(HeatmapMeshRenderer));
-    }
-
-    void CreateHeatmapInstance (Type t)
-    {
-        m_HeatMapInstance = new GameObject();
-        m_HeatMapInstance.tag = "EditorOnly";
-        m_HeatMapInstance.name = "UnityAnalytics__Heatmap";
-        m_HeatMapInstance.AddComponent(t);
-        m_HeatMapInstance.GetComponent<IHeatmapRenderer>().allowRender = true;
+        AttemptReconnectWithHeatmapInstance();
+        if (m_HeatMapInstance == null)
+        {
+            CreateHeatmapInstance();
+        }
+        if (m_RenderView != null)
+        {
+            m_RenderView.SetGameObject(m_HeatMapInstance);
+        }
     }
 
     /// <summary>
@@ -200,5 +168,36 @@ public class Heatmapper : EditorWindow
     void AttemptReconnectWithHeatmapInstance()
     {
         m_HeatMapInstance = GameObject.Find("UnityAnalytics__Heatmap");
+    }
+
+    /// <summary>
+    /// Creates the heat map instance.
+    /// </summary>
+    void CreateHeatmapInstance(bool force = false)
+    {
+        if (force)
+        {
+            DestroyHeatmapInstance();
+        }
+        CreateHeatmapInstance(typeof(HeatmapMeshRenderer));
+    }
+
+    void CreateHeatmapInstance (Type t)
+    {
+        DestroyHeatmapInstance();
+        m_HeatMapInstance = new GameObject();
+        m_HeatMapInstance.tag = "EditorOnly";
+        m_HeatMapInstance.name = "UnityAnalytics__Heatmap";
+        m_HeatMapInstance.AddComponent(t);
+        m_HeatMapInstance.GetComponent<IHeatmapRenderer>().allowRender = true;
+    }
+
+    void DestroyHeatmapInstance()
+    {
+        if (m_HeatMapInstance)
+        {
+            m_HeatMapInstance.transform.parent = null;
+            DestroyImmediate(m_HeatMapInstance);
+        }
     }
 }
