@@ -217,9 +217,6 @@ namespace UnityAnalytics
                     var evt = (UnityAnalyticsEventType)Enum.Parse(typeof(UnityAnalyticsEventType), report.request.dataset);
                     if (eventList.Contains(evt) && report.status == RawDataReport.Completed && report.result.size > 0 && FilesHaveLoaded(report))
                     {
-                        #if UNITY_EDITOR
-                        EditorUtility.DisplayProgressBar("Loading data", "", (float)a/manifest.Count);
-                        #endif
                         DateTime reportDate = report.createdAt;
                         var fileList = report.result.fileList;
                         for (var b = 0; b < fileList.Count; b++)
@@ -244,9 +241,6 @@ namespace UnityAnalytics
                             }
                         }
                     }
-                    #if UNITY_EDITOR
-                    EditorUtility.ClearProgressBar();
-                    #endif
                 }
                 foreach(var kv in resultsAsDict)
                 {
