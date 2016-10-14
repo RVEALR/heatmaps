@@ -96,7 +96,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     public void UpdateGradient(Gradient gradient)
     {
-        if (gradient == null || !CompareGradients(gradient, m_Gradient))
+        if (gradient == null || !GradientUtils.CompareGradients(gradient, m_Gradient))
         {
             m_Gradient = gradient;
             m_RenderState = k_UpdateMaterials;
@@ -251,7 +251,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                         int pt = 0;         // cursor that increments each time we find a point in the time range
                         int currentSubmap = 0;
                         int oldSubmap = -1;
-                        int verticesPerShape = GetVecticesForShape();
+                        int verticesPerShape = RenderShapeMeshUtils.GetVecticesForShape(m_RenderStyle);
                         GameObject go = null;
                         Material[] materials = null;
 
@@ -312,7 +312,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
             var submaps = new List<List<HeatPoint>>();
             int currentSubmap = 0;
-            int verticesPerShape = GetVecticesForShape();
+            int verticesPerShape = RenderShapeMeshUtils.GetVecticesForShape(m_RenderStyle);
 
             for (int a = 0; a < m_Data.Length; a++)
             {
@@ -398,29 +398,29 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             switch (m_RenderStyle)
             {
                 case RenderShape.Cube:
-                    vector3 = AddCubeVectorsToMesh(position.x, position.y, position.z);
+                    vector3 = RenderShapeMeshUtils.AddCubeVectorsToMesh(m_ParticleSize, position.x, position.y, position.z);
                     allVectors.Add(vector3);
-                    allTris.Add(AddCubeTrisToMesh(a * vector3.Length));
+                    allTris.Add(RenderShapeMeshUtils.AddCubeTrisToMesh(a * vector3.Length));
                     break;
                 case RenderShape.Arrow:
-                    vector3 = AddArrowVectorsToMesh(position, rotation);
+                    vector3 = RenderShapeMeshUtils.AddArrowVectorsToMesh(m_ParticleSize, position, rotation);
                     allVectors.Add(vector3);
-                    allTris.Add(AddArrowTrisToMesh(a * vector3.Length));
+                    allTris.Add(RenderShapeMeshUtils.AddArrowTrisToMesh(a * vector3.Length));
                     break;
                 case RenderShape.Square:
-                    vector3 = AddSquareVectorsToMesh(position.x, position.y, position.z);
+                    vector3 = RenderShapeMeshUtils.AddSquareVectorsToMesh(m_ParticleSize, m_RenderDirection, position.x, position.y, position.z);
                     allVectors.Add(vector3);
-                    allTris.Add(AddSquareTrisToMesh(a * vector3.Length));
+                    allTris.Add(RenderShapeMeshUtils.AddSquareTrisToMesh(a * vector3.Length));
                     break;
                 case RenderShape.Triangle:
-                    vector3 = AddTriVectorsToMesh(position.x, position.y, position.z);
+                    vector3 = RenderShapeMeshUtils.AddTriVectorsToMesh(m_ParticleSize, m_RenderDirection, position.x, position.y, position.z);
                     allVectors.Add(vector3);
-                    allTris.Add(AddTriTrisToMesh(a * vector3.Length));
+                    allTris.Add(RenderShapeMeshUtils.AddTriTrisToMesh(a * vector3.Length));
                     break;
                 case RenderShape.PointToPoint:
-                    vector3 = AddP2PVectorsToMesh(position, destination);
+                    vector3 = RenderShapeMeshUtils.AddP2PVectorsToMesh(m_ParticleSize, position, destination);
                     allVectors.Add(vector3);
-                    allTris.Add(AddP2PTrisToMesh(a * vector3.Length));
+                    allTris.Add(RenderShapeMeshUtils.AddP2PTrisToMesh(a * vector3.Length));
                     break;
             }
             allColors.Add(AddColorsToMesh(vector3.Length, submap[a]));
@@ -437,7 +437,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
         go.GetComponent<Renderer>().materials = materials;
         go.GetComponent<HeatmapSubmap>().m_PointData = submap;
-        go.GetComponent<HeatmapSubmap>().m_TrianglesPerShape = GetTrianglesForShape();
+        go.GetComponent<HeatmapSubmap>().m_TrianglesPerShape = RenderShapeMeshUtils.GetTrianglesForShape(m_RenderStyle);
         //mesh.Optimize();
 
         if (m_Tips)
@@ -451,6 +451,11 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
+    bool hasData()
+    {
+        return m_Data != null && m_Data.Length > 0;
+    }
+
     Color32[] AddColorsToMesh(int count, HeatPoint pt)
     {
         Color32[] colors = new Color32[count];
@@ -458,334 +463,11 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         if (float.IsInfinity(pct)) {
             pct = 0f;
         }
-        Color color = PickGradientColor(pct);
+        Color color = GradientUtils.PickGradientColor(m_Gradient, pct);
         for (int b = 0 ; b < count ; b++)
         {
             colors[b] = new Color (color.r, color.g, color.b, color.a) ; 
         }
         return colors;
-    }
-
-    Vector3[] AddCubeVectorsToMesh(float x, float y, float z)
-    {
-        float halfP = m_ParticleSize / 2;
-
-        var p0 = new Vector3(x - halfP, y - halfP, z - halfP);
-        var p1 = new Vector3(x + halfP, y - halfP, z - halfP);
-        var p2 = new Vector3(x + halfP, y + halfP, z - halfP);
-        var p3 = new Vector3(x - halfP, y + halfP, z - halfP);
-
-        var p4 = new Vector3(x - halfP, y - halfP, z + halfP);
-        var p5 = new Vector3(x + halfP, y - halfP, z + halfP);
-        var p6 = new Vector3(x + halfP, y + halfP, z + halfP);
-        var p7 = new Vector3(x - halfP, y + halfP, z + halfP);
-
-        return new Vector3[] { p0, p1, p2, p3, p4, p5, p6, p7 };
-    }
-
-    // Generate a cube mesh procedurally
-    int[] AddCubeTrisToMesh(int offset)
-    {
-        var tris = new int[]
-        {
-            0, 1, 2,    // bottom
-            0, 2, 3,
-            4, 6, 5,    // top
-            4, 7, 6,
-            1, 6, 2,    // right
-            1, 5, 6,
-
-            3, 4, 0,    // left
-            3, 7, 4,
-            2, 7, 3,    // back
-            2, 6, 7,
-            0, 4, 5,    // front
-            0, 5, 1
-        };
-        for (int a = 0; a < tris.Length; a++)
-        {
-            tris[a] += offset;
-        }
-        return tris;
-    }
-
-    Vector3[] AddArrowVectorsToMesh(Vector3 position, Vector3 rotation)
-    {
-        float thirdP = m_ParticleSize / 3f;
-
-        var p0 = new Vector3(-thirdP, 0f, 0f);
-        var p1 = new Vector3(-thirdP, 0f, -m_ParticleSize * 2f);
-        var p2 = new Vector3(-m_ParticleSize, 0f, -m_ParticleSize * 2f);
-        var p3 = new Vector3(0f, 0f, -m_ParticleSize * 3f);
-        var p4 = new Vector3(m_ParticleSize, 0f, -m_ParticleSize * 2f);
-        var p5 = new Vector3(thirdP, 0f, -m_ParticleSize * 2f);
-        var p6 = new Vector3(thirdP, 0f, 0f);
-
-        var v = new Vector3[] { p0, p1, p2, p3, p4, p5, p6 };
-
-        Quaternion q = Quaternion.Euler(rotation);
-
-        for (int a = 0; a < v.Length; a++)
-        {
-            Matrix4x4 m = Matrix4x4.TRS(position, q, Vector3.one);
-            v[a] = m.MultiplyPoint3x4(v[a]);
-        }
-        return v;
-    }
-
-    //Generate a pyramid mesh procedurally
-    int[] AddArrowTrisToMesh(int offset)
-    {
-        var tris = new int[]
-        {
-            0, 1, 5,    // left
-            6, 0, 5,    //right
-            3, 4, 2	    // head
-        };
-        for (int a = 0; a < tris.Length; a++)
-        {
-            tris[a] += offset;
-        }
-        return tris;
-    }
-
-    Vector3[] AddSquareVectorsToMesh(float x, float y, float z)
-    {
-        float halfP = m_ParticleSize / 2;
-
-        Vector3 p0, p1, p2, p3;
-
-        switch (m_RenderDirection)
-        {
-            case RenderDirection.YZ:
-                p0 = new Vector3(x, y - halfP, z - halfP);
-                p1 = new Vector3(x, y + halfP, z - halfP);
-                p2 = new Vector3(x, y + halfP, z + halfP);
-                p3 = new Vector3(x, y - halfP, z + halfP);
-                break;
-
-            case RenderDirection.XZ:
-                p0 = new Vector3(x - halfP, y, z - halfP);
-                p1 = new Vector3(x + halfP, y, z - halfP);
-                p2 = new Vector3(x + halfP, y, z + halfP);
-                p3 = new Vector3(x - halfP, y, z + halfP);
-                break;
-
-            default:
-                p0 = new Vector3(x - halfP, y - halfP, z);
-                p1 = new Vector3(x + halfP, y - halfP, z);
-                p2 = new Vector3(x + halfP, y + halfP, z);
-                p3 = new Vector3(x - halfP, y + halfP, z);
-                break;
-        }
-
-        return new Vector3[] { p0, p1, p2, p3 };
-    }
-
-    //Generate a procedural square
-    int[] AddSquareTrisToMesh(int offset)
-    {
-        var tris = new int[]
-        {
-            offset, offset + 2, offset + 1, // top
-            offset, offset + 3, offset + 2
-        };
-        return tris;
-    }
-
-    Vector3[] AddTriVectorsToMesh(float x, float y, float z)
-    {
-        float halfP = m_ParticleSize / 2;
-
-        Vector3 p0, p1, p2;
-
-        switch (m_RenderDirection)
-        {
-            case RenderDirection.YZ:
-                p0 = new Vector3(x, y - halfP, z - halfP);
-                p1 = new Vector3(x, y, z + halfP);
-                p2 = new Vector3(x, y + halfP, z - halfP);
-                break;
-
-            case RenderDirection.XZ:
-                p0 = new Vector3(x - halfP, y, z - halfP);
-                p1 = new Vector3(x, y, z + halfP);
-                p2 = new Vector3(x + halfP, y, z - halfP);
-                break;
-
-            default:
-                p0 = new Vector3(x - halfP, y - halfP, z);
-                p1 = new Vector3(x, y + halfP, z);
-                p2 = new Vector3(x + halfP, y - halfP, z);
-                break;
-        }
-        return new Vector3[] { p0, p1, p2 };
-    }
-
-    //Generate a procedural tri
-    int[] AddTriTrisToMesh(int offset)
-    {
-        var tris = new int[]
-        {
-            offset, offset + 2, offset + 1  // top
-        };
-        return tris;
-    }
-
-    Vector3[] AddP2PVectorsToMesh(Vector3 fromVector, Vector3 toVector)
-    {
-        Vector3 relativePos = toVector - fromVector;
-        Quaternion q = (relativePos == Vector3.zero) ? Quaternion.identity : Quaternion.LookRotation(relativePos);
-        float distance = Vector3.Distance(fromVector, toVector);
-
-        float arrowBaseZ = distance - (m_ParticleSize * 1.5f);
-        float halfP = m_ParticleSize * .5f;
-
-        // base
-        var p0 = new Vector3(-m_ParticleSize, 0f, -halfP);
-        var p1 = new Vector3(-m_ParticleSize, 0f, halfP);
-        var p2 = new Vector3(m_ParticleSize, 0f, halfP);
-        var p3 = new Vector3(m_ParticleSize, 0f, -halfP);
-        // stem
-        var p4 = new Vector3(-.5f * m_ParticleSize, 0f, -halfP);
-        var p5 = new Vector3(-.5f * m_ParticleSize, 0f, arrowBaseZ);
-        var p6 = new Vector3(.5f * m_ParticleSize, 0f, arrowBaseZ);
-        var p7 = new Vector3(.5f * m_ParticleSize, 0f, -halfP);
-        // arrow
-        var p8 = new Vector3(-m_ParticleSize, 0f, arrowBaseZ);
-        var p9 = new Vector3(0f, 0f, distance);
-        var p10 = new Vector3(m_ParticleSize, 0f, arrowBaseZ);
-        // head
-        var p11 = new Vector3(-m_ParticleSize, 0f, distance);
-        var p12 = new Vector3(-m_ParticleSize, 0f, distance + halfP);
-        var p13 = new Vector3(m_ParticleSize, 0f, distance + halfP);
-        var p14 = new Vector3(m_ParticleSize, 0f, distance);
-
-        var v = new Vector3[] { p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14 };
-        for (int a = 0; a < v.Length; a++)
-        {
-            Matrix4x4 m = Matrix4x4.TRS(fromVector, q, Vector3.one);
-            v[a] = m.MultiplyPoint3x4(v[a]);
-        }
-        return v;
-    }
-
-    //Generate a procedural P2P
-    int[] AddP2PTrisToMesh(int offset)
-    {
-        var tris = new int[]
-        {
-            // base
-            offset, offset + 1, offset + 2,
-            offset, offset + 2, offset + 3,
-            // stem
-            offset + 4, offset + 5, offset + 6,
-            offset + 4, offset + 6, offset + 7,
-            // arrow
-            offset + 8, offset + 9, offset + 10,
-            // head
-            offset + 11, offset + 12, offset + 13,
-            offset + 11, offset + 13, offset + 14
-        };
-        return tris;
-    }
-
-    bool hasData()
-    {
-        return m_Data != null && m_Data.Length > 0;
-    }
-
-    int GetVecticesForShape()
-    {
-        // Verts is the number of UNIQUE vertices in each shape
-        int verts = 0;
-        switch (m_RenderStyle)
-        {
-            case RenderShape.Cube:
-                verts = 8;
-                break;
-            case RenderShape.Arrow:
-                verts = 7;
-                break;
-            case RenderShape.Square:
-                verts = 4;
-                break;
-            case RenderShape.Triangle:
-                verts = 3;
-                break;
-            case RenderShape.PointToPoint:
-                verts = 15;
-                break;
-        }
-        return verts;
-    }
-
-    int GetTrianglesForShape()
-    {
-        // Verts is the number of UNIQUE vertices in each shape
-        int verts = 0;
-        switch (m_RenderStyle)
-        {
-            case RenderShape.Cube:
-                verts = 12;
-                break;
-            case RenderShape.Arrow:
-                verts = 3;
-                break;
-            case RenderShape.Square:
-                verts = 2;
-                break;
-            case RenderShape.Triangle:
-                verts = 1;
-                break;
-            case RenderShape.PointToPoint:
-                verts = 7;
-                break;
-        }
-        return verts;
-    }
-
-    Color PickGradientColor(float percent)
-    {
-        return m_Gradient.Evaluate(percent);
-    }
-
-    public static bool CompareGradients(Gradient gradient, Gradient otherGradient)
-    {
-        if (gradient == null || otherGradient == null)
-        {
-            return false;
-        }
-
-        // Compare the lengths before checking actual colors and alpha components
-        if (gradient.colorKeys.Length != otherGradient.colorKeys.Length || gradient.alphaKeys.Length != otherGradient.alphaKeys.Length) {
-            return false;
-        }
-        
-        // Compare all the colors
-        for (int a = 0; a < gradient.colorKeys.Length; a++)
-        {
-            // Test if the color and alpha is the same
-            GradientColorKey key = gradient.colorKeys[a];
-            GradientColorKey otherKey = otherGradient.colorKeys[a];
-            if (key.color != otherKey.color || key.time != otherKey.time) {
-                return false;
-            }
-        }
-        
-        // Compare all the alphas
-        for (int a = 0; a < gradient.alphaKeys.Length; a++)
-        {
-            // Test if the color and alpha is the same
-            GradientAlphaKey key = gradient.alphaKeys[a];
-            GradientAlphaKey otherKey = otherGradient.alphaKeys[a];
-            if (key.alpha != otherKey.alpha || key.time != otherKey.time)
-            {
-                return false;
-            }
-        }
-        
-        // They're the same
-        return true;
     }
 }

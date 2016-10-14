@@ -5,6 +5,56 @@ namespace UnityAnalyticsHeatmap
 {
     public class RenderShapeMeshUtils
     {
+        public static int GetTrianglesForShape(RenderShape renderShape)
+        {
+            // Verts is the number of UNIQUE vertices in each shape
+            int verts = 0;
+            switch (renderShape)
+            {
+                case RenderShape.Cube:
+                    verts = 12;
+                    break;
+                case RenderShape.Arrow:
+                    verts = 3;
+                    break;
+                case RenderShape.Square:
+                    verts = 2;
+                    break;
+                case RenderShape.Triangle:
+                    verts = 1;
+                    break;
+                case RenderShape.PointToPoint:
+                    verts = 7;
+                    break;
+            }
+            return verts;
+        }
+
+        public static int GetVecticesForShape(RenderShape renderShape)
+        {
+            // Verts is the number of UNIQUE vertices in each shape
+            int verts = 0;
+            switch (renderShape)
+            {
+                case RenderShape.Cube:
+                    verts = 8;
+                    break;
+                case RenderShape.Arrow:
+                    verts = 7;
+                    break;
+                case RenderShape.Square:
+                    verts = 4;
+                    break;
+                case RenderShape.Triangle:
+                    verts = 3;
+                    break;
+                case RenderShape.PointToPoint:
+                    verts = 15;
+                    break;
+            }
+            return verts;
+        }
+
         public static Vector3[] AddCubeVectorsToMesh(float m_ParticleSize, float x, float y, float z)
         {
             float halfP = m_ParticleSize / 2;

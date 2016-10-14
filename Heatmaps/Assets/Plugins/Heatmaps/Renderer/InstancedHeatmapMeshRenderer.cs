@@ -393,7 +393,7 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
 //        gameObject.GetComponent<Renderer>().materials = materials;
 //        gameObject.GetComponent<HeatmapSubmap>().m_PointData = map;
-//        gameObject.GetComponent<HeatmapSubmap>().m_TrianglesPerShape = GetTrianglesForShape();
+//        gameObject.GetComponent<HeatmapSubmap>().m_TrianglesPerShape = RenderShapeUtils.GetTrianglesForShape(m_RenderStyle);
 //        
 //        if (m_Tips)
 //        {
@@ -411,31 +411,5 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     bool hasData()
     {
         return m_Data != null && m_Data.Length > 0;
-    }
-
-    //TODO: probably remove
-    int GetTrianglesForShape()
-    {
-        // Verts is the number of UNIQUE vertices in each shape
-        int verts = 0;
-        switch (m_RenderStyle)
-        {
-            case RenderShape.Cube:
-                verts = 12;
-                break;
-            case RenderShape.Arrow:
-                verts = 3;
-                break;
-            case RenderShape.Square:
-                verts = 2;
-                break;
-            case RenderShape.Triangle:
-                verts = 1;
-                break;
-            case RenderShape.PointToPoint:
-                verts = 7;
-                break;
-        }
-        return verts;
     }
 }
