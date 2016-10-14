@@ -40,7 +40,7 @@ namespace UnityAnalyticsHeatmap
         void UpdateThresholds(float[] thresholds);
 
         /// <summary>
-        /// Updates a mask which trims the rendered points.
+        /// Updates a mask which filters the rendered points using a cubic slicing strategy.
         /// </summary>
         /// <param name="lowX">The lowest X position to render as a percent from 0-1.</param>
         /// <param name="highX">The greatest X position to render as a percent from 0-1.</param>
@@ -49,6 +49,13 @@ namespace UnityAnalyticsHeatmap
         /// <param name="lowZ">The lowest Z position to render as a percent from 0-1.</param>
         /// <param name="highZ">The highest Z position to render as a percent from 0-1.</param>
         void UpdateRenderMask(float lowX, float highX, float lowY, float highY, float lowZ, float highZ);
+
+        /// <summary>
+        /// Updates a mask which filters the rendered points using a position-and-radius strategy.
+        /// </summary>
+        /// <param name="pos">The focus coordinate.</param>
+        /// <param name="radius">A spherical area around pos to include in the filter.</param>
+        void UpdateRenderMask(Vector3 pos, float radius);
 
         /// <summary>
         /// Updates the time limits.

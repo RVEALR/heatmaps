@@ -141,6 +141,11 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
+    public void UpdateRenderMask(Vector3 pos, float radius)
+    {
+        //TODO
+    }
+
     public float pointSize
     {
         get

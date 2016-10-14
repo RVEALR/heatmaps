@@ -145,6 +145,11 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             m_RenderState = k_BeginRenderer;
         }
     }
+
+    public void UpdateRenderMask(Vector3 pos, float radius)
+    {
+        //TODO
+    }
     
     public float pointSize
     {

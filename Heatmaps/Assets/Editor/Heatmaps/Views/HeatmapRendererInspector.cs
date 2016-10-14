@@ -25,6 +25,10 @@ namespace UnityAnalyticsHeatmap
         const string k_ParticleShapeKey = "UnityAnalyticsHeatmapParticleShape";
         const string k_ParticleDirectionKey = "UnityAnalyticsHeatmapParticleDirection";
 
+        const string k_MaskOptionKey = "UnityAnalyticsHeatmapMaskOption";
+        const string k_MaskRadiusKey = "UnityAnalyticsHeatmapMaskRadius";
+        const string k_MaskWillFollowKey = "UnityAnalyticsHeatmapMaskWillFollow";
+
         const string k_LowXKey = "UnityAnalyticsHeatmapLowX";
         const string k_HighXKey = "UnityAnalyticsHeatmapHighX";
         const string k_LowYKey = "UnityAnalyticsHeatmapLowY";
@@ -49,6 +53,11 @@ namespace UnityAnalyticsHeatmap
         int m_ParticleShapeIndex = 0;
         GUIContent[] m_ParticleShapeOptions = new GUIContent[]{ new GUIContent("Cube"), new GUIContent("Arrow"), new GUIContent("Point To Point"), new GUIContent("Square"), new GUIContent("Triangle") };
         RenderShape[] m_ParticleShapeIds = new RenderShape[]{ RenderShape.Cube, RenderShape.Arrow, RenderShape.PointToPoint, RenderShape.Square, RenderShape.Triangle };
+
+        int m_MaskOption = 0;
+        float m_MaskRadius = 1.0f;
+        Vector3 m_MaskRadiusSource = Vector3.zero;
+        bool m_MaskWillFollow = false;
 
         float m_LowX = 0f;
         float m_HighX = 1f;
@@ -80,16 +89,18 @@ namespace UnityAnalyticsHeatmap
         Texture2D lightSkinPauseIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/pause_light.png") as Texture2D;
         Texture2D lightSkinRewindIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/rwd_light.png") as Texture2D;
 
-        private GUIContent m_ParticleSizeContent = new GUIContent("Size", "The display size of an individual data point");
-        private GUIContent m_ParticleShapeContent = new GUIContent("Shape", "The display shape of an individual data point");
-        private GUIContent m_ParticleDirectionContent = new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point");
-        private GUIContent m_PlaySpeedContent = new GUIContent("Play speed", "Speed at which playback occurs");
-        private GUIContent m_TipsContent = new GUIContent("Hot tips", "When enabled, see individual point information on rollover. Caution: can be costly! Also note, submap must be selected to see hot tips.");
-        private GUIContent m_TipsTextContent = new GUIContent("Points (displayed/total): 0 / 0");
-        private GUIContent m_RestartContent;
-        private GUIContent m_PlayContent;
-        private GUIContent m_PauseContent;
-
+        GUIContent m_ParticleSizeContent = new GUIContent("Size", "The display size of an individual data point");
+        GUIContent m_ParticleShapeContent = new GUIContent("Shape", "The display shape of an individual data point");
+        GUIContent m_ParticleDirectionContent = new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point");
+        GUIContent m_PlaySpeedContent = new GUIContent("Play speed", "Speed at which playback occurs");
+        GUIContent m_TipsContent = new GUIContent("Hot tips", "When enabled, see individual point information on rollover. Caution: can be costly! Also note, submap must be selected to see hot tips.");
+        GUIContent m_TipsTextContent = new GUIContent("Points (displayed/total): 0 / 0");
+        GUIContent m_RestartContent;
+        GUIContent m_PlayContent;
+        GUIContent m_PauseContent;
+        GUIContent m_MaskOptionContentRadius = new GUIContent("Radius", "Check this to filter data by position and radius");
+        GUIContent m_MaskOptionContentSlice = new GUIContent("Slice", "Check this to filter data by global x/y/x positions");
+        GUIContent m_MaskRadiusContent = new GUIContent("Radius", "Radius to draw");
 
         public HeatmapRendererInspector()
         {
@@ -110,6 +121,10 @@ namespace UnityAnalyticsHeatmap
             m_HighX = EditorPrefs.GetFloat(k_HighXKey, m_HighX);
             m_HighY = EditorPrefs.GetFloat(k_HighXKey, m_HighY);
             m_HighZ = EditorPrefs.GetFloat(k_HighXKey, m_HighZ);
+
+            m_MaskOption = EditorPrefs.GetInt(k_MaskOptionKey, m_MaskOption);
+            m_MaskRadius = EditorPrefs.GetFloat(k_MaskRadiusKey, m_MaskRadius);
+            m_MaskWillFollow = EditorPrefs.GetBool(k_MaskWillFollowKey, m_MaskWillFollow);
 
             m_Tips = EditorPrefs.GetBool(k_ShowTipsKey, false);
 
@@ -134,6 +149,29 @@ namespace UnityAnalyticsHeatmap
             inspector.m_Processor = processor;
             inspector.m_Heatmapper = heatmapper;
             return inspector;
+        }
+
+        public void OnEnable()
+        {
+            SceneView.onSceneGUIDelegate += OnSceneGUI;
+        }
+
+        public void OnDisable()
+        {
+            SceneView.onSceneGUIDelegate -= OnSceneGUI;
+        }
+
+        void OnSceneGUI(SceneView view)
+        {
+            if (m_MaskWillFollow)
+            {
+                var originalSource = m_MaskRadiusSource;
+                m_MaskRadiusSource = view.camera.transform.position;
+                if (Vector3.Equals(originalSource, m_MaskRadiusSource) == false)
+                {
+                    m_Heatmapper.Repaint();
+                }
+            }
         }
 
         public void OnGUI()
@@ -165,7 +203,6 @@ namespace UnityAnalyticsHeatmap
                     }
                 }
 
-
                 var oldParticleSize = m_ParticleSize;
                 m_ParticleSize = EditorGUILayout.FloatField(m_ParticleSizeContent, m_ParticleSize);
                 m_ParticleSize = Mathf.Max(0.05f, m_ParticleSize);
@@ -190,11 +227,48 @@ namespace UnityAnalyticsHeatmap
                         EditorPrefs.SetInt(k_ParticleDirectionKey, m_ParticleDirectionIndex);
                     }
                 }
-                // POSITION MASKING
-                EditorGUILayout.LabelField("Masking (x/y/z)");
-                RenderMinMaxSlider(ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey, m_LowSpace.x, m_HighSpace.x);
-                RenderMinMaxSlider(ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey, m_LowSpace.y, m_HighSpace.y);
-                RenderMinMaxSlider(ref m_LowZ, ref m_HighZ, k_LowZKey, k_HighZKey, m_LowSpace.z, m_HighSpace.z);
+            }
+
+            // POSITION MASKING
+            using(new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Filtering", EditorStyles.boldLabel);
+
+                GUIContent[] maskOptionContent = new GUIContent[]{m_MaskOptionContentSlice, m_MaskOptionContentRadius};
+                int oldMaskOption = m_MaskOption;
+                m_MaskOption = GUILayout.Toolbar(m_MaskOption, maskOptionContent, GUILayout.MaxWidth(200));
+                if (oldMaskOption != m_MaskOption)
+                {
+                    EditorPrefs.SetInt(k_MaskOptionKey, m_MaskOption);
+                }
+
+                if (m_MaskOption == 1)
+                {
+                    var oldMaskRadius = m_MaskRadius;
+                    EditorGUI.BeginChangeCheck();
+                    m_MaskWillFollow = EditorGUILayout.Toggle("Follow camera", m_MaskWillFollow);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        EditorPrefs.SetBool(k_MaskWillFollowKey, m_MaskWillFollow);
+                    }
+
+                    EditorGUI.BeginDisabledGroup(m_MaskWillFollow);
+                    m_MaskRadiusSource = EditorGUILayout.Vector3Field("Source", m_MaskRadiusSource);
+                    EditorGUI.EndDisabledGroup();
+
+                    m_MaskRadius = EditorGUILayout.FloatField(m_MaskRadiusContent, m_MaskRadius);
+                    if (oldMaskRadius != m_MaskRadius)
+                    {
+                        EditorPrefs.SetFloat(k_MaskRadiusKey, m_MaskRadius);
+                    }
+                }
+                else
+                {
+                    EditorGUILayout.LabelField("Slice (x/y/z)");
+                    RenderMinMaxSlider(ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey, m_LowSpace.x, m_HighSpace.x);
+                    RenderMinMaxSlider(ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey, m_LowSpace.y, m_HighSpace.y);
+                    RenderMinMaxSlider(ref m_LowZ, ref m_HighZ, k_LowZKey, k_HighZKey, m_LowSpace.z, m_HighSpace.z);
+                }
             }
 
             // TIME WINDOW
@@ -265,7 +339,14 @@ namespace UnityAnalyticsHeatmap
                     r.UpdateGradient(SafeGradientValue(m_ColorGradient));
                     r.pointSize = m_ParticleSize;
                     r.activateTips = m_Tips;
-                    r.UpdateRenderMask(m_LowX, m_HighX, m_LowY, m_HighY, m_LowZ, m_HighZ);
+                    if (m_MaskOption == 1)
+                    {
+                        r.UpdateRenderMask(m_MaskRadiusSource, m_MaskRadius);
+                    }
+                    else
+                    {
+                        r.UpdateRenderMask(m_LowX, m_HighX, m_LowY, m_HighY, m_LowZ, m_HighZ);
+                    }
                     r.UpdateRenderStyle(m_ParticleShapeIds[m_ParticleShapeIndex], m_ParticleDirectionIds[m_ParticleDirectionIndex]);
                 }
             }

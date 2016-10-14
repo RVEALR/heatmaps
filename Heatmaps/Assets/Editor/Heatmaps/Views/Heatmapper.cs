@@ -14,8 +14,6 @@ using System;
 public class Heatmapper : EditorWindow
 {
 
-
-
     [MenuItem("Window/Unity Analytics/Heatmapper #%h")]
     static void HeatmapperMenuOption()
     {
@@ -45,9 +43,18 @@ public class Heatmapper : EditorWindow
         EnsureHeatmapInstance();
         m_Processor = new HeatmapDataProcessor();
         m_RenderView = HeatmapRendererInspector.Init(this, m_Processor);
+        m_RenderView.OnEnable();
         m_AggregationView = AggregationInspector.Init(m_Processor);
         m_Processor.RestoreSettings();
         m_AggregationView.OnEnable();
+    }
+
+    void OnDisable()
+    {
+        if (m_RenderView != null)
+        {
+            m_RenderView.OnDisable();
+        }
     }
 
     void OnFocus()

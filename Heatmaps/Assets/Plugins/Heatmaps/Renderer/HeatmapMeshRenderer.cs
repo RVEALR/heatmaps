@@ -13,6 +13,7 @@ using System.Linq;
 using UnityAnalyticsHeatmap;
 using UnityEngine;
 
+[ExecuteInEditMode]
 [RequireComponent(typeof(GradientContainer))]
 public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 {
@@ -21,6 +22,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     const int k_BeginRenderer = 1;
     const int k_RenderInProgress = 2;
     const int k_UpdateMaterials = 4;
+
+    const int k_SliceMasking = 0;
+    const int k_RadiusMasking = 1;
 
     // Unity limit of vectors per mesh
     const int k_VerticesPerMesh = 65000;
@@ -48,6 +52,10 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     float m_HighY = 1f;
     float m_HighZ = 1f;
 
+    int m_MaskOption = k_SliceMasking;
+    float m_MaskRadius = 1.0f;
+    Vector3 m_MaskSource = Vector3.zero;
+
     RenderShape m_RenderStyle = RenderShape.Cube;
     RenderDirection m_RenderDirection = RenderDirection.YZ;
 
@@ -61,7 +69,12 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     void Start()
     {
-        m_Shader = Shader.Find("Heatmaps/Particles/AlphaBlend");
+        if (m_Materials == null || m_Materials.Length == 0)
+        {
+            m_Shader = Shader.Find("Heatmaps/Particles/AlphaBlend");
+            m_Materials = new Material[1];
+            m_Materials[0] = new Material(m_Shader);
+        }
     }
 
     public void UpdatePointData(HeatPoint[] newData, float newMaxDensity)
@@ -83,12 +96,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     public void UpdateGradient(Gradient gradient)
     {
-        if (m_Materials == null || m_Materials.Length == 0)
-        {
-            m_Shader = Shader.Find("Heatmaps/Particles/AlphaBlend");
-            m_Materials = new Material[1];
-            m_Materials[0] = new Material(m_Shader);
-        }
         if (gradient == null || !CompareGradients(gradient, m_Gradient))
         {
             m_Gradient = gradient;
@@ -127,6 +134,22 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         {
             m_HighZ = highZ;
             m_RenderState = k_BeginRenderer;
+        }
+        if (m_MaskOption != k_SliceMasking)
+        {
+            m_MaskOption = k_SliceMasking;
+            m_RenderState = k_BeginRenderer;
+        }
+    }
+
+    public void UpdateRenderMask(Vector3 pos, float radius)
+    {
+        if (m_MaskOption != k_RadiusMasking || radius != m_MaskRadius || Vector3.Equals(pos, m_MaskSource) == false)
+        {
+            m_MaskSource = pos;
+            m_MaskRadius = radius;
+            m_RenderState = k_BeginRenderer;
+            m_MaskOption = k_RadiusMasking;
         }
     }
 
@@ -200,6 +223,11 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
+    void Update()
+    {
+        RenderHeatmap();
+    }
+
     public void RenderHeatmap()
     {
         if (allowRender)
@@ -260,6 +288,21 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
+    bool FilterPoint(HeatPoint pt)
+    {
+        if (pt.time < m_StartTime || pt.time > m_EndTime)
+            return false;
+
+        if (m_MaskOption == k_RadiusMasking)
+        {
+            return Vector3.Distance(m_MaskSource, pt.position) <= m_MaskRadius;
+        }
+        return 
+            pt.position.x >= m_LowX && pt.position.x <= m_HighX &&
+            pt.position.y >= m_LowY && pt.position.y <= m_HighY &&
+            pt.position.z >= m_LowZ && pt.position.z <= m_HighZ;
+    }
+
     void CreatePoints()
     {
         if (hasData())
@@ -275,10 +318,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             {
                 // FILTER FOR TIME & POSITION
                 var pt = m_Data[a];
-                if (pt.time >= m_StartTime && pt.time <= m_EndTime &&
-                    pt.position.x >= m_LowX && pt.position.x <= m_HighX &&
-                    pt.position.y >= m_LowY && pt.position.y <= m_HighY &&
-                    pt.position.z >= m_LowZ && pt.position.z <= m_HighZ)
+                if (FilterPoint(pt))
                 {
                     currentPoints++;
                     if (submaps.Count <= currentSubmap)
