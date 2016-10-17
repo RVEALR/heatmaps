@@ -78,6 +78,18 @@ namespace UnityAnalyticsHeatmap
             double currentSeconds = startSeconds;
             double firstDate = currentSeconds;
 
+            int currentPoint = 0;
+            int currentPlace = 0;
+            int totalPoints = 0;
+
+            int totalPlaces = deviceCount * sessionCount * eventCount * lookThisManyPlaces;
+            int[] numTimesToLookList = new int[totalPlaces];
+            for (int d = 0; d < totalPlaces; d++)
+            {
+                numTimesToLookList[d] = UnityEngine.Random.Range(lookThisManyTimesMin, lookThisManyTimesMax);
+                totalPoints += numTimesToLookList[d];
+            }
+
             Vector3 position = Vector3.zero, destination = Vector3.zero, pointOnCircle = Vector3.zero;
 
             for (int a = 0; a < deviceCount; a++)
@@ -95,14 +107,15 @@ namespace UnityAnalyticsHeatmap
 
                         for (int e = 0; e < lookThisManyPlaces; e++)
                         {
-                            int numTimesToLook = UnityEngine.Random.Range(lookThisManyTimesMin, lookThisManyTimesMax);
                             float xAddition = UnityEngine.Random.Range(-radius, radius);
                             float yAddition = UnityEngine.Random.Range(0, radius/2f);
                             float zAddition = UnityEngine.Random.Range(-radius, radius);
 
-                            while (numTimesToLook > 0)
+                            while (numTimesToLookList[currentPlace] > 0)
                             {
-                                numTimesToLook --;
+                                Progress(currentPoint, totalPoints);
+                                currentPoint ++;
+                                numTimesToLookList[currentPlace] --;
                                 currentSeconds ++;
                                 TestCustomEvent customEvent = events[0];
                                 customEvent.SetParam("t", c.ToString());
@@ -119,11 +132,13 @@ namespace UnityAnalyticsHeatmap
                                 string evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
                                 data += evt;
                             }
+                            currentPlace ++;
                         }
 
                     }
                 }
             }
+            EndProgress();
             retv.Add(firstDate, data);
             fileCount++;
             return retv;
