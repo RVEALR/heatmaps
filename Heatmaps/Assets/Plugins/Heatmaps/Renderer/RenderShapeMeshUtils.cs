@@ -113,10 +113,9 @@ namespace UnityAnalyticsHeatmap
             var v = new Vector3[] { p0, p1, p2, p3, p4, p5, p6 };
 
             Quaternion q = Quaternion.Euler(rotation);
-
+            Matrix4x4 m = Matrix4x4.TRS(position, q, Vector3.one);
             for (int a = 0; a < v.Length; a++)
             {
-                Matrix4x4 m = Matrix4x4.TRS(position, q, Vector3.one);
                 v[a] = m.MultiplyPoint3x4(v[a]);
             }
             return v;
@@ -138,14 +137,31 @@ namespace UnityAnalyticsHeatmap
             return tris;
         }
 
-        public static Vector3[] AddSquareVectorsToMesh(float m_ParticleSize, RenderDirection m_RenderDirection, float x, float y, float z)
+        public static Vector3[] AddSquareVectorsToMesh(float m_ParticleSize, RenderDirection m_RenderDirection, Vector3 position, Vector3 source)
         {
             float halfP = m_ParticleSize / 2;
+            float x = position.x;
+            float y = position.y;
+            float z = position.z;
 
             Vector3 p0, p1, p2, p3;
 
             switch (m_RenderDirection)
             {
+                case RenderDirection.Billboard:
+                    Quaternion q = Quaternion.LookRotation( source - position );
+                    Matrix4x4 m = Matrix4x4.TRS(position, q, Vector3.one);
+                    p0 = new Vector3(-halfP, -halfP);
+                    p1 = new Vector3(halfP,  -halfP);
+                    p2 = new Vector3(halfP,   halfP);
+                    p3 = new Vector3(-halfP, halfP);
+                    var v = new Vector3[] { p0, p1, p2, p3 };
+                    for (int a = 0; a < v.Length; a++)
+                    {
+                        v[a] = m.MultiplyPoint3x4(v[a]);
+                    }
+                    return v;
+
                 case RenderDirection.YZ:
                     p0 = new Vector3(x, y - halfP, z - halfP);
                     p1 = new Vector3(x, y + halfP, z - halfP);
@@ -182,14 +198,30 @@ namespace UnityAnalyticsHeatmap
             return tris;
         }
 
-        public static Vector3[] AddTriVectorsToMesh(float m_ParticleSize, RenderDirection m_RenderDirection, float x, float y, float z)
+        public static Vector3[] AddTriVectorsToMesh(float m_ParticleSize, RenderDirection m_RenderDirection, Vector3 position, Vector3 source)
         {
             float halfP = m_ParticleSize / 2;
+            float x = position.x;
+            float y = position.y;
+            float z = position.z;
 
             Vector3 p0, p1, p2;
 
             switch (m_RenderDirection)
             {
+                case RenderDirection.Billboard:
+                    Quaternion q = Quaternion.LookRotation( source - position );
+                    Matrix4x4 m = Matrix4x4.TRS(position, q, Vector3.one);
+                    p0 = new Vector3(-halfP, -halfP);
+                    p1 = new Vector3(0f,  halfP);
+                    p2 = new Vector3(halfP,  - halfP);
+                    var v = new Vector3[] { p0, p1, p2 };
+                    for (int a = 0; a < v.Length; a++)
+                    {
+                        v[a] = m.MultiplyPoint3x4(v[a]);
+                    }
+                    return v;
+
                 case RenderDirection.YZ:
                     p0 = new Vector3(x, y - halfP, z - halfP);
                     p1 = new Vector3(x, y, z + halfP);

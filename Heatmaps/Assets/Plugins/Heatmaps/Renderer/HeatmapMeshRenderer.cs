@@ -57,7 +57,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     Vector3 m_MaskSource = Vector3.zero;
 
     RenderShape m_RenderStyle = RenderShape.Cube;
-    RenderDirection m_RenderDirection = RenderDirection.YZ;
+    RenderDirection m_RenderDirection = RenderDirection.Billboard;
 
     Shader m_Shader;
     public Material[] m_Materials;
@@ -408,12 +408,12 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                     allTris.Add(RenderShapeMeshUtils.AddArrowTrisToMesh(a * vector3.Length));
                     break;
                 case RenderShape.Square:
-                    vector3 = RenderShapeMeshUtils.AddSquareVectorsToMesh(m_ParticleSize, m_RenderDirection, position.x, position.y, position.z);
+                    vector3 = RenderShapeMeshUtils.AddSquareVectorsToMesh(m_ParticleSize, m_RenderDirection, position, m_MaskSource);
                     allVectors.Add(vector3);
                     allTris.Add(RenderShapeMeshUtils.AddSquareTrisToMesh(a * vector3.Length));
                     break;
                 case RenderShape.Triangle:
-                    vector3 = RenderShapeMeshUtils.AddTriVectorsToMesh(m_ParticleSize, m_RenderDirection, position.x, position.y, position.z);
+                    vector3 = RenderShapeMeshUtils.AddTriVectorsToMesh(m_ParticleSize, m_RenderDirection, position, m_MaskSource);
                     allVectors.Add(vector3);
                     allTris.Add(RenderShapeMeshUtils.AddTriTrisToMesh(a * vector3.Length));
                     break;

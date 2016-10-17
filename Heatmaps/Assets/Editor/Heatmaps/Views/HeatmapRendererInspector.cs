@@ -69,8 +69,8 @@ namespace UnityAnalyticsHeatmap
         Vector3 m_HighSpace = Vector3.one;
 
         int m_ParticleDirectionIndex = 0;
-        GUIContent[] m_ParticleDirectionOptions = new GUIContent[]{ new GUIContent("YZ"), new GUIContent("XZ"), new GUIContent("XY") };
-        RenderDirection[] m_ParticleDirectionIds = new RenderDirection[]{ RenderDirection.YZ, RenderDirection.XZ, RenderDirection.XY };
+        GUIContent[] m_ParticleDirectionOptions = new GUIContent[]{ new GUIContent("Billboard"), new GUIContent("YZ"), new GUIContent("XZ"), new GUIContent("XY") };
+        RenderDirection[] m_ParticleDirectionIds = new RenderDirection[]{ RenderDirection.Billboard, RenderDirection.YZ, RenderDirection.XZ, RenderDirection.XY };
 
         bool m_IsPlaying = false;
         float m_PlaySpeed = 1f;

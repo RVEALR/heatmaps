@@ -255,7 +255,7 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                 tris = RenderShapeMeshUtils.AddArrowTrisToMesh(0);
                 break;
             case RenderShape.Square:
-                vectors = RenderShapeMeshUtils.AddSquareVectorsToMesh(m_ParticleSize, m_RenderDirection, 0, 0, 0);
+                vectors = RenderShapeMeshUtils.AddSquareVectorsToMesh(m_ParticleSize, m_RenderDirection, Vector3.zero, Vector3.zero);
                 tris = RenderShapeMeshUtils.AddSquareTrisToMesh(0);
                 break;
             case RenderShape.PointToPoint:
@@ -266,7 +266,7 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                 break;
             case RenderShape.Triangle:
             default:
-                vectors = RenderShapeMeshUtils.AddTriVectorsToMesh(m_ParticleSize, m_RenderDirection, 0, 0, 0);
+                vectors = RenderShapeMeshUtils.AddTriVectorsToMesh(m_ParticleSize, m_RenderDirection, Vector3.zero, Vector3.zero);
                 tris = RenderShapeMeshUtils.AddTriTrisToMesh(0);
                 break;
         }
