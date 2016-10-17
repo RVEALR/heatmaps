@@ -152,9 +152,9 @@ namespace UnityAnalyticsHeatmap
                     Quaternion q = Quaternion.LookRotation( source - position );
                     Matrix4x4 m = Matrix4x4.TRS(position, q, Vector3.one);
                     p0 = new Vector3(-halfP, -halfP);
-                    p1 = new Vector3(halfP,  -halfP);
+                    p1 = new Vector3(-halfP,  halfP);
                     p2 = new Vector3(halfP,   halfP);
-                    p3 = new Vector3(-halfP, halfP);
+                    p3 = new Vector3(halfP,  -halfP);
                     var v = new Vector3[] { p0, p1, p2, p3 };
                     for (int a = 0; a < v.Length; a++)
                     {
@@ -212,9 +212,9 @@ namespace UnityAnalyticsHeatmap
                 case RenderDirection.Billboard:
                     Quaternion q = Quaternion.LookRotation( source - position );
                     Matrix4x4 m = Matrix4x4.TRS(position, q, Vector3.one);
-                    p0 = new Vector3(-halfP, -halfP);
+                    p0 = new Vector3(halfP,  - halfP);
                     p1 = new Vector3(0f,  halfP);
-                    p2 = new Vector3(halfP,  - halfP);
+                    p2 = new Vector3(-halfP, -halfP);
                     var v = new Vector3[] { p0, p1, p2 };
                     for (int a = 0; a < v.Length; a++)
                     {
