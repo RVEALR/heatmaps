@@ -79,6 +79,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             m_Materials = new Material[1];
             m_Materials[0] = new Material(m_Shader);
         }
+        allowRender = true;
     }
 
     public void UpdatePointData(HeatPoint[] newData, float newMaxDensity)
