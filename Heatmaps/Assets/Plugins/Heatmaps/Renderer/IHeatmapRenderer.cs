@@ -80,6 +80,12 @@ namespace UnityAnalyticsHeatmap
         void UpdateRenderStyle(RenderShape style, RenderDirection direction);
 
         /// <summary>
+        /// Updates the type of projection (currently only supported by point-to-point and arrow shapes).
+        /// </summary>
+        /// <param name="projection">A RenderProjection enum.</param>
+        void UpdateProjection(RenderProjection projection);
+
+        /// <summary>
         /// Gets or sets the size of each point.
         /// </summary>
         /// <value>The size of the point (in Unity units).</value>

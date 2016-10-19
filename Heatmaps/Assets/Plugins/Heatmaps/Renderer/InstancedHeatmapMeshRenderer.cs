@@ -51,6 +51,8 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     
     RenderShape m_RenderStyle = RenderShape.Cube;
     RenderDirection m_RenderDirection = RenderDirection.YZ;
+
+    RenderProjection m_Projection = RenderProjection.FirstPerson;
     
     Shader m_Shader;
     public Material m_Material;
@@ -149,6 +151,11 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     public void UpdateRenderMask(Vector3 pos, float radius)
     {
         //TODO
+    }
+
+    public void UpdateProjection(RenderProjection projection)
+    {
+        // TODO
     }
     
     public float pointSize
@@ -251,8 +258,8 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                 tris = RenderShapeMeshUtils.AddCubeTrisToMesh(0);
                 break;
             case RenderShape.Arrow:
-                vectors = RenderShapeMeshUtils.AddArrowVectorsToMesh(m_ParticleSize, Vector3.zero, Vector3.zero);
-                tris = RenderShapeMeshUtils.AddArrowTrisToMesh(0);
+                vectors = RenderShapeMeshUtils.AddArrowVectorsToMesh(m_ParticleSize, Vector3.zero, Vector3.zero, m_Projection);
+                tris = RenderShapeMeshUtils.AddArrowTrisToMesh(0, m_Projection);
                 break;
             case RenderShape.Square:
                 vectors = RenderShapeMeshUtils.AddSquareVectorsToMesh(m_ParticleSize, m_RenderDirection, Vector3.zero, Vector3.zero);
@@ -261,8 +268,8 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             case RenderShape.PointToPoint:
                 // FIXME: This needs more thinking. Obviously destination isn't fixed.
                 // In fact, can we even use do this in the Instanced renderer?
-                vectors = RenderShapeMeshUtils.AddP2PVectorsToMesh(m_ParticleSize, Vector3.zero, Vector3.one);
-                tris = RenderShapeMeshUtils.AddP2PTrisToMesh(0);
+                vectors = RenderShapeMeshUtils.AddP2PVectorsToMesh(m_ParticleSize, Vector3.zero, Vector3.one, m_Projection);
+                tris = RenderShapeMeshUtils.AddP2PTrisToMesh(0, m_Projection);
                 break;
             case RenderShape.Triangle:
             default:

@@ -5,32 +5,32 @@ namespace UnityAnalyticsHeatmap
 {
     public class RenderShapeMeshUtils
     {
-        public static int GetTrianglesForShape(RenderShape renderShape)
+        public static int GetTrianglesForShape(RenderShape renderShape, RenderProjection projection)
         {
-            // Verts is the number of UNIQUE vertices in each shape
-            int verts = 0;
+            // Tris is the number of triangles in each shape
+            int tris = 0;
             switch (renderShape)
             {
                 case RenderShape.Cube:
-                    verts = 12;
+                    tris = 12;
                     break;
                 case RenderShape.Arrow:
-                    verts = 3;
+                    tris = (projection == RenderProjection.FirstPerson) ? 2 : 3;
                     break;
                 case RenderShape.Square:
-                    verts = 2;
+                    tris = 2;
                     break;
                 case RenderShape.Triangle:
-                    verts = 1;
+                    tris = 1;
                     break;
                 case RenderShape.PointToPoint:
-                    verts = 7;
+                    tris = (projection == RenderProjection.FirstPerson) ? 2 : 7;
                     break;
             }
-            return verts;
+            return tris;
         }
 
-        public static int GetVecticesForShape(RenderShape renderShape)
+        public static int GetVecticesForShape(RenderShape renderShape, RenderProjection projection)
         {
             // Verts is the number of UNIQUE vertices in each shape
             int verts = 0;
@@ -40,7 +40,7 @@ namespace UnityAnalyticsHeatmap
                     verts = 8;
                     break;
                 case RenderShape.Arrow:
-                    verts = 7;
+                    verts = (projection == RenderProjection.FirstPerson) ? 4 : 7;
                     break;
                 case RenderShape.Square:
                     verts = 4;
@@ -49,7 +49,7 @@ namespace UnityAnalyticsHeatmap
                     verts = 3;
                     break;
                 case RenderShape.PointToPoint:
-                    verts = 15;
+                    verts = (projection == RenderProjection.FirstPerson) ? 4 : 15;
                     break;
             }
             return verts;
@@ -98,16 +98,25 @@ namespace UnityAnalyticsHeatmap
             return tris;
         }
 
-        public static Vector3[] AddArrowVectorsToMesh(float m_ParticleSize, Vector3 position, Vector3 rotation)
+        public static Vector3[] AddArrowVectorsToMesh(float m_ParticleSize, Vector3 position, Vector3 rotation, RenderProjection projection)
         {
+            if (projection == RenderProjection.FirstPerson)
+            {
+                Quaternion q1 = Quaternion.Euler(rotation);
+                Matrix4x4 m1 = Matrix4x4.TRS(position, q1, Vector3.one);
+                Vector3 projectedPosition = m1.MultiplyPoint3x4(new Vector3(0f, 0f, -2f));
+                return AddSquareVectorsToMesh(m_ParticleSize, RenderDirection.Billboard, projectedPosition, position);
+            }
+
             float thirdP = m_ParticleSize / 3f;
+            float stemLength = 5f;
 
             var p0 = new Vector3(-thirdP, 0f, 0f);
-            var p1 = new Vector3(-thirdP, 0f, -m_ParticleSize * 2f);
-            var p2 = new Vector3(-m_ParticleSize, 0f, -m_ParticleSize * 2f);
-            var p3 = new Vector3(0f, 0f, -m_ParticleSize * 3f);
-            var p4 = new Vector3(m_ParticleSize, 0f, -m_ParticleSize * 2f);
-            var p5 = new Vector3(thirdP, 0f, -m_ParticleSize * 2f);
+            var p1 = new Vector3(-thirdP, 0f, -m_ParticleSize * stemLength);
+            var p2 = new Vector3(-m_ParticleSize, 0f, -m_ParticleSize * stemLength);
+            var p3 = new Vector3(0f, 0f, -m_ParticleSize * (stemLength + 1f));
+            var p4 = new Vector3(m_ParticleSize, 0f, -m_ParticleSize * stemLength);
+            var p5 = new Vector3(thirdP, 0f, -m_ParticleSize * stemLength);
             var p6 = new Vector3(thirdP, 0f, 0f);
 
             var v = new Vector3[] { p0, p1, p2, p3, p4, p5, p6 };
@@ -122,8 +131,13 @@ namespace UnityAnalyticsHeatmap
         }
 
         //Generate an arrow mesh procedurally
-        public static int[] AddArrowTrisToMesh(int offset)
+        public static int[] AddArrowTrisToMesh(int offset, RenderProjection projection)
         {
+            if (projection == RenderProjection.FirstPerson)
+            {
+                return AddSquareTrisToMesh(offset);
+            }
+
             var tris = new int[]
                 {
                     0, 1, 5,    // left
@@ -253,8 +267,13 @@ namespace UnityAnalyticsHeatmap
             return tris;
         }
 
-        public static Vector3[] AddP2PVectorsToMesh(float m_ParticleSize, Vector3 fromVector, Vector3 toVector)
+        public static Vector3[] AddP2PVectorsToMesh(float m_ParticleSize, Vector3 fromVector, Vector3 toVector, RenderProjection projection)
         {
+            if (projection == RenderProjection.FirstPerson)
+            {
+                return AddSquareVectorsToMesh(m_ParticleSize, RenderDirection.Billboard, toVector, fromVector);
+            }
+
             Vector3 relativePos = toVector - fromVector;
             Quaternion q = (relativePos == Vector3.zero) ? Quaternion.identity : Quaternion.LookRotation(relativePos);
             float distance = Vector3.Distance(fromVector, toVector);
@@ -292,8 +311,13 @@ namespace UnityAnalyticsHeatmap
         }
 
         //Generate a procedural P2P
-        public static int[] AddP2PTrisToMesh(int offset)
+        public static int[] AddP2PTrisToMesh(int offset, RenderProjection projection)
         {
+            if (projection == RenderProjection.FirstPerson)
+            {
+                return AddSquareTrisToMesh(offset);
+            }
+
             var tris = new int[]
                 {
                     // base

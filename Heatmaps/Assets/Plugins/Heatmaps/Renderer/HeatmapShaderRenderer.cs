@@ -146,6 +146,11 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
         //TODO
     }
 
+    public void UpdateProjection(RenderProjection projection)
+    {
+        //TODO
+    }
+
     public float pointSize
     {
         get

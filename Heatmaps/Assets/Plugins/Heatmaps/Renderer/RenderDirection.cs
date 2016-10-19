@@ -9,4 +9,10 @@ namespace UnityAnalyticsHeatmap
         XZ,
         XY
     }
+
+    public enum RenderProjection
+    {
+        FirstPerson,
+        ThirdPerson
+    }
 }
