@@ -138,6 +138,7 @@ public class RawDataInspector : EditorWindow
         new GUIContent("Maze 1: Multilevel Game"),
         new GUIContent("Maze 2: FPS Dropoff"), 
         new GUIContent("VR Lookat"),
+        new GUIContent("VR Interaction"),
         new GUIContent("Speed Racer")
     };
     DataStory[] m_DataStories = new DataStory[]{
@@ -146,6 +147,7 @@ public class RawDataInspector : EditorWindow
         new MultiLevelDataStory(),
         new FPSDropoffDataStory(),
         new VRLookAtDataStory(),
+        new VRInteractWithDataStory(),
         new SpeedRacerDataStory()
     };
 

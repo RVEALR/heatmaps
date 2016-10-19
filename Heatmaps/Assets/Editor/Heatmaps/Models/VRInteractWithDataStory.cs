@@ -4,14 +4,14 @@ using UnityEngine;
 
 namespace UnityAnalyticsHeatmap
 {
-    public class VRLookAtDataStory : DataStory
+    public class VRInteractWithDataStory : DataStory
     {
-        public VRLookAtDataStory()
+        public VRInteractWithDataStory()
         {
-            name = "VR Look At";
+            name = "VR Interaction";
             genre = "VR Adventure";
             description = "Imagine this data as part of a VR game. Your question: as they move through my game, ";
-            description += "are users looking where I want them to look?";
+            description += "are users interacting with the items I expect them to?";
             whatToTry = "Generate this data, then click Process in the Heatmapper. In the render setting under 'Shape', ";
             whatToTry += "pick 'Point to Point' (you may also want to set particle size to around 10). Observe how you can see not just where the user was in the virtual world, ";
             whatToTry += "but also what they were looking at.\n\n";
@@ -47,11 +47,11 @@ namespace UnityAnalyticsHeatmap
                 customEvent.Add(z);
                 var t = new TestEventParam("t", TestEventParam.Str, "");
                 customEvent.Add(t);
-                var dx = new TestEventParam("rx", TestEventParam.Str, "");
+                var dx = new TestEventParam("dx", TestEventParam.Str, "");
                 customEvent.Add(dx);
-                var dy = new TestEventParam("ry", TestEventParam.Str, "");
+                var dy = new TestEventParam("dy", TestEventParam.Str, "");
                 customEvent.Add(dy);
-                var dz = new TestEventParam("rz", TestEventParam.Str, "");
+                var dz = new TestEventParam("dz", TestEventParam.Str, "");
                 customEvent.Add(dz);
                 events.Add(customEvent);
             }
@@ -69,9 +69,9 @@ namespace UnityAnalyticsHeatmap
             int lookThisManyPlaces = 15;
             int lookThisManyTimesMin = 1;
             int lookThisManyTimesMax = 5;
-//            float randomRange = .25f;
+            //            float randomRange = .25f;
             float radius = 50f;
-//            float halfRadius = 25f;
+            float halfRadius = 25f;
 
             DateTime now = DateTime.UtcNow;
             int totalSeconds = deviceCount * waypointsPerPlay * sessionCount;
@@ -103,7 +103,9 @@ namespace UnityAnalyticsHeatmap
                         position = new Vector3(UnityEngine.Random.Range(-radius, radius), 0f, UnityEngine.Random.Range(-radius, radius));
                         for (int e = 0; e < lookThisManyPlaces; e++)
                         {
-                            Vector3 rotation = new Vector3(UnityEngine.Random.Range(0, 90f), UnityEngine.Random.Range(-180f, 180f), 0f);
+                            float xAddition = UnityEngine.Random.Range(-radius, radius);
+                            float yAddition = UnityEngine.Random.Range(0, halfRadius);
+                            float zAddition = UnityEngine.Random.Range(-radius, radius);
 
                             while (numTimesToLookList[currentPlace] > 0)
                             {
@@ -114,12 +116,14 @@ namespace UnityAnalyticsHeatmap
                                 TestCustomEvent customEvent = events[0];
                                 customEvent.SetParam("t", c.ToString());
 
+                                destination = new Vector3(position.x + xAddition, position.y + yAddition, position.z + zAddition);
+
                                 customEvent.SetParam("x", position.x.ToString());
                                 customEvent.SetParam("y", position.y.ToString());
                                 customEvent.SetParam("z", position.z.ToString());
-                                customEvent.SetParam("rx", rotation.x.ToString());
-                                customEvent.SetParam("ry", rotation.y.ToString());
-                                customEvent.SetParam("rz", rotation.z.ToString());
+                                customEvent.SetParam("dx", destination.x.ToString());
+                                customEvent.SetParam("dy", destination.y.ToString());
+                                customEvent.SetParam("dz", destination.z.ToString());
 
                                 string evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
                                 data += evt;
