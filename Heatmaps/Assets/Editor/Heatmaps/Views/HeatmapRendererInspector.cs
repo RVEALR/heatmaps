@@ -118,6 +118,7 @@ namespace UnityAnalyticsHeatmap
 
         void OnSettingsUpdate(object sender, HeatmapSettings settings)
         {
+            m_Heatmapper.Repaint();
         }
 
 
