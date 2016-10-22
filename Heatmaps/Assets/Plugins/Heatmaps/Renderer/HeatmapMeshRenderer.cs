@@ -29,8 +29,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     // Unity limit of vectors per mesh
     const int k_VerticesPerMesh = 65000;
 
-    static Color s_GhostColor = new Color(.5f, .5f, .5f, .05f);
-
     // Density Thresholds
     float m_HighThreshold;
     float m_LowThreshold;
@@ -262,39 +260,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                 case k_UpdateMaterials:
                     if (hasData())
                     {
-                        int pt = 0;         // cursor that increments each time we find a point in the time range
-                        int currentSubmap = 0;
-                        int oldSubmap = -1;
-                        int verticesPerShape = RenderShapeMeshUtils.GetVecticesForShape(m_RenderStyle, m_Projection);
-                        GameObject go = null;
-                        Material[] materials = null;
-
-                        for (int a = 0; a < m_Data.Length; a++)
-                        {
-                            if (m_Data[a].time >= m_StartTime && m_Data[a].time <= m_EndTime)
-                            {
-
-                                currentSubmap = (pt * verticesPerShape) / k_VerticesPerMesh;
-
-                                if (currentSubmap != oldSubmap)
-                                {
-                                    if (go != null && materials != null)
-                                    {
-                                        go.GetComponent<Renderer>().materials = materials;
-                                    }
-                                    go = m_GameObjects[currentSubmap];
-                                    materials = go.GetComponent<Renderer>().sharedMaterials;
-                                }
-                                materials = m_Materials;
-                                oldSubmap = currentSubmap;
-                                pt++;
-                            }
-                        }
-                        if (go != null && materials != null)
-                        {
-                            go.GetComponent<Renderer>().materials = materials;
-                        }
-
+                        UpdateMaterials();
                         CreatePoints();
                     }
                     break;
@@ -302,15 +268,52 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
+    void UpdateMaterials()
+    {
+        int pt = 0;         // cursor that increments each time we find a point in the time range
+        int currentSubmap = 0;
+        int oldSubmap = -1;
+        int verticesPerShape = RenderShapeMeshUtils.GetVecticesForShape(m_RenderStyle, m_Projection);
+        GameObject go = null;
+        Material[] materials = null;
+
+        for (int a = 0; a < m_Data.Length; a++)
+        {
+            if (m_Data[a].time >= m_StartTime && m_Data[a].time <= m_EndTime)
+            {
+                currentSubmap = (pt * verticesPerShape) / k_VerticesPerMesh;
+                if (currentSubmap != oldSubmap)
+                {
+                    if (go != null && materials != null)
+                    {
+                        go.GetComponent<Renderer>().materials = materials;
+                    }
+                    go = m_GameObjects[currentSubmap];
+                    materials = go.GetComponent<Renderer>().sharedMaterials;
+                }
+                materials = m_Materials;
+                oldSubmap = currentSubmap;
+                pt++;
+            }
+        }
+        if (go != null && materials != null)
+        {
+            go.GetComponent<Renderer>().materials = materials;
+        }
+    }
+
     bool FilterPoint(HeatPoint pt)
     {
         if (pt.time < m_StartTime || pt.time > m_EndTime)
+        {
             return false;
+        }
 
         if (m_MaskOption == k_RadiusMasking)
         {
             return true;
         }
+
         return 
             pt.position.x >= m_LowX && pt.position.x <= m_HighX &&
             pt.position.y >= m_LowY && pt.position.y <= m_HighY &&
@@ -321,6 +324,8 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     {
         if (hasData())
         {
+            m_CollapseDensity = 0f;
+
             totalPoints = m_Data.Length;
             currentPoints = 0;
 
@@ -328,20 +333,45 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             int currentSubmap = 0;
             int verticesPerShape = RenderShapeMeshUtils.GetVecticesForShape(m_RenderStyle, m_Projection);
 
+            // Filter & Aggregate
+            Dictionary<Vector3, HeatPoint> collapsePoints = new Dictionary<Vector3, HeatPoint>();
+            List<HeatPoint> otherPoints = new List<HeatPoint>();
+
             for (int a = 0; a < m_Data.Length; a++)
             {
                 // FILTER FOR TIME & POSITION
                 var pt = m_Data[a];
                 if (FilterPoint(pt))
                 {
-                    currentPoints++;
-                    if (submaps.Count <= currentSubmap)
+                    if (m_MaskOption == k_RadiusMasking && m_Projection == RenderProjection.FirstPerson && IsOutsideRadius(pt))
                     {
-                        submaps.Add(new List<HeatPoint>());
+                        Aggregate(pt, collapsePoints);
                     }
-                    submaps[currentSubmap].Add(pt);
-                    currentSubmap = (currentPoints * verticesPerShape) / k_VerticesPerMesh;
+                    else
+                    {
+                        otherPoints.Add(pt);
+                    }
                 }
+            }
+            HeatPoint[] dictData = collapsePoints.Values.ToArray();
+            HeatPoint[] filteredData = new HeatPoint[dictData.Length + otherPoints.Count];
+
+
+            dictData.CopyTo(filteredData, 0);
+            otherPoints.CopyTo(filteredData, dictData.Length);
+
+
+            // Arrange into submaps
+            for (int a = 0; a < filteredData.Length; a++)
+            {
+                var pt = filteredData[a];
+                currentPoints++;
+                if (submaps.Count <= currentSubmap)
+                {
+                    submaps.Add(new List<HeatPoint>());
+                }
+                submaps[currentSubmap].Add(pt);
+                currentSubmap = (currentPoints * verticesPerShape) / k_VerticesPerMesh;
             }
 
             int neededSubmaps = submaps.Count;
@@ -411,9 +441,18 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                     allTris.Add(RenderShapeMeshUtils.AddCubeTrisToMesh(a * vector3.Length));
                     break;
                 case RenderShape.Arrow:
-                    vector3 = RenderShapeMeshUtils.AddArrowVectorsToMesh(m_ParticleSize, position, rotation, m_Projection);
-                    allVectors.Add(vector3);
-                    allTris.Add(RenderShapeMeshUtils.AddArrowTrisToMesh(a * vector3.Length, m_Projection));
+                    if (m_MaskOption == k_RadiusMasking && m_Projection == RenderProjection.FirstPerson && IsOutsideRadius(submap[a]))
+                    {
+                        vector3 = RenderShapeMeshUtils.AddDiamondVectorsToMesh(m_ParticleSize, RenderDirection.Billboard, position, m_MaskSource);
+                        allVectors.Add(vector3);
+                        allTris.Add(RenderShapeMeshUtils.AddArrowTrisToMesh(a * vector3.Length, m_Projection));
+                    }
+                    else
+                    {
+                        vector3 = RenderShapeMeshUtils.AddArrowVectorsToMesh(m_ParticleSize, position, rotation, m_Projection);
+                        allVectors.Add(vector3);
+                        allTris.Add(RenderShapeMeshUtils.AddArrowTrisToMesh(a * vector3.Length, m_Projection));
+                    }
                     break;
                 case RenderShape.Square:
                     vector3 = RenderShapeMeshUtils.AddSquareVectorsToMesh(m_ParticleSize, m_RenderDirection, position, m_MaskSource);
@@ -464,26 +503,38 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         return m_Data != null && m_Data.Length > 0;
     }
 
+    float m_CollapseDensity = 0f;
+
+    HeatPoint Aggregate(HeatPoint pt, Dictionary<Vector3, HeatPoint> collapsePoints)
+    {
+        HeatPoint retv = pt;
+        if (collapsePoints.ContainsKey(pt.position))
+        {
+            retv = collapsePoints[pt.position];
+            retv.density += pt.density;
+        }
+        m_CollapseDensity = Mathf.Max(retv.density, m_MaxDensity);
+        collapsePoints[pt.position] = retv;
+        return retv;
+    }
+
     Color32[] AddColorsToMesh(int count, HeatPoint pt)
     {
         Color32[] colors = new Color32[count];
-        float pct = (pt.density/m_MaxDensity);
+        float pct = (m_MaskOption == k_RadiusMasking && IsOutsideRadius(pt)) ? (pt.density/m_CollapseDensity) : (pt.density/m_MaxDensity);
         if (float.IsInfinity(pct)) {
             pct = 0f;
         }
-        Color color;
-        if (m_MaskOption == k_RadiusMasking && Vector3.Distance(m_MaskSource, pt.position) > m_MaskRadius)
-        {
-            color = s_GhostColor;
-        }
-        else
-        {
-            color  = GradientUtils.PickGradientColor(m_Gradient, pct);
-        }
+        Color color = GradientUtils.PickGradientColor(m_Gradient, pct);
         for (int b = 0 ; b < count ; b++)
         {
-            colors[b] = new Color (color.r, color.g, color.b, color.a) ; 
+            colors[b] = new Color (color.r, color.g, color.b, color.a) ;
         }
         return colors;
+    }
+
+    bool IsOutsideRadius(HeatPoint pt)
+    {
+        return  Vector3.Distance(m_MaskSource, pt.position) > m_MaskRadius;
     }
 }

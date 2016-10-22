@@ -105,7 +105,7 @@ namespace UnityAnalyticsHeatmap
                 Quaternion q1 = Quaternion.Euler(rotation);
                 Matrix4x4 m1 = Matrix4x4.TRS(position, q1, Vector3.one);
                 Vector3 projectedPosition = m1.MultiplyPoint3x4(new Vector3(0f, 0f, -2f));
-                return AddSquareVectorsToMesh(m_ParticleSize, RenderDirection.Billboard, projectedPosition, position);
+                return AddDiamondVectorsToMesh(m_ParticleSize, RenderDirection.Billboard, projectedPosition, position);
             }
 
             float thirdP = m_ParticleSize / 3f;
@@ -195,6 +195,60 @@ namespace UnityAnalyticsHeatmap
                     p1 = new Vector3(x + halfP, y - halfP, z);
                     p2 = new Vector3(x + halfP, y + halfP, z);
                     p3 = new Vector3(x - halfP, y + halfP, z);
+                    break;
+            }
+
+            return new Vector3[] { p0, p1, p2, p3 };
+        }
+
+
+        /// <summary>
+        /// Use in place of AddSquareVectorsToMesh when you want to show squares as diamonds
+        /// </summary>
+        public static Vector3[] AddDiamondVectorsToMesh(float m_ParticleSize, RenderDirection m_RenderDirection, Vector3 position, Vector3 source)
+        {
+            float halfP = m_ParticleSize / 2;
+            float x = position.x;
+            float y = position.y;
+            float z = position.z;
+
+            Vector3 p0, p1, p2, p3;
+
+            switch (m_RenderDirection)
+            {
+                case RenderDirection.Billboard:
+                    Quaternion q = Quaternion.LookRotation(source - position);
+                    Matrix4x4 m = Matrix4x4.TRS(position, q, Vector3.one);
+                    p0 = new Vector3( 0,    -halfP);
+                    p1 = new Vector3(-halfP, 0);
+                    p2 = new Vector3( 0,     halfP);
+                    p3 = new Vector3( halfP, 0);
+                    var v = new Vector3[] { p0, p1, p2, p3 };
+                    for (int a = 0; a < v.Length; a++)
+                    {
+                        v[a] = m.MultiplyPoint3x4(v[a]);
+                    }
+                    return v;
+
+                case RenderDirection.YZ:
+                    p0 = new Vector3(x, 0, z - halfP);
+                    p1 = new Vector3(x, y + halfP, 0);
+                    p2 = new Vector3(x, 0, z + halfP);
+                    p3 = new Vector3(x, y - halfP, 0);
+                    break;
+
+                case RenderDirection.XZ:
+                    p0 = new Vector3(0, y, z - halfP);
+                    p1 = new Vector3(x + halfP, y, 0);
+                    p2 = new Vector3(0, y, z + halfP);
+                    p3 = new Vector3(x - halfP, y, 0);
+                    break;
+
+                default:
+                    p0 = new Vector3(0, y - halfP, z);
+                    p1 = new Vector3(x + halfP, 0, z);
+                    p2 = new Vector3(0, y + halfP, z);
+                    p3 = new Vector3(x - halfP, 0, z);
                     break;
             }
 
