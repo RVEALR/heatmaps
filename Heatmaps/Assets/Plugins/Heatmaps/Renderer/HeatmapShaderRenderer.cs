@@ -48,6 +48,8 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
     float m_HighY = 1f;
     float m_HighZ = 1f;
 
+    Vector3 m_MaskSource;
+
     RenderShape m_RenderStyle = RenderShape.Cube;
     RenderDirection m_RenderDirection = RenderDirection.YZ;
 
@@ -141,7 +143,7 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
-    public void UpdateRenderMask(Vector3 pos, float radius)
+    public void UpdateRenderMask(float radius)
     {
         //TODO
     }
@@ -149,6 +151,15 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
     public void UpdateProjection(RenderProjection projection)
     {
         //TODO
+    }
+
+    public void UpdateCameraPosition(Vector3 pos)
+    {
+        if (Vector3.Equals(pos, m_MaskSource) == false)
+        {
+            m_MaskSource = pos;
+            m_RenderState = k_BeginRenderer;
+        }
     }
 
     public float pointSize

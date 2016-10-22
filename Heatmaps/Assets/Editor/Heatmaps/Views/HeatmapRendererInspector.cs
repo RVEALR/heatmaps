@@ -21,8 +21,6 @@ namespace UnityAnalyticsHeatmap
         const string k_EndTimeKey = "UnityAnalyticsHeatmapEndTime";
         const string k_PlaySpeedKey = "UnityAnalyticsHeatmapPlaySpeed";
 
-
-
         const string k_LowXKey = "UnityAnalyticsHeatmapLowX";
         const string k_HighXKey = "UnityAnalyticsHeatmapHighX";
         const string k_LowYKey = "UnityAnalyticsHeatmapLowY";
@@ -345,9 +343,10 @@ namespace UnityAnalyticsHeatmap
                     r.UpdateGradient(SafeGradientValue(m_ColorGradient));
                     r.pointSize = m_ViewModel.particleSize;
                     r.activateTips = m_Tips;
+                    r.UpdateCameraPosition(m_MaskRadiusSource);
                     if (m_ViewModel.maskType == 1)
                     {
-                        r.UpdateRenderMask(m_MaskRadiusSource, m_ViewModel.maskRadius);
+                        r.UpdateRenderMask(m_ViewModel.maskRadius);
                     }
                     else
                     {

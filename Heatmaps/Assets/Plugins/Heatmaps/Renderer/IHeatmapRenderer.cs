@@ -53,9 +53,14 @@ namespace UnityAnalyticsHeatmap
         /// <summary>
         /// Updates a mask which filters the rendered points using a position-and-radius strategy.
         /// </summary>
-        /// <param name="pos">The focus coordinate.</param>
         /// <param name="radius">A spherical area around pos to include in the filter.</param>
-        void UpdateRenderMask(Vector3 pos, float radius);
+        void UpdateRenderMask(float radius);
+
+        /// <summary>
+        /// Updates the camera source.
+        /// </summary>
+        /// <param name="radius">A spherical area around pos to include in the filter.</param>
+        void UpdateCameraPosition(Vector3 pos);
 
         /// <summary>
         /// Updates the time limits.

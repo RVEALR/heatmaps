@@ -145,13 +145,21 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
-    public void UpdateRenderMask(Vector3 pos, float radius)
+    public void UpdateRenderMask(float radius)
     {
-        if (m_MaskOption != k_RadiusMasking || radius != m_MaskRadius || Vector3.Equals(pos, m_MaskSource) == false)
+        if (m_MaskOption != k_RadiusMasking || radius != m_MaskRadius)
         {
-            m_MaskSource = pos;
             m_MaskRadius = radius;
             m_MaskOption = k_RadiusMasking;
+            m_RenderState = k_BeginRenderer;
+        }
+    }
+
+    public void UpdateCameraPosition(Vector3 pos)
+    {
+        if (Vector3.Equals(pos, m_MaskSource) == false)
+        {
+            m_MaskSource = pos;
             m_RenderState = k_BeginRenderer;
         }
     }
