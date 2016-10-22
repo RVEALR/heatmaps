@@ -32,6 +32,7 @@ namespace UnityAnalyticsHeatmap
         public delegate void ParseHandler(Dictionary<string, HeatPoint[]> heatData, string[] options);
 
         ParseHandler m_ParseHandler;
+        string m_RemapLabel = "";
 
         public HeatmapDataParser()
         {
@@ -43,9 +44,10 @@ namespace UnityAnalyticsHeatmap
         /// <param name="path">A location from which to load the data.</param>
         /// <param name="handler">A method handler to which we return the data.</param>
         /// <param name="asResource">If set to <c>true</c> the path is assumed to be a Resource location rather than a URI.</param>
-        public void LoadData(string path, ParseHandler handler, int method = k_AsData)
+        public void LoadData(string path, ParseHandler handler, int method = k_AsData, string remapLabel = "")
         {
             m_ParseHandler = handler;
+            m_RemapLabel = remapLabel;
             if (!string.IsNullOrEmpty(path))
             {
                 switch (method)
@@ -163,6 +165,10 @@ namespace UnityAnalyticsHeatmap
                     array[a].rotation = new Vector3(rx, ry, rz);
                     array[a].destination = new Vector3(dx, dy, dz);
                     array[a].density = d;
+                    if (!String.IsNullOrEmpty(m_RemapLabel))
+                    {
+                        array[a].densityLabel = m_RemapLabel;
+                    }
                     array[a].time = t;
                     maxDensity = Mathf.Max(d, maxDensity);
                     maxTime = Mathf.Max(array[a].time, maxTime);

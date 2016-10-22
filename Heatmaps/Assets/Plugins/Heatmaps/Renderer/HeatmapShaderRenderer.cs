@@ -195,6 +195,8 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
+    public string remapLabel{ get; set; }
+
     public bool allowRender{ get; set; }
 
     public int currentPoints { get; set; }

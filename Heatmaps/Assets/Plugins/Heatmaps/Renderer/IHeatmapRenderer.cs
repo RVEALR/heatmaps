@@ -114,5 +114,11 @@ namespace UnityAnalyticsHeatmap
         /// </summary>
         /// <value>Count of all points in the current set</value>
         int totalPoints{ get; }
+
+        /// <summary>
+        /// A tooltip label which overrides the default "Density".
+        /// </summary>
+        /// <value>The remap label.</value>
+        string remapLabel { get; set; }
     }
 }

@@ -16,5 +16,6 @@ namespace UnityAnalyticsHeatmap
         public Vector3 destination;
         public float density;
         public float time;
+        public string densityLabel;
     }
 }

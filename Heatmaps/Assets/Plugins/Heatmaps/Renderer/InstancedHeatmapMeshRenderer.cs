@@ -203,6 +203,8 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
+    public string remapLabel{ get; set; }
+
     bool _allowRender = true;
     public bool allowRender
     {

@@ -82,7 +82,8 @@ public class PointSelector : Editor
         text +=  " y: " + pt.destination.y;
         text +=  " z: " + pt.destination.z + "\n";
         text += "Time: " + pt.time + "\n";
-        text += "Density: " + pt.density;
+        string label = (String.IsNullOrEmpty(pt.densityLabel)) ? "Density" : pt.densityLabel;
+        text += label + ": " + pt.density;
         return text;
     }
 

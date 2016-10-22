@@ -407,7 +407,8 @@ namespace UnityAnalyticsHeatmap
 
         void OnAggregated(string jsonString)
         {
-            m_DataParser.LoadData(jsonString, OnParsed, HeatmapDataParser.k_AsData);
+            string labelName = (m_InspectorViewModel.remapDensity) ? m_InspectorViewModel.remapColorField : "";
+            m_DataParser.LoadData(jsonString, OnParsed, HeatmapDataParser.k_AsData, labelName);
         }
 
         void OnParsed(Dictionary<string, HeatPoint[]> data, string[] options)
