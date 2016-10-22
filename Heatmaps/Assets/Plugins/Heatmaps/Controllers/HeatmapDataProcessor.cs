@@ -51,8 +51,10 @@ namespace UnityAnalyticsHeatmap
         public const int SMOOTH_UNION = 2;
 
         public HeatmapViewModel m_ViewModel;
+        HeatmapInspectorViewModel m_InspectorViewModel;
         public HeatmapAggregator m_Aggregator;
         public HeatmapDataParser m_DataParser;
+
 
         bool m_DateChangeHasOccurred = true;
 
@@ -281,17 +283,8 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        List<int> _heatmapOptions;
-        public List<int> m_HeatmapOptions
-        {
-            get {
-                return _heatmapOptions;
-            }
-            set {
-                _heatmapOptions = value;
-            }
-        }
-        public int m_HeatmapOptionIndex;
+
+
         public List<List<string>> m_SeparatedLists;
 
         public delegate void AggregationHandler(string jsonPath);
@@ -314,6 +307,7 @@ namespace UnityAnalyticsHeatmap
             m_ViewModel = new HeatmapViewModel();
             m_Aggregator = new HeatmapAggregator(m_RawDataPath);
             m_DataParser = new HeatmapDataParser();
+            m_InspectorViewModel = HeatmapInspectorViewModel.GetInstance();
         }
 
         public void RestoreSettings()
@@ -479,18 +473,18 @@ namespace UnityAnalyticsHeatmap
             m_ViewModel.m_SeparationOptions = options;
             if (m_ViewModel.m_Heatmaps != null)
             {
-                m_HeatmapOptionIndex = PickBestOption(options);
+                m_InspectorViewModel.heatmapOptionIndex = PickBestOption(options);
                 ParseOptionList(options);
-                SelectHeatmap(m_ViewModel.m_Heatmaps[options[m_HeatmapOptionIndex]]);
+                SelectHeatmap(m_ViewModel.m_Heatmaps[options[m_InspectorViewModel.heatmapOptionIndex]]);
             }
         }
 
         int PickBestOption(string[] options)
         {
             int bestOption = 0;
-            if (m_HeatmapOptions != null)
+            if (m_InspectorViewModel.heatmapOptions != null)
             {
-                string opt = m_HeatmapOptionIndex > options.Length ? "" : m_ViewModel.m_SeparationOptions[m_HeatmapOptionIndex];
+                string opt = m_InspectorViewModel.heatmapOptionIndex > options.Length ? "" : m_ViewModel.m_SeparationOptions[m_InspectorViewModel.heatmapOptionIndex];
                 ArrayList list = new ArrayList(options);
                 int idx = list.IndexOf(opt);
                 bestOption = idx == -1 ? 0 : idx;
@@ -502,7 +496,7 @@ namespace UnityAnalyticsHeatmap
         {
             string[] oldKey = BuildKey().Split('~');
             m_SeparatedLists = new List<List<string>>();
-            m_HeatmapOptions = new List<int>();
+            m_InspectorViewModel.heatmapOptions = new List<int>();
 
             foreach(string opt in options)
             {
@@ -529,7 +523,7 @@ namespace UnityAnalyticsHeatmap
                     index = m_SeparatedLists[a].IndexOf(oldKey[a]);
                     index = Math.Max(0, index);
                 }
-                m_HeatmapOptions.Add(index);
+                m_InspectorViewModel.heatmapOptions.Add(index);
             }
         }
 
@@ -540,7 +534,7 @@ namespace UnityAnalyticsHeatmap
             {
                 for (int a = 0; a < m_SeparatedLists.Count; a++)
                 {
-                    retv += m_SeparatedLists[a][m_HeatmapOptions[a]];
+                    retv += m_SeparatedLists[a][m_InspectorViewModel.heatmapOptions[a]];
                     if (a < m_SeparatedLists.Count - 1)
                     {
                         retv += "~";
@@ -552,7 +546,7 @@ namespace UnityAnalyticsHeatmap
 
         public void SelectList()
         {
-            m_HeatmapOptionIndex = IndexFromOptions();
+            m_InspectorViewModel.heatmapOptionIndex = IndexFromOptions();
             string key = BuildKey();
             if (m_ViewModel.m_Heatmaps != null &&
                 m_ViewModel.m_Heatmaps.ContainsKey(key))
@@ -565,10 +559,10 @@ namespace UnityAnalyticsHeatmap
         {
             int index = 0;
             string key = "";
-            for (var a = 0; a < m_HeatmapOptions.Count; a++)
+            for (var a = 0; a < m_InspectorViewModel.heatmapOptions.Count; a++)
             {
-                key += m_SeparatedLists[a][m_HeatmapOptions[a]];
-                if (a < m_HeatmapOptions.Count-1)
+                key += m_SeparatedLists[a][m_InspectorViewModel.heatmapOptions[a]];
+                if (a < m_InspectorViewModel.heatmapOptions.Count-1)
                 {
                     key += "~";
                 }

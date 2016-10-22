@@ -49,6 +49,29 @@ namespace UnityAnalyticsHeatmap
             return m_Instance;
         }
 
+        public int heatmapOptionIndex
+        {
+            get
+            {
+                return m_Settings.heatmapOptionIndex;
+            }
+            set
+            {
+                m_Settings.heatmapOptionIndex = value;
+                Dispatch();
+            }
+        }
+
+        public List<int> heatmapOptions
+        {
+            get {
+                return m_Settings.heatmapOptions;
+            }
+            set {
+                m_Settings.heatmapOptions = value;
+            }
+        }
+
         public int maskFollowType
         {
             get
@@ -181,16 +204,21 @@ namespace UnityAnalyticsHeatmap
     {
         public HeatmapSettings()
         {
+            heatmapOptionIndex = 0;
+            heatmapOptions = new List<int>();
+
             maskFollowType = UnityEditor.EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_MaskFollowType);
             maskRadius = UnityEditor.EditorPrefs.GetFloat(HeatmapsInspectorSettingsKeys.k_MaskRadiusKey, 1.0f);
             maskType = UnityEditor.EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_MaskTypeKey);
-
 
             particleSize = UnityEditor.EditorPrefs.GetFloat(HeatmapsInspectorSettingsKeys.k_ParticleSizeKey);
             particleShape = UnityEditor.EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_ParticleShapeKey);
             particleDirection = UnityEditor.EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_ParticleSizeKey);
             particleProjection = UnityEditor.EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_ParticleProjectionKey);
         }
+
+        public int heatmapOptionIndex;
+        public List<int> heatmapOptions;
 
         public int maskFollowType;
         public float maskRadius;

@@ -198,7 +198,7 @@ namespace UnityAnalyticsHeatmap
             using (new EditorGUILayout.VerticalScope())
             {
                 EditorGUILayout.LabelField("Data set options", EditorStyles.boldLabel);
-                m_Processor.m_HeatmapOptions = AnalyticsListGroup.ListGroup(m_Processor.m_HeatmapOptions,
+                m_ViewModel.heatmapOptions = AnalyticsListGroup.ListGroup(m_ViewModel.heatmapOptions,
                     m_Processor.m_SeparatedLists, OptionsChange);
             }
 
