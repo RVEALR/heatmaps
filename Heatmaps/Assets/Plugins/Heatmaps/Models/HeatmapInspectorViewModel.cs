@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEngine;
 
 namespace UnityAnalyticsHeatmap
 {
@@ -137,6 +138,7 @@ namespace UnityAnalyticsHeatmap
             }
             set
             {
+                value = Mathf.Max(0.05f, value);
                 if (value != m_Settings.particleSize)
                 {
                     EditorPrefs.SetFloat(HeatmapsInspectorSettingsKeys.k_ParticleSizeKey, value);
