@@ -281,8 +281,8 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             case RenderShape.PointToPoint:
                 // FIXME: This needs more thinking. Obviously destination isn't fixed.
                 // In fact, can we even use do this in the Instanced renderer?
-                vectors = RenderShapeMeshUtils.AddP2PVectorsToMesh(m_ParticleSize, Vector3.zero, Vector3.one, m_Projection);
-                tris = RenderShapeMeshUtils.AddP2PTrisToMesh(0, m_Projection);
+                vectors = RenderShapeMeshUtils.AddP2PVectorsToMesh(m_ParticleSize, Vector3.zero, Vector3.one, false);
+                tris = RenderShapeMeshUtils.AddP2PTrisToMesh(0, false);
                 break;
             case RenderShape.Triangle:
             default:

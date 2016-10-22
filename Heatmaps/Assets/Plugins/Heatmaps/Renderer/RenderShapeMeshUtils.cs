@@ -24,7 +24,7 @@ namespace UnityAnalyticsHeatmap
                     tris = 1;
                     break;
                 case RenderShape.PointToPoint:
-                    tris = (projection == RenderProjection.FirstPerson) ? 2 : 7;
+                    tris = 4;
                     break;
             }
             return tris;
@@ -49,7 +49,7 @@ namespace UnityAnalyticsHeatmap
                     verts = 3;
                     break;
                 case RenderShape.PointToPoint:
-                    verts = (projection == RenderProjection.FirstPerson) ? 4 : 15;
+                    verts = 8;
                     break;
             }
             return verts;
@@ -321,41 +321,49 @@ namespace UnityAnalyticsHeatmap
             return tris;
         }
 
-        public static Vector3[] AddP2PVectorsToMesh(float m_ParticleSize, Vector3 fromVector, Vector3 toVector, RenderProjection projection)
+        public static Vector3[] AddP2PVectorsToMesh(float m_ParticleSize, Vector3 fromVector, Vector3 toVector, bool collapsed)
         {
-            if (projection == RenderProjection.FirstPerson)
-            {
-                return AddSquareVectorsToMesh(m_ParticleSize, RenderDirection.Billboard, toVector, fromVector);
-            }
-
-            Vector3 relativePos = toVector - fromVector;
-            Quaternion q = (relativePos == Vector3.zero) ? Quaternion.identity : Quaternion.LookRotation(relativePos);
-            float distance = Vector3.Distance(fromVector, toVector);
-
-            float arrowBaseZ = distance - (m_ParticleSize * 1.5f);
+            Vector3 p0, p1, p2, p3, p4, p5, p6, p7;
+            Vector3[] v = null;
             float halfP = m_ParticleSize * .5f;
 
-            // base
-            var p0 = new Vector3(-m_ParticleSize, 0f, -halfP);
-            var p1 = new Vector3(-m_ParticleSize, 0f, halfP);
-            var p2 = new Vector3(m_ParticleSize, 0f, halfP);
-            var p3 = new Vector3(m_ParticleSize, 0f, -halfP);
-            // stem
-            var p4 = new Vector3(-.5f * m_ParticleSize, 0f, -halfP);
-            var p5 = new Vector3(-.5f * m_ParticleSize, 0f, arrowBaseZ);
-            var p6 = new Vector3(.5f * m_ParticleSize, 0f, arrowBaseZ);
-            var p7 = new Vector3(.5f * m_ParticleSize, 0f, -halfP);
-            // arrow
-            var p8 = new Vector3(-m_ParticleSize, 0f, arrowBaseZ);
-            var p9 = new Vector3(0f, 0f, distance);
-            var p10 = new Vector3(m_ParticleSize, 0f, arrowBaseZ);
-            // head
-            var p11 = new Vector3(-m_ParticleSize, 0f, distance);
-            var p12 = new Vector3(-m_ParticleSize, 0f, distance + halfP);
-            var p13 = new Vector3(m_ParticleSize, 0f, distance + halfP);
-            var p14 = new Vector3(m_ParticleSize, 0f, distance);
+            if (collapsed)
+            {
+                // Left half
+                p0 = new Vector3(0f, 0f, halfP);
+                p1 = new Vector3(0f, 0f, -halfP);
+                p2 = new Vector3(-halfP, -halfP, 0f);
+                p3 = new Vector3(halfP, -halfP, 0f);
 
-            var v = new Vector3[] { p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14 };
+                // Right half
+                p4 = new Vector3(0f, 0f, halfP);
+                p5 = new Vector3(0f, 0f, -halfP);
+                p6 = new Vector3(-halfP, halfP, 0f);
+                p7 = new Vector3(halfP, halfP, 0f);
+            }
+            else
+            {
+                float distance = Vector3.Distance(fromVector, toVector);
+                float arrowBaseZ = distance * .75f;
+
+                // base
+                p0 = new Vector3(0f, 0f, arrowBaseZ * .05f);
+                p1 = new Vector3(-halfP, 0f, arrowBaseZ * .5f);
+                p2 = new Vector3(halfP, 0f, arrowBaseZ * .5f);
+
+                // top of stem
+                p3 = new Vector3(-halfP, 0f, arrowBaseZ);
+                p4 = new Vector3(halfP, 0f, arrowBaseZ);
+
+                // arrowhead
+                p5 = new Vector3(-m_ParticleSize, 0f, arrowBaseZ);
+                p6 = new Vector3(0f, 0f, distance);
+                p7 = new Vector3(m_ParticleSize, 0f, arrowBaseZ);
+            }
+
+            v = new Vector3[] { p0, p1, p2, p3, p4, p5, p6, p7 };
+            Vector3 relativePos = toVector - fromVector;
+            Quaternion q = (relativePos == Vector3.zero) ? Quaternion.identity : Quaternion.LookRotation(relativePos);
             for (int a = 0; a < v.Length; a++)
             {
                 Matrix4x4 m = Matrix4x4.TRS(fromVector, q, Vector3.one);
@@ -365,27 +373,37 @@ namespace UnityAnalyticsHeatmap
         }
 
         //Generate a procedural P2P
-        public static int[] AddP2PTrisToMesh(int offset, RenderProjection projection)
+        public static int[] AddP2PTrisToMesh(int offset, bool collapsed)
         {
-            if (projection == RenderProjection.FirstPerson)
+            int[] tris = null;
+            if (collapsed)
             {
-                return AddSquareTrisToMesh(offset);
-            }
+                tris = new int[]
+                    {
+                        // Left half
+                        offset, offset + 1, offset + 2,
+                        offset, offset + 3, offset + 1,
 
-            var tris = new int[]
-                {
-                    // base
-                    offset, offset + 1, offset + 2,
-                    offset, offset + 2, offset + 3,
-                    // stem
-                    offset + 4, offset + 5, offset + 6,
-                    offset + 4, offset + 6, offset + 7,
-                    // arrow
-                    offset + 8, offset + 9, offset + 10,
-                    // head
-                    offset + 11, offset + 12, offset + 13,
-                    offset + 11, offset + 13, offset + 14
-                };
+                        // Right half
+                        offset + 4, offset + 5, offset + 6,
+                        offset + 4, offset + 7, offset + 5
+                    };
+            }
+            else
+            {
+                tris = new int[]
+                    {
+                        // base
+                        offset, offset + 1, offset + 2,
+
+                        // stem
+                        offset + 1, offset + 3, offset + 4,
+                        offset + 2, offset + 1, offset + 4,
+
+                        // arrowhead
+                        offset + 5, offset + 6, offset + 7
+                    };
+            }
             return tris;
         }
     }

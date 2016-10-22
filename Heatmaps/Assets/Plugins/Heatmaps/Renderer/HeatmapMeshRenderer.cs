@@ -366,7 +366,6 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             HeatPoint[] dictData = collapsePoints.Values.ToArray();
             HeatPoint[] filteredData = new HeatPoint[dictData.Length + otherPoints.Count];
 
-
             dictData.CopyTo(filteredData, 0);
             otherPoints.CopyTo(filteredData, dictData.Length);
 
@@ -475,9 +474,10 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                     allTris.Add(RenderShapeMeshUtils.AddTriTrisToMesh(a * vector3.Length));
                     break;
                 case RenderShape.PointToPoint:
-                    vector3 = RenderShapeMeshUtils.AddP2PVectorsToMesh(m_ParticleSize, position, destination, m_Projection);
+                    var collapsed = m_MaskOption == k_RadiusMasking && m_Projection == RenderProjection.FirstPerson && IsOutsideRadius(submap[a]);
+                    vector3 = RenderShapeMeshUtils.AddP2PVectorsToMesh(m_ParticleSize, position, destination, collapsed);
                     allVectors.Add(vector3);
-                    allTris.Add(RenderShapeMeshUtils.AddP2PTrisToMesh(a * vector3.Length, m_Projection));
+                    allTris.Add(RenderShapeMeshUtils.AddP2PTrisToMesh(a * vector3.Length, collapsed));
                     break;
             }
             allColors.Add(AddColorsToMesh(vector3.Length, submap[a]));
