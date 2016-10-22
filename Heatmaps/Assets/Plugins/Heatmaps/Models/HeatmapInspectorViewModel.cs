@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using UnityEditor;
 
 namespace UnityAnalyticsHeatmap
 {
@@ -17,6 +18,11 @@ namespace UnityAnalyticsHeatmap
         internal static string k_ParticleShapeKey = "UnityAnalyticsHeatmapParticleShape";
         internal static string k_ParticleDirectionKey = "UnityAnalyticsHeatmapParticleDirection";
         internal static string k_ParticleProjectionKey = "UnityAnalyticsHeatmapParticleProjection";
+
+        internal static string k_RemapColorKey = "UnityAnalyticsHeatmapRemapColorKey";
+        internal static string k_RemapOptionIndexKey = "UnityAnalyticsHeatmapRemapOptionIndexKey";
+        internal static string k_RemapColorFieldKey = "UnityAnalyticsHeatmapRemapColorFieldKey";
+        internal static string k_PercentileKey = "UnityAnalyticsHeatmapRemapPercentileKey";
     }
 
 
@@ -82,7 +88,7 @@ namespace UnityAnalyticsHeatmap
             {
                 if (value != m_Settings.maskFollowType)
                 {
-                    UnityEditor.EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_MaskFollowType, value);
+                    EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_MaskFollowType, value);
                     m_Settings.maskFollowType = value;
                     Dispatch();
                 }
@@ -99,7 +105,7 @@ namespace UnityAnalyticsHeatmap
             {
                 if (value != m_Settings.maskType)
                 {
-                    UnityEditor.EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_MaskTypeKey, value);
+                    EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_MaskTypeKey, value);
                     m_Settings.maskType = value;
                     Dispatch();
                 }
@@ -116,7 +122,7 @@ namespace UnityAnalyticsHeatmap
             {
                 if (value != m_Settings.maskRadius)
                 {
-                    UnityEditor.EditorPrefs.SetFloat(HeatmapsInspectorSettingsKeys.k_MaskRadiusKey, value);
+                    EditorPrefs.SetFloat(HeatmapsInspectorSettingsKeys.k_MaskRadiusKey, value);
                     m_Settings.maskRadius = value;
                     Dispatch();
                 }
@@ -133,7 +139,7 @@ namespace UnityAnalyticsHeatmap
             {
                 if (value != m_Settings.particleSize)
                 {
-                    UnityEditor.EditorPrefs.SetFloat(HeatmapsInspectorSettingsKeys.k_ParticleSizeKey, value);
+                    EditorPrefs.SetFloat(HeatmapsInspectorSettingsKeys.k_ParticleSizeKey, value);
                     m_Settings.particleSize = value;
                     Dispatch();
                 }
@@ -150,7 +156,7 @@ namespace UnityAnalyticsHeatmap
             {
                 if (value != m_Settings.particleShape)
                 {
-                    UnityEditor.EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_ParticleShapeKey, value);
+                    EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_ParticleShapeKey, value);
                     m_Settings.particleShape = value;
                     Dispatch();
                 }
@@ -167,7 +173,7 @@ namespace UnityAnalyticsHeatmap
             {
                 if (value != m_Settings.particleDirection)
                 {
-                    UnityEditor.EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_ParticleDirectionKey, value);
+                    EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_ParticleDirectionKey, value);
                     m_Settings.particleDirection = value;
                     Dispatch();
                 }
@@ -184,10 +190,55 @@ namespace UnityAnalyticsHeatmap
             {
                 if (value != m_Settings.particleProjection)
                 {
-                    UnityEditor.EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_ParticleProjectionKey, value);
+                    EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_ParticleProjectionKey, value);
                     m_Settings.particleProjection = value;
                     Dispatch();
                 }
+            }
+        }
+
+        public bool remapDensity
+        {
+            get {
+                return m_Settings.remapDensity;
+            }
+            set {
+                m_Settings.remapDensity = value;
+                EditorPrefs.SetBool(HeatmapsInspectorSettingsKeys.k_RemapColorKey, m_Settings.remapDensity);
+            }
+        }
+
+        public string remapColorField
+        {
+            get
+            {
+                return m_Settings.remapColorField;
+            }
+            set {
+                m_Settings.remapColorField = value;
+                EditorPrefs.SetString(HeatmapsInspectorSettingsKeys.k_RemapColorFieldKey, m_Settings.remapColorField);
+            }
+        }
+
+        public int remapOptionIndex
+        {
+            get {
+                return m_Settings.remapOptionIndex;
+            }
+            set {
+                m_Settings.remapOptionIndex = value;
+                EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_RemapOptionIndexKey, m_Settings.remapOptionIndex);
+            }
+        }
+
+        public float remapPercentile
+        {
+            get {
+                return m_Settings.remapPercentile;
+            }
+            set {
+                m_Settings.remapPercentile = value;
+                EditorPrefs.SetFloat(HeatmapsInspectorSettingsKeys.k_PercentileKey, m_Settings.remapPercentile);
             }
         }
 
@@ -207,14 +258,19 @@ namespace UnityAnalyticsHeatmap
             heatmapOptionIndex = 0;
             heatmapOptions = new List<int>();
 
-            maskFollowType = UnityEditor.EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_MaskFollowType);
-            maskRadius = UnityEditor.EditorPrefs.GetFloat(HeatmapsInspectorSettingsKeys.k_MaskRadiusKey, 1.0f);
-            maskType = UnityEditor.EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_MaskTypeKey);
+            maskFollowType = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_MaskFollowType);
+            maskRadius = EditorPrefs.GetFloat(HeatmapsInspectorSettingsKeys.k_MaskRadiusKey, 1.0f);
+            maskType = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_MaskTypeKey);
 
-            particleSize = UnityEditor.EditorPrefs.GetFloat(HeatmapsInspectorSettingsKeys.k_ParticleSizeKey);
-            particleShape = UnityEditor.EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_ParticleShapeKey);
-            particleDirection = UnityEditor.EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_ParticleSizeKey);
-            particleProjection = UnityEditor.EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_ParticleProjectionKey);
+            particleSize = EditorPrefs.GetFloat(HeatmapsInspectorSettingsKeys.k_ParticleSizeKey);
+            particleShape = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_ParticleShapeKey);
+            particleDirection = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_ParticleSizeKey);
+            particleProjection = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_ParticleProjectionKey);
+
+            remapDensity = EditorPrefs.GetBool(HeatmapsInspectorSettingsKeys.k_RemapColorKey);
+            remapColorField = EditorPrefs.GetString(HeatmapsInspectorSettingsKeys.k_RemapColorFieldKey);
+            remapOptionIndex = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_RemapOptionIndexKey);
+            remapPercentile = EditorPrefs.GetFloat(HeatmapsInspectorSettingsKeys.k_PercentileKey);
         }
 
         public int heatmapOptionIndex;
@@ -228,6 +284,11 @@ namespace UnityAnalyticsHeatmap
         public int particleShape;
         public int particleDirection;
         public int particleProjection;
+
+        public bool remapDensity;
+        public string remapColorField;
+        public int remapOptionIndex;
+        public float remapPercentile;
     }
 }
 

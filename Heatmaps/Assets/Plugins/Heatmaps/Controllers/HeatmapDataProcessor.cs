@@ -36,11 +36,6 @@ namespace UnityAnalyticsHeatmap
 
         const string k_ArbitraryFieldsKey = "UnityAnalyticsHeatmapAggregationArbitraryFields";
 
-        const string k_RemapColorKey = "UnityAnalyticsHeatmapRemapColorKey";
-        const string k_RemapOptionIndexKey = "UnityAnalyticsHeatmapRemapOptionIndexKey";
-        const string k_RemapColorFieldKey = "UnityAnalyticsHeatmapRemapColorFieldKey";
-        const string k_PercentileKey = "UnityAnalyticsHeatmapRemapPercentileKey";
-
         const float k_DefaultSpace = 10f;
         const float k_DefaultTime = 10f;
         const float k_DefaultRotation = 15f;
@@ -237,54 +232,6 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        bool _remapDensity;
-        public bool m_RemapDensity
-        {
-            get {
-                return _remapDensity;
-            }
-            set {
-                _remapDensity = value;
-                EditorPrefs.SetBool(k_RemapColorKey, _remapDensity);
-            }
-        }
-        string _remapColorField;
-        public string m_RemapColorField
-        {
-            get
-            {
-                return _remapColorField;
-            }
-            set {
-                _remapColorField = value;
-                EditorPrefs.SetString(k_RemapColorFieldKey, _remapColorField);
-            }
-        }
-        int _remapOptionIndex;
-        public int m_RemapOptionIndex
-        {
-            get {
-                return _remapOptionIndex;
-            }
-            set {
-                _remapOptionIndex = value;
-                EditorPrefs.SetInt(k_RemapOptionIndexKey, _remapOptionIndex);
-            }
-        }
-        float _percentile;
-        public float m_Percentile
-        {
-            get {
-                return _percentile;
-            }
-            set {
-                _percentile = value;
-                EditorPrefs.SetFloat(k_PercentileKey, _percentile);
-            }
-        }
-
-
-
         public List<List<string>> m_SeparatedLists;
 
         public delegate void AggregationHandler(string jsonPath);
@@ -327,10 +274,6 @@ namespace UnityAnalyticsHeatmap
             m_SmoothTimeToggle = EditorPrefs.GetInt(k_SmoothTimeKey);
             m_SmoothRotationToggle = EditorPrefs.GetInt(k_SmoothRotationKey);
             m_SeparateUsers = EditorPrefs.GetBool(k_SeparateUsersKey);
-            m_RemapDensity = EditorPrefs.GetBool(k_RemapColorKey);
-            m_RemapColorField = EditorPrefs.GetString(k_RemapColorFieldKey);
-            m_RemapOptionIndex = EditorPrefs.GetInt(k_RemapOptionIndexKey);
-            m_Percentile = EditorPrefs.GetFloat(k_PercentileKey);
 
             // Restore list of arbitrary separation fields
             string loadedArbitraryFields = EditorPrefs.GetString(k_ArbitraryFieldsKey);
@@ -388,7 +331,7 @@ namespace UnityAnalyticsHeatmap
                 }
             }
 
-            if (m_RemapDensity && string.IsNullOrEmpty(m_RemapColorField))
+            if (m_InspectorViewModel.remapDensity && string.IsNullOrEmpty(m_InspectorViewModel.remapColorField))
             {
                 Debug.LogWarning("You have selected 'Remap color to field' but haven't specified a field name. No remapping can occur.");
             }
@@ -454,12 +397,12 @@ namespace UnityAnalyticsHeatmap
                 smoothOn.Add("t", timeSmoothValue);
             }
 
-            string remapToField = m_RemapDensity ? m_RemapColorField : "";
-            int remapOption = m_RemapDensity ? m_RemapOptionIndex : 0;
+            string remapToField = m_InspectorViewModel.remapDensity ? m_InspectorViewModel.remapColorField : "";
+            int remapOption = m_InspectorViewModel.remapDensity ? m_InspectorViewModel.remapOptionIndex : 0;
 
             m_Aggregator.Process(OnAggregated, m_ViewModel.m_RawDataFileList, start, end,
                 aggregateOn, smoothOn, groupOn,
-                remapToField, m_RemapOptionIds[remapOption], m_Percentile);
+                remapToField, m_RemapOptionIds[remapOption], m_InspectorViewModel.remapPercentile);
         }
 
         void OnAggregated(string jsonString)
@@ -484,7 +427,7 @@ namespace UnityAnalyticsHeatmap
             int bestOption = 0;
             if (m_InspectorViewModel.heatmapOptions != null)
             {
-                string opt = m_InspectorViewModel.heatmapOptionIndex > options.Length ? "" : m_ViewModel.m_SeparationOptions[m_InspectorViewModel.heatmapOptionIndex];
+                string opt = (m_InspectorViewModel.heatmapOptionIndex > options.Length) ? "" : m_ViewModel.m_SeparationOptions[m_InspectorViewModel.heatmapOptionIndex];
                 ArrayList list = new ArrayList(options);
                 int idx = list.IndexOf(opt);
                 bestOption = idx == -1 ? 0 : idx;

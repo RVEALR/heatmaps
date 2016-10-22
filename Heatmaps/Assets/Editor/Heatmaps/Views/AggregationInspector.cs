@@ -22,6 +22,7 @@ namespace UnityAnalyticsHeatmap
         bool m_UseCustomDataPath = true;
 
         HeatmapDataProcessor m_Processor;
+        HeatmapInspectorViewModel m_ViewModel;
 
         private GUIContent m_UseCustomDataPathContent = new GUIContent("Use custom data path", "By default, will use Application.persistentDataPath");
         private GUIContent m_DataPathContent = new GUIContent("Input path", "Where to retrieve data (defaults to Application.persistentDataPath");
@@ -82,6 +83,7 @@ namespace UnityAnalyticsHeatmap
         public AggregationInspector(HeatmapDataProcessor processor)
         {
             m_Processor = processor;
+            m_ViewModel = HeatmapInspectorViewModel.GetInstance();
         }
 
         public static AggregationInspector Init(HeatmapDataProcessor processor)
@@ -115,10 +117,10 @@ namespace UnityAnalyticsHeatmap
             m_SeparateSessions = m_Processor.m_SeparateSessions;
             m_SeparateCustomField = m_Processor.m_SeparateCustomField;
 
-            m_RemapColor = m_Processor.m_RemapDensity;
-            m_RemapColorField = m_Processor.m_RemapColorField;
-            m_RemapOptionIndex = m_Processor.m_RemapOptionIndex;
-            m_Percentile = m_Processor.m_Percentile;
+            m_RemapColor = m_ViewModel.remapDensity;
+            m_RemapColorField = m_ViewModel.remapColorField;
+            m_RemapOptionIndex = m_ViewModel.remapOptionIndex;
+            m_Percentile = m_ViewModel.remapPercentile;
             m_ArbitraryFields = m_Processor.m_SeparationFields;
         }
 
@@ -338,25 +340,25 @@ namespace UnityAnalyticsHeatmap
 
         void RemapChange(bool value)
         {
-            m_Processor.m_RemapDensity = value;
+            m_ViewModel.remapDensity = value;
             ScheduleFetch();
         }
 
         void RemapFieldChange(string value)
         {
-            m_Processor.m_RemapColorField = value;
+            m_ViewModel.remapColorField = value;
             ScheduleFetch();
         }
 
         void RemapOptionIndexChange(int value)
         {
-            m_Processor.m_RemapOptionIndex = value;
+            m_ViewModel.remapOptionIndex = value;
             ScheduleFetch();
         }
 
         void PercentileChange(float value)
         {
-            m_Processor.m_Percentile = m_Percentile;
+            m_ViewModel.remapPercentile = m_Percentile;
             ScheduleFetch();
         }
 
