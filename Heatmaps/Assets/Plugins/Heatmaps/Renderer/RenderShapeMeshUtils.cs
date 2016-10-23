@@ -330,16 +330,16 @@ namespace UnityAnalyticsHeatmap
             if (collapsed)
             {
                 // Left half
-                p0 = new Vector3(0f, 0f, halfP);
-                p1 = new Vector3(0f, 0f, -halfP);
-                p2 = new Vector3(-halfP, -halfP, 0f);
+                p0 = new Vector3(halfP, halfP, 0f);
+                p1 = new Vector3(-halfP, 0f, -halfP);
+                p2 = new Vector3(-halfP, 0f, halfP);
                 p3 = new Vector3(halfP, -halfP, 0f);
 
                 // Right half
-                p4 = new Vector3(0f, 0f, halfP);
-                p5 = new Vector3(0f, 0f, -halfP);
-                p6 = new Vector3(-halfP, halfP, 0f);
-                p7 = new Vector3(halfP, halfP, 0f);
+                p4 = new Vector3(halfP, -halfP, 0f);
+                p5 = new Vector3(halfP, halfP, 0f);
+                p6 = new Vector3(-halfP, 0f, halfP);
+                p7 = new Vector3(-halfP, 0f, -halfP);
             }
             else
             {
@@ -382,7 +382,7 @@ namespace UnityAnalyticsHeatmap
                     {
                         // Left half
                         offset, offset + 1, offset + 2,
-                        offset, offset + 3, offset + 1,
+                        offset + 2, offset + 1, offset + 3,
 
                         // Right half
                         offset + 4, offset + 5, offset + 6,
