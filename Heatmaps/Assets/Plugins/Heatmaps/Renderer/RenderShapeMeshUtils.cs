@@ -100,23 +100,25 @@ namespace UnityAnalyticsHeatmap
 
         public static Vector3[] AddArrowVectorsToMesh(float m_ParticleSize, Vector3 position, Vector3 rotation, RenderProjection projection)
         {
+            float stemLength = 5f * m_ParticleSize;
+
             if (projection == RenderProjection.FirstPerson)
             {
                 Quaternion q1 = Quaternion.Euler(rotation);
                 Matrix4x4 m1 = Matrix4x4.TRS(position, q1, Vector3.one);
-                Vector3 projectedPosition = m1.MultiplyPoint3x4(new Vector3(0f, 0f, -2f));
+                Vector3 projectedPosition = m1.MultiplyPoint3x4(new Vector3(0f, 0f, m_ParticleSize * (stemLength + 1f)));
                 return AddDiamondVectorsToMesh(m_ParticleSize, RenderDirection.Billboard, projectedPosition, position);
             }
 
             float thirdP = m_ParticleSize / 3f;
-            float stemLength = 5f;
+
 
             var p0 = new Vector3(-thirdP, 0f, 0f);
-            var p1 = new Vector3(-thirdP, 0f, -m_ParticleSize * stemLength);
-            var p2 = new Vector3(-m_ParticleSize, 0f, -m_ParticleSize * stemLength);
-            var p3 = new Vector3(0f, 0f, -m_ParticleSize * (stemLength + 1f));
-            var p4 = new Vector3(m_ParticleSize, 0f, -m_ParticleSize * stemLength);
-            var p5 = new Vector3(thirdP, 0f, -m_ParticleSize * stemLength);
+            var p1 = new Vector3(-thirdP, 0f, m_ParticleSize * stemLength);
+            var p2 = new Vector3(-m_ParticleSize, 0f, m_ParticleSize * stemLength);
+            var p3 = new Vector3(0f, 0f, m_ParticleSize * (stemLength + 1f));
+            var p4 = new Vector3(m_ParticleSize, 0f, m_ParticleSize * stemLength);
+            var p5 = new Vector3(thirdP, 0f, m_ParticleSize * stemLength);
             var p6 = new Vector3(thirdP, 0f, 0f);
 
             var v = new Vector3[] { p0, p1, p2, p3, p4, p5, p6 };
