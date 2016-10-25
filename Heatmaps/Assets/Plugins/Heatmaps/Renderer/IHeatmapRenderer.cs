@@ -125,5 +125,11 @@ namespace UnityAnalyticsHeatmap
         /// </summary>
         /// <value>The remap label.</value>
         string remapLabel { get; set; }
+
+        /// <summary>
+        /// Flag to ensure heatmap is in front of everything else.
+        /// </summary>
+        /// <value>If true, heatmap will always occlude.</value>
+        bool heatmapInFront { get; set; }
     }
 }

@@ -11,6 +11,8 @@ namespace UnityAnalyticsHeatmap
 {
     internal class HeatmapsInspectorSettingsKeys
     {
+        internal static string k_HeatmapInFrontKey = "UnityAnalyticsHeatmapInFront";
+
         internal static string k_MaskTypeKey = "UnityAnalyticsHeatmapMaskOption";
         internal static string k_MaskRadiusKey = "UnityAnalyticsHeatmapMaskRadius";
         internal static string k_MaskFollowType = "UnityAnalyticsHeatmapMaskFollowType";
@@ -54,6 +56,19 @@ namespace UnityAnalyticsHeatmap
                 m_Instance = new HeatmapInspectorViewModel();
             }
             return m_Instance;
+        }
+
+        public bool heatmapInFront
+        {
+            get
+            {
+                return m_Settings.heatmapInFront;
+            }
+            set
+            {
+                m_Settings.heatmapInFront = value;
+                Dispatch();
+            }
         }
 
         public int heatmapOptionIndex
@@ -257,6 +272,8 @@ namespace UnityAnalyticsHeatmap
     {
         public HeatmapSettings()
         {
+            heatmapInFront = EditorPrefs.GetBool(HeatmapsInspectorSettingsKeys.k_HeatmapInFrontKey);
+
             heatmapOptionIndex = 0;
             heatmapOptions = new List<int>();
 
@@ -274,6 +291,8 @@ namespace UnityAnalyticsHeatmap
             remapOptionIndex = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_RemapOptionIndexKey);
             remapPercentile = EditorPrefs.GetFloat(HeatmapsInspectorSettingsKeys.k_PercentileKey);
         }
+
+        public bool heatmapInFront;
 
         public int heatmapOptionIndex;
         public List<int> heatmapOptions;

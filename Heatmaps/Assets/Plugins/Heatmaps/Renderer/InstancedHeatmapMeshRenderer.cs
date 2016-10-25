@@ -65,6 +65,8 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     List<Matrix4x4[]> m_Matrices;
     List<MaterialPropertyBlock> m_Properties;
 
+    bool m_HeatmapInFront;
+
     int _r = k_NotRendering;
     int m_RenderState
     {
@@ -210,6 +212,22 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                         DestroyImmediate(child.gameObject.GetComponent<MeshCollider>());
                     }
                 }
+            }
+        }
+    }
+
+    public bool heatmapInFront {
+        get
+        {
+            return m_HeatmapInFront;
+        }
+
+        set {
+            if (value != m_HeatmapInFront)
+            {
+                m_HeatmapInFront = value;
+                //CreateMaterials();
+                m_RenderState = k_UpdateMaterials;
             }
         }
     }

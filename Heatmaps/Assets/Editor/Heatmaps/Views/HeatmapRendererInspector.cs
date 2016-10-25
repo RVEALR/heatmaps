@@ -212,7 +212,11 @@ namespace UnityAnalyticsHeatmap
                 else if (m_ColorGradient != null)
                 {
                     EditorGUI.BeginChangeCheck();
-                    EditorGUILayout.PropertyField(m_ColorGradient, false);
+                    using(new EditorGUILayout.HorizontalScope())
+                    {
+                        EditorGUILayout.PropertyField(m_ColorGradient, false);
+                        m_ViewModel.heatmapInFront = EditorGUILayout.Toggle("Always in front", m_ViewModel.heatmapInFront);
+                    }
                     if(EditorGUI.EndChangeCheck())
                     {
                         m_SerializedGradient.ApplyModifiedProperties();
@@ -344,6 +348,7 @@ namespace UnityAnalyticsHeatmap
                     r.pointSize = m_ViewModel.particleSize;
                     r.activateTips = m_Tips;
                     r.UpdateCameraPosition(m_MaskRadiusSource);
+                    r.heatmapInFront = m_ViewModel.heatmapInFront;
                     if (m_ViewModel.maskType == 1)
                     {
                         r.UpdateRenderMask(m_ViewModel.maskRadius);

@@ -60,11 +60,18 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
 
     int m_RenderState = k_NotRendering;
 
+    bool m_HeatmapInFront;
+
     List<GameObject> m_GameObjects = new List<GameObject>();
 
     void Start()
     {
-        m_Shader = Shader.Find("Heatmaps/Particles/Gaussian");
+        CreateMaterials();
+    }
+
+    void CreateMaterials()
+    {
+        m_Shader = Shader.Find(m_HeatmapInFront ? "Heatmaps/Particles/AlwaysInFront" : "Heatmaps/Particles/AlphaBlend");
     }
 
     public void UpdatePointData(HeatPoint[] newData, float newMaxDensity)
@@ -202,6 +209,22 @@ public class HeatmapShaderRenderer : MonoBehaviour, IHeatmapRenderer
                         DestroyImmediate(child.gameObject.GetComponent<MeshCollider>());
                     }
                 }
+            }
+        }
+    }
+
+    public bool heatmapInFront {
+        get
+        {
+            return m_HeatmapInFront;
+        }
+
+        set {
+            if (value != m_HeatmapInFront)
+            {
+                m_HeatmapInFront = value;
+                CreateMaterials();
+                m_RenderState = k_UpdateMaterials;
             }
         }
     }
