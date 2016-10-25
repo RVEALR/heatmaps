@@ -91,8 +91,12 @@ namespace UnityAnalyticsHeatmap
             }
             set {
                 m_Settings.heatmapOptions = value;
+                Dispatch();
             }
         }
+
+        public List<List<string>> heatmapOptionLabels { get; set; }
+        public string[] heatmapOptionConjoinedLabels { get; set; }
 
         public int maskFollowType
         {

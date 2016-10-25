@@ -197,7 +197,7 @@ namespace UnityAnalyticsHeatmap
             {
                 EditorGUILayout.LabelField("Data set options", EditorStyles.boldLabel);
                 m_ViewModel.heatmapOptions = AnalyticsListGroup.ListGroup(m_ViewModel.heatmapOptions,
-                    m_Processor.m_SeparatedLists, OptionsChange);
+                    m_ViewModel.heatmapOptionLabels, OptionsChange);
             }
 
             // PARTICLE SIZE/SHAPE
