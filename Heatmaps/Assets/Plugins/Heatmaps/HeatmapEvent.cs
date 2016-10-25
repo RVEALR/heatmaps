@@ -11,6 +11,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using System.IO;
 
 #if UNITY_4_0 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 ||  UNITY_4_4 || UNITY_4_5 || UNITY_4_6 || UNITY_4_7 || UNITY_5_0
 using analyticsResultNamespace = UnityEngine.Cloud.Analytics;
@@ -28,6 +29,43 @@ namespace UnityAnalyticsHeatmap
     public class HeatmapEvent
     {
         private static Dictionary<string, object> s_Dictionary = new Dictionary<string, object>();
+
+        private static bool s_SaveToLocal = false;
+        private static string s_LocalSavePath;
+
+        private static string s_SessionId;
+
+        /// <summary>
+        /// When set to true, HeatmapEvents are saved to a local file, instead of sent to the server.
+        /// </summary>
+        /// <param name="value">If set to <c>true</c> save to a local file.</param>
+        public static bool saveToLocal
+        {
+            get
+            {
+                return s_SaveToLocal;
+            }
+            set
+            {
+                s_SaveToLocal = value;
+            }
+        }
+
+        /// <summary>
+        /// Sets the local save path.
+        /// </summary>
+        /// <value>The path on the local drive where HeatmapEvents will be saved.</param>
+        public static string localSavePath
+        {
+            get
+            {
+                return s_LocalSavePath;
+            }
+            set
+            {
+                s_LocalSavePath = value;
+            }
+        }
 
         /// <summary>
         /// Send the event with position and an optional dictionary.
@@ -123,7 +161,22 @@ namespace UnityAnalyticsHeatmap
         /// </summary>
         protected static analyticsResultNamespace.AnalyticsResult Commit(string eventName)
         {
-            analyticsResultNamespace.AnalyticsResult result = analyticsEventNamespace.CustomEvent("Heatmap." + eventName, s_Dictionary);
+            analyticsResultNamespace.AnalyticsResult result;
+            if (s_SaveToLocal)
+            {
+                string path = String.IsNullOrEmpty(s_LocalSavePath) ? System.IO.Path.Combine(Application.dataPath, "RawData") : s_LocalSavePath;
+                result = analyticsResultNamespace.AnalyticsResult.Ok;
+                using (var writer = new StreamWriter(path, true))
+                {
+                    s_SessionId = (String.IsNullOrEmpty(s_SessionId)) ? System.Guid.NewGuid().ToString() : s_SessionId;
+                    string evt = WriteEvent("Heatmap." + eventName, s_Dictionary, "TestDevice", s_SessionId, Application.platform.ToString(), Debug.isDebugBuild);
+                    writer.WriteLine(evt);
+                }
+            }
+            else
+            {
+                result = analyticsEventNamespace.CustomEvent("Heatmap." + eventName, s_Dictionary);
+            }
             s_Dictionary.Clear();
             return result;
         }
@@ -183,5 +236,96 @@ namespace UnityAnalyticsHeatmap
                 }
             }
         }
+
+        public static string WriteEvent(string eventName, Dictionary<string, object> parameters, string deviceId, string sessionId, string platform, bool isDebug = false)
+        {
+            double currentMilliseconds = Math.Floor((DateTime.UtcNow - UnityAnalytics.DateTimeUtils.s_Epoch).TotalMilliseconds);
+
+            string evt = "";
+            evt += currentMilliseconds + "\t";
+
+            // AppID
+            #if UNITY_5
+            evt += (string.IsNullOrEmpty(Application.cloudProjectId)) ? "1234-abcd-5678-efgh" : Application.cloudProjectId;
+            #else
+            evt += "1234-abcd-5678-efgh";
+            #endif
+            evt += "\t";
+
+            // Event Type
+            evt += "custom\t";
+
+            // User ID, Session ID
+            evt += deviceId + "\t";
+            evt += sessionId + "\t";
+
+            // Remote IP
+            evt += "1.1.1.1\t";
+
+            // Platform
+            evt += platform + "\t";
+
+            // SDK Version
+            evt += "5.3.4\t";
+
+            // IsDebug
+            evt += isDebug + "\t";
+
+            // User agent
+            evt += "Corridor%20Z/3 CFNetwork/758.2.8 Darwin/15.0.0\t";
+
+            // Submit time
+            evt += currentMilliseconds + "\t";
+
+            // Event Name
+            evt += eventName + "\t";
+
+            evt += WriteParams(eventName, parameters);
+
+            return evt;
+        }
+
+        static string WriteParams(string eventName, Dictionary<string, object> parameters)
+        {
+            string json = "{";
+
+            foreach(KeyValuePair<string, object> kv in parameters)
+            {
+                json += Quotify(kv.Key);
+                json += ":";
+                if (IsNum(kv.Value) || kv.Value is bool)
+                {
+                    json += kv.Value;
+                }
+                else
+                {
+                    json += Quotify(kv.Value.ToString());
+                }
+                json += ",";
+            }
+            json += Quotify("unity.name") + ":" + Quotify(eventName) + "}\n";
+            return json;
+        }
+
+        static bool IsNum(object value)
+        {
+            return value is sbyte
+                || value is byte
+                || value is short
+                || value is ushort
+                || value is int
+                || value is uint
+                || value is long
+                || value is ulong
+                || value is float
+                || value is double
+                || value is decimal;
+        }
+
+        static string Quotify(string value)
+        {
+            return "\"" + value + "\"";
+        }
+
     }
 }

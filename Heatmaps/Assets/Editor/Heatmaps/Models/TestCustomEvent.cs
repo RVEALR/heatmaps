@@ -76,7 +76,12 @@ public class TestCustomEvent : List<TestEventParam> {
         evt += currentMilliseconds + "\t";
 
         // AppID
-        evt += "1234-abcd-5678-efgh\t";
+        #if UNITY_5
+        evt += (string.IsNullOrEmpty(Application.cloudProjectId)) ? "1234-abcd-5678-efgh" : Application.cloudProjectId;
+        #else
+        evt += "1234-abcd-5678-efgh";
+        #endif
+        evt += "\t";
 
         // Event Type
         evt += "custom\t";
