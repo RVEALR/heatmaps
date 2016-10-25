@@ -69,9 +69,7 @@ namespace UnityAnalyticsHeatmap
             int lookThisManyPlaces = 15;
             int lookThisManyTimesMin = 1;
             int lookThisManyTimesMax = 5;
-//            float randomRange = .25f;
             float radius = 50f;
-//            float halfRadius = 25f;
 
             DateTime now = DateTime.UtcNow;
             int totalSeconds = deviceCount * waypointsPerPlay * sessionCount;
@@ -106,7 +104,7 @@ namespace UnityAnalyticsHeatmap
                         position = new Vector3(UnityEngine.Random.Range(-radius, radius), UnityEngine.Random.Range(shortestUser, tallestUser), UnityEngine.Random.Range(-radius, radius));
                         for (int e = 0; e < lookThisManyPlaces; e++)
                         {
-                            Vector3 rotation = new Vector3(UnityEngine.Random.Range(0, 90f), UnityEngine.Random.Range(-180f, 180f), 0f);
+                            Vector3 rotation = new Vector3(UnityEngine.Random.Range(0, -180f), UnityEngine.Random.Range(0f,360f), 0f);
 
                             while (numTimesToLookList[currentPlace] > 0)
                             {
