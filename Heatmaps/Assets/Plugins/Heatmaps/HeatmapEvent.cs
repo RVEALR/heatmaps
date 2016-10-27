@@ -93,9 +93,10 @@ namespace UnityAnalyticsHeatmap
         }
 
         /// <summary>
-        /// Send the event with position, time and an optional dictionary.
+        /// Send the event with position, time, rotation (as a float) and an optional dictionary.
         /// </summary>
-        /// Note that Vector2 will implicitly convert to Vector3
+        /// Note that Vector2 will implicitly convert to Vector3.
+        /// Note also that this variation is particularly suited to 2D environments
         public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 v, float time, float rotation, Dictionary<string, object> options = null)
         {
             AddXY(v.x, v.y);
@@ -126,6 +127,31 @@ namespace UnityAnalyticsHeatmap
             AddXY(trans.position.x, trans.position.y);
             AddZ(trans.position.z);
             AddRotation(trans.rotation.eulerAngles);
+            AddTime(time);
+            AddOptions(options);
+            return Commit(eventName);
+        }
+
+        /// <summary>
+        /// Send the event with position, rotation and an optional dictionary.
+        /// </summary>
+        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 position, Quaternion q, Dictionary<string, object> options = null)
+        {
+            AddXY(position.x, position.y);
+            AddZ(position.z);
+            AddRotation(q.eulerAngles);
+            AddOptions(options);
+            return Commit(eventName);
+        }
+
+        /// <summary>
+        /// Send the event with position, rotation, time and an optional dictionary.
+        /// </summary>
+        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 position, Quaternion q, float time, Dictionary<string, object> options = null)
+        {
+            AddXY(position.x, position.y);
+            AddZ(position.z);
+            AddRotation(q.eulerAngles);
             AddTime(time);
             AddOptions(options);
             return Commit(eventName);
@@ -291,35 +317,11 @@ namespace UnityAnalyticsHeatmap
 
             foreach(KeyValuePair<string, object> kv in parameters)
             {
-                json += Quotify(kv.Key);
-                json += ":";
-                if (IsNum(kv.Value) || kv.Value is bool)
-                {
-                    json += kv.Value;
-                }
-                else
-                {
-                    json += Quotify(kv.Value.ToString());
-                }
+                json += Quotify(kv.Key) + ":" + Quotify(kv.Value.ToString());
                 json += ",";
             }
             json += Quotify("unity.name") + ":" + Quotify(eventName) + "}\n";
             return json;
-        }
-
-        static bool IsNum(object value)
-        {
-            return value is sbyte
-                || value is byte
-                || value is short
-                || value is ushort
-                || value is int
-                || value is uint
-                || value is long
-                || value is ulong
-                || value is float
-                || value is double
-                || value is decimal;
         }
 
         static string Quotify(string value)
