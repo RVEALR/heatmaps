@@ -253,6 +253,12 @@ namespace UnityAnalyticsHeatmap
             m_Aggregator = new HeatmapAggregator(m_RawDataPath);
             m_DataParser = new HeatmapDataParser();
             m_InspectorViewModel = HeatmapInspectorViewModel.GetInstance();
+            m_InspectorViewModel.SettingsChanged += OnSettingsUpdate;
+        }
+
+        void OnSettingsUpdate(object sender, HeatmapSettings settings)
+        {
+            SelectList();
         }
 
         public void RestoreSettings()

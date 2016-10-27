@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using System.Linq;
 
 namespace UnityAnalyticsHeatmap
 {
@@ -66,8 +67,11 @@ namespace UnityAnalyticsHeatmap
             }
             set
             {
-                m_Settings.heatmapInFront = value;
-                Dispatch();
+                if (m_Settings.heatmapInFront != value)
+                {
+                    m_Settings.heatmapInFront = value;
+                    Dispatch();
+                }
             }
         }
 
@@ -79,8 +83,11 @@ namespace UnityAnalyticsHeatmap
             }
             set
             {
-                m_Settings.heatmapOptionIndex = value;
-                Dispatch();
+                if (m_Settings.heatmapOptionIndex != value)
+                {
+                    m_Settings.heatmapOptionIndex = value;
+                    Dispatch();
+                }
             }
         }
 

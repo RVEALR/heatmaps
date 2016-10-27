@@ -10,6 +10,7 @@ using UnityEditor;
 using UnityEngine;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace UnityAnalyticsHeatmap
 {
@@ -31,7 +32,6 @@ namespace UnityAnalyticsHeatmap
         const string k_ShowTipsKey = "UnityAnalyticsHeatmapShowRendererTooltips";
 
         Heatmapper m_Heatmapper;
-        HeatmapDataProcessor m_Processor;
         HeatmapInspectorViewModel m_ViewModel;
 
         Type[] m_Renderers = new Type[]{ typeof(HeatmapMeshRenderer), typeof(InstancedHeatmapMeshRenderer) };
@@ -113,12 +113,10 @@ namespace UnityAnalyticsHeatmap
         GUIContent m_MaskOptionContentSlice = new GUIContent("Slice", "Check this to filter data by global x/y/x positions");
         GUIContent m_MaskRadiusContent = new GUIContent("Radius", "Radius to draw");
 
-
         void OnSettingsUpdate(object sender, HeatmapSettings settings)
         {
             m_Heatmapper.Repaint();
         }
-
 
         public HeatmapRendererInspector()
         {
@@ -159,7 +157,6 @@ namespace UnityAnalyticsHeatmap
         public static HeatmapRendererInspector Init(Heatmapper heatmapper, HeatmapDataProcessor processor)
         {
             var inspector = new HeatmapRendererInspector();
-            inspector.m_Processor = processor;
             inspector.m_Heatmapper = heatmapper;
             return inspector;
         }
@@ -196,7 +193,7 @@ namespace UnityAnalyticsHeatmap
             using (new EditorGUILayout.VerticalScope())
             {
                 EditorGUILayout.LabelField("Data set options", EditorStyles.boldLabel);
-                m_ViewModel.heatmapOptions = AnalyticsListGroup.ListGroup(m_ViewModel.heatmapOptions,
+                AnalyticsListGroup.ListGroup(m_ViewModel.heatmapOptions,
                     m_ViewModel.heatmapOptionLabels, OptionsChange);
             }
 
@@ -535,7 +532,7 @@ namespace UnityAnalyticsHeatmap
 
         void OptionsChange(List<int> value)
         {
-            m_Processor.SelectList();
+            m_ViewModel.heatmapOptions = value;
         }
         #endregion
     }
