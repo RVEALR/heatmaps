@@ -35,6 +35,7 @@ public class Heatmapper : EditorWindow
 
     bool m_ShowAggregate = false;
     bool m_ShowRender = false;
+    bool m_IsPlayMode = false;
 
     Vector2 m_ScrollPosition;
 
@@ -128,6 +129,12 @@ public class Heatmapper : EditorWindow
             }
             m_RenderView.Update(hasNewData);
             m_Processor.m_ViewModel.m_HeatData = null;
+        }
+        if (Application.isPlaying && !m_IsPlayMode) {
+            m_IsPlayMode = true;
+            SystemReset ();
+        } else if (!Application.isPlaying && m_IsPlayMode) {
+            m_IsPlayMode = false;
         }
     }
 
