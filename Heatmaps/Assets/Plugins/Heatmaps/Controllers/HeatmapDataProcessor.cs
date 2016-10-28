@@ -444,12 +444,10 @@ namespace UnityAnalyticsHeatmap
         {
             string[] oldKey = BuildKey().Split('~');
             m_InspectorViewModel.heatmapOptionLabels = new List<List<string>>();
-            m_InspectorViewModel.heatmapOptions = new List<int>();
-
+            var optionsList = new List<int>();
             foreach(string opt in options)
             {
                 string[] parts = opt.Split('~');
-
                 for (int a = 0; a < parts.Length; a++)
                 {
                     if (m_InspectorViewModel.heatmapOptionLabels.Count <= a)
@@ -471,8 +469,9 @@ namespace UnityAnalyticsHeatmap
                     index = m_InspectorViewModel.heatmapOptionLabels[a].IndexOf(oldKey[a]);
                     index = Math.Max(0, index);
                 }
-                m_InspectorViewModel.heatmapOptions.Add(index);
+                optionsList.Add(index);
             }
+            m_InspectorViewModel.heatmapOptions = optionsList;
         }
 
         string BuildKey()
