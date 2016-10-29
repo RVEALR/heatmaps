@@ -149,8 +149,7 @@ public class Heatmapper : EditorWindow
                     if (profile > -1)
                     {
                         m_Profiles[profile].OnEnable();
-                        m_RenderView.SetProfile(m_Profiles[profile]);
-                        m_AggregationView.SetProfile(m_Profiles[profile]);
+                        HeatmapInspectorViewModel.GetInstance().UpdateSettings(m_Profiles[profile]);
                         SystemReset();
                     }
                 }

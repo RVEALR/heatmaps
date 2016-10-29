@@ -360,12 +360,45 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
+        public void UpdateSettings(HeatmapSettings settings)
+        {
+            separateUsers = settings.separateUsers;
+
+            smoothSpaceOption = settings.smoothSpaceOption;
+            smoothSpace = settings.smoothSpace;
+            smoothRotationOption = settings.smoothRotationOption;
+            smoothRotation = settings.smoothRotation;
+            smoothTimeOption = settings.smoothTimeOption;
+            smoothTime = settings.smoothTime;
+
+            heatmapInFront = settings.heatmapInFront;
+
+            maskFollowType = settings.maskFollowType;
+            maskRadius = settings.maskRadius;
+            maskType = settings.maskType;
+            particleSize = settings.particleSize;
+            particleShape = settings.particleShape;
+            particleProjection = settings.particleProjection;
+            particleDirection = settings.particleDirection;
+
+            OptionListIsNew = true;
+            heatmapOptions = settings.heatmapOptions;
+        }
+
+        public bool OptionListIsNew{ get; set; }
+
+
+
         bool m_Changed = false;
         void Dispatch()
         {
             m_Changed = true;
         }
 
+        /// <summary>
+        /// If there are any changed queued up, dispatch them.
+        /// </summary>
+        /// <param name="value">Irrelevant. FIXME</param>
         public void Dispatch(bool value)
         {
             if (m_Changed)

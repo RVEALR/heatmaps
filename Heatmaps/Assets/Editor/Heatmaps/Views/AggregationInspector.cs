@@ -207,18 +207,6 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        public void SetProfile(HeatmapSettings profile)
-        {
-            m_ViewModel.separateUsers = profile.separateUsers;
-
-            m_ViewModel.smoothSpaceOption = profile.smoothSpaceOption;
-            m_ViewModel.smoothSpace = profile.smoothSpace;
-            m_ViewModel.smoothRotationOption = profile.smoothRotationOption;
-            m_ViewModel.smoothRotation = profile.smoothRotation;
-            m_ViewModel.smoothTimeOption = profile.smoothTimeOption;
-            m_ViewModel.smoothTime = profile.smoothTime;
-        }
-
         void UseCustomDataPathChange(bool value)
         {
             EditorPrefs.SetBool(k_UseCustomDataPathKey, value);
