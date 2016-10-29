@@ -9,16 +9,19 @@ namespace UnityAnalyticsHeatmap
         {
             base.OnEnable();
 
-            smoothSpaceOption = 0;
-            smoothSpace = 1f;
-            smoothRotationOption  = 0;
-            smoothRotation = 90f;
+            smoothSpaceOption = 1;
+            smoothSpace = 0f;
+
+            smoothRotationOption  = 2;
+            smoothRotation = 0f;
+
             smoothTimeOption = 2;
+            smoothTime = 0f;
 
             separateUsers = true;
 
-            heatmapInFront = true;
-            heatmapOptions = new List<int>{0, 0};
+            heatmapInFront = false;
+            heatmapOptions = new List<int>{1, 1};
 
             particleSize = .1f;
             particleShape = 2;

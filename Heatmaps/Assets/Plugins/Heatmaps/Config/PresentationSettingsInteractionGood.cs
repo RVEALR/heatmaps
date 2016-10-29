@@ -21,7 +21,7 @@ namespace UnityAnalyticsHeatmap
             separateUsers = true;
 
             heatmapInFront = false;
-            heatmapOptions = new List<int>{0, 0};
+            heatmapOptions = new List<int>{1, 0};
 
             particleSize = .1f;
             particleShape = 2;
