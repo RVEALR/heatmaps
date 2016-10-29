@@ -357,7 +357,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     {
         if (hasData())
         {
-            m_CollapseDensity = 0f;
+//            m_CollapseDensity = 0f;
 
             totalPoints = m_Data.Length;
             currentPoints = 0;
@@ -536,7 +536,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         return m_Data != null && m_Data.Length > 0;
     }
 
-    float m_CollapseDensity = 0f;
+//    float m_CollapseDensity = 0f;
 
     HeatPoint Aggregate(HeatPoint pt, Dictionary<Vector3, HeatPoint> collapsePoints)
     {
@@ -546,19 +546,30 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             retv = collapsePoints[pt.position];
             retv.density += pt.density;
         }
-        m_CollapseDensity = Mathf.Max(retv.density, m_MaxDensity);
+//        m_CollapseDensity = Mathf.Max(retv.density, m_MaxDensity);
         collapsePoints[pt.position] = retv;
         return retv;
     }
 
+
+    static Color s_GhostColor = new Color(0,0,0,.5f);
     Color32[] AddColorsToMesh(int count, HeatPoint pt)
     {
         Color32[] colors = new Color32[count];
-        float pct = (m_MaskOption == k_RadiusMasking && IsOutsideRadius(pt)) ? (pt.density/m_CollapseDensity) : (pt.density/m_MaxDensity);
-        if (float.IsInfinity(pct)) {
-            pct = 0f;
+
+        Color color;
+        if (m_MaskOption == k_RadiusMasking && IsOutsideRadius(pt))
+        {
+            color = s_GhostColor;
         }
-        Color color = GradientUtils.PickGradientColor(m_Gradient, pct);
+        else
+        {
+            float pct = pt.density/m_MaxDensity;
+            if (float.IsInfinity(pct)) {
+                pct = 0f;
+            }
+            color = GradientUtils.PickGradientColor(m_Gradient, pct);
+        }
         for (int b = 0 ; b < count ; b++)
         {
             colors[b] = new Color (color.r, color.g, color.b, color.a) ;
