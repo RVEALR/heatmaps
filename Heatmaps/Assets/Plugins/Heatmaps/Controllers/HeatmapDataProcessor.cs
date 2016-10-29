@@ -15,6 +15,7 @@ using UnityEngine;
 using UnityAnalytics;
 using UnityEditor;
 using System.Collections;
+using System.Linq;
 
 namespace UnityAnalyticsHeatmap
 {
@@ -328,37 +329,54 @@ namespace UnityAnalyticsHeatmap
             m_DataParser.LoadData(jsonString, OnParsed, HeatmapDataParser.k_AsData, labelName);
         }
 
-        void OnParsed(Dictionary<string, HeatPoint[]> data, string[] options)
+        void OnParsed(Dictionary<string, HeatPoint[]> data, string[] conjoinedOptions)
         {
             m_ViewModel.m_Heatmaps = data;
-            m_InspectorViewModel.heatmapOptionConjoinedLabels = options;
+            m_InspectorViewModel.heatmapOptionConjoinedLabels = conjoinedOptions;
             if (m_ViewModel.m_Heatmaps != null)
             {
-                m_InspectorViewModel.heatmapOptionIndex = PickBestOption(options);
-                ParseOptionList(options);
-                SelectHeatmap(m_ViewModel.m_Heatmaps[options[m_InspectorViewModel.heatmapOptionIndex]]);
+                ParseOptionList(conjoinedOptions);
+                m_InspectorViewModel.heatmapOptionIndex = PickBestOption(conjoinedOptions);
+                SelectHeatmap(m_ViewModel.m_Heatmaps[conjoinedOptions[m_InspectorViewModel.heatmapOptionIndex]]);
             }
         }
 
-        int PickBestOption(string[] options)
+        /// <summary>
+        /// Attempt to find a "preferred" index from the provided options list.
+        /// </summary>
+        /// Defaults to picking all 0s.
+        /// <returns>The best option.</returns>
+        /// <param name="conjoinedOptions">The list of options.</param>
+        int PickBestOption(string[] conjoinedOptions)
         {
             int bestOption = 0;
+            string opt = "";
+
             if (m_InspectorViewModel.heatmapOptions != null)
             {
-                string opt = (m_InspectorViewModel.heatmapOptionIndex >= options.Length) ? "" : m_InspectorViewModel.heatmapOptionConjoinedLabels[m_InspectorViewModel.heatmapOptionIndex];
-                ArrayList list = new ArrayList(options);
-                int idx = list.IndexOf(opt);
-                bestOption = idx == -1 ? 0 : idx;
+                opt = (m_InspectorViewModel.heatmapOptionIndex >= conjoinedOptions.Length) ?
+                    "" :
+                    m_InspectorViewModel.heatmapOptionConjoinedLabels[m_InspectorViewModel.heatmapOptionIndex];
             }
+
+            ArrayList list = new ArrayList(conjoinedOptions);
+            int index = list.IndexOf(opt);
+            bestOption = index == -1 ? 0 : index;
             return bestOption;
         }
 
-        void ParseOptionList(string[] options)
+//        string[] m_LastKey;
+
+        /// <summary>
+        /// Parses the conjoined options to generate two broken-out "lists of lists" of options.
+        /// </summary>
+        /// heatmapOptions represents the indices
+        /// heatmapOptionLabels represents the strings
+        /// <param name="conjoinedOptions">Options.</param>
+        void ParseOptionList(string[] conjoinedOptions)
         {
-            string[] oldKey = BuildKey().Split('~');
             m_InspectorViewModel.heatmapOptionLabels = new List<List<string>>();
-            var optionsList = new List<int>();
-            foreach(string opt in options)
+            foreach(string opt in conjoinedOptions)
             {
                 string[] parts = opt.Split('~');
                 for (int a = 0; a < parts.Length; a++)
@@ -373,18 +391,57 @@ namespace UnityAnalyticsHeatmap
                     }
                 }
             }
-            for (int a = 0; a < m_InspectorViewModel.heatmapOptionLabels.Count; a++)
+            if (m_InspectorViewModel.OptionListIsNew && m_InspectorViewModel.heatmapOptions.Count == m_InspectorViewModel.heatmapOptionLabels.Count)
             {
-                // Restore old indices when possible
-                int index = 0;
-                if (oldKey.Length > a)
-                {
-                    index = m_InspectorViewModel.heatmapOptionLabels[a].IndexOf(oldKey[a]);
-                    index = Math.Max(0, index);
-                }
-                optionsList.Add(index);
+                // new list from settings...just leave it alone.
+                m_InspectorViewModel.OptionListIsNew = false;
             }
-            m_InspectorViewModel.heatmapOptions = optionsList;
+            else
+            {
+                List<int> optionsList = m_InspectorViewModel.heatmapOptionLabels.Select(x => 0).ToList();
+                m_InspectorViewModel.heatmapOptions = optionsList;
+            }
+
+            // Leaving all this mess for now.
+            // Might try to re-enable heuristic guessing
+//            for (int a = 0; a < m_InspectorViewModel.heatmapOptionLabels.Count; a++)
+//            {
+//                // Restore old indices when possible
+//                int index = 0;
+//                if (m_LastKey != null && m_LastKey.Length > 0 && m_InspectorViewModel.heatmapOptionLabels.Count == m_LastKey.Length)
+//                {
+//
+//                    Debug.Log(m_LastKey[a]);
+//
+//                    index = m_InspectorViewModel.heatmapOptionLabels[a].IndexOf(m_LastKey[a]);
+//                    index = Math.Max(0, index);
+//                }
+//
+//
+//                int index = 0;
+//                if (m_InspectorViewModel.OptionListIsNew && m_InspectorViewModel.heatmapOptions.Count == m_InspectorViewModel.heatmapOptionLabels.Count)
+//                {
+//                    m_InspectorViewModel.OptionListIsNew = false;
+//                    for (int a = 0; a < m_InspectorViewModel.heatmapOptions.Count; a++)
+//                    {
+//                        int idx = m_InspectorViewModel.heatmapOptions[a];
+//                        opt += m_InspectorViewModel.heatmapOptionLabels[a][idx] + "~";
+//                    }
+//
+//                    if (opt.LastIndexOf("~") == opt.Length - 1)
+//                        opt = opt.Substring(0, opt.Length - 1);
+//
+//                    index = m_InspectorViewModel.heatmapOptions[a];
+//
+//
+//                }
+//
+//
+//
+//                optionsList.Add(index);
+//            }
+//            m_InspectorViewModel.heatmapOptions = optionsList;
+//            m_LastKey = BuildKey().Split('~');
         }
 
         string BuildKey()
@@ -392,7 +449,7 @@ namespace UnityAnalyticsHeatmap
             string retv = "";
             if (m_InspectorViewModel.heatmapOptionLabels != null)
             {
-                for (int a = 0; a < m_InspectorViewModel.heatmapOptionLabels.Count; a++)
+                for (int a = 0; a < m_InspectorViewModel.heatmapOptions.Count; a++)
                 {
                     retv += m_InspectorViewModel.heatmapOptionLabels[a][m_InspectorViewModel.heatmapOptions[a]];
                     if (a < m_InspectorViewModel.heatmapOptionLabels.Count - 1)
@@ -404,6 +461,9 @@ namespace UnityAnalyticsHeatmap
             return retv;
         }
 
+        /// <summary>
+        /// Selects the heatmap from among the list of all heatmaps
+        /// </summary>
         void SelectList()
         {
             m_InspectorViewModel.heatmapOptionIndex = IndexFromOptions();
@@ -415,6 +475,10 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
+        /// <summary>
+        /// Indexs from options.
+        /// </summary>
+        /// <returns>The from options.</returns>
         int IndexFromOptions()
         {
             int index = 0;
@@ -437,7 +501,6 @@ namespace UnityAnalyticsHeatmap
 
         void SelectHeatmap(HeatPoint[] heatData)
         {
-            // Creating this data allows the renderer to use it on the next Update pass
             m_ViewModel.m_HeatData = heatData;
         }
     }
