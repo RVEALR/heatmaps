@@ -27,6 +27,17 @@ namespace UnityAnalyticsHeatmap
         internal static string k_RemapOptionIndexKey = "UnityAnalyticsHeatmapRemapOptionIndexKey";
         internal static string k_RemapColorFieldKey = "UnityAnalyticsHeatmapRemapColorFieldKey";
         internal static string k_PercentileKey = "UnityAnalyticsHeatmapRemapPercentileKey";
+
+        internal static string k_SeparateUsersKey = "UnityAnalyticsHeatmapAggregationAggregateUserIDs";
+
+        internal static string k_SmoothSpaceOptionKey = "UnityAnalyticsHeatmapSmoothSpaceOptionKey";
+        internal static string k_SmoothSpaceKey = "UnityAnalyticsHeatmapSmoothSpaceKey";
+
+        internal static string k_SmoothRotationOptionKey = "UnityAnalyticsHeatmapSmoothRotationOptionKey";
+        internal static string k_SmoothRotationKey = "UnityAnalyticsHeatmapSmoothRotationKey";
+
+        internal static string k_SmoothTimeOptionKey = "UnityAnalyticsHeatmapSmoothTimeOptionKey";
+        internal static string k_SmoothTimeKey = "UnityAnalyticsHeatmapSmoothTimeKey";
     }
 
 
@@ -270,6 +281,84 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
+        public bool separateUsers
+        {
+            get {
+                return m_Settings.separateUsers;
+            }
+            set {
+                m_Settings.separateUsers = value;
+                EditorPrefs.SetBool(HeatmapsInspectorSettingsKeys.k_SeparateUsersKey, m_Settings.separateUsers);
+            }
+        }
+
+        public int smoothSpaceOption
+        {
+            get {
+                return m_Settings.smoothSpaceOption;
+            }
+            set {
+                m_Settings.smoothSpaceOption = value;
+                EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_SmoothSpaceOptionKey, m_Settings.smoothSpaceOption);
+            }
+        }
+
+        public float smoothSpace
+        {
+            get {
+                return m_Settings.smoothSpace;
+            }
+            set {
+                m_Settings.smoothSpace = value;
+                EditorPrefs.SetFloat(HeatmapsInspectorSettingsKeys.k_SmoothSpaceKey, m_Settings.smoothSpace);
+            }
+        }
+
+
+        public int smoothRotationOption
+        {
+            get {
+                return m_Settings.smoothRotationOption;
+            }
+            set {
+                m_Settings.smoothRotationOption = value;
+                EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_SmoothRotationOptionKey, m_Settings.smoothRotationOption);
+            }
+        }
+
+        public float smoothRotation
+        {
+            get {
+                return m_Settings.smoothRotation;
+            }
+            set {
+                m_Settings.smoothRotation = value;
+                EditorPrefs.SetFloat(HeatmapsInspectorSettingsKeys.k_SmoothRotationKey, m_Settings.smoothRotation);
+            }
+        }
+
+        public int smoothTimeOption
+        {
+            get {
+                return m_Settings.smoothTimeOption;
+            }
+            set {
+                m_Settings.smoothTimeOption = value;
+                EditorPrefs.SetInt(HeatmapsInspectorSettingsKeys.k_SmoothTimeOptionKey, m_Settings.smoothTimeOption);
+            }
+        }
+
+        public float smoothTime
+        {
+            get {
+                return m_Settings.smoothTime;
+            }
+            set {
+                m_Settings.smoothTime = value;
+                EditorPrefs.SetFloat(HeatmapsInspectorSettingsKeys.k_SmoothTimeKey, m_Settings.smoothTime);
+            }
+        }
+
         void Dispatch()
         {
             if (SettingsChanged != null)
@@ -277,50 +366,6 @@ namespace UnityAnalyticsHeatmap
                 SettingsChanged(this, m_Settings);
             }
         }
-    }
-
-    public class HeatmapSettings : EventArgs
-    {
-        public HeatmapSettings()
-        {
-            heatmapInFront = EditorPrefs.GetBool(HeatmapsInspectorSettingsKeys.k_HeatmapInFrontKey);
-
-            heatmapOptionIndex = 0;
-            heatmapOptions = new List<int>();
-
-            maskFollowType = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_MaskFollowType);
-            maskRadius = EditorPrefs.GetFloat(HeatmapsInspectorSettingsKeys.k_MaskRadiusKey, 1.0f);
-            maskType = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_MaskTypeKey);
-
-            particleSize = EditorPrefs.GetFloat(HeatmapsInspectorSettingsKeys.k_ParticleSizeKey);
-            particleShape = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_ParticleShapeKey);
-            particleDirection = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_ParticleSizeKey);
-            particleProjection = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_ParticleProjectionKey);
-
-            remapDensity = EditorPrefs.GetBool(HeatmapsInspectorSettingsKeys.k_RemapColorKey);
-            remapColorField = EditorPrefs.GetString(HeatmapsInspectorSettingsKeys.k_RemapColorFieldKey);
-            remapOptionIndex = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_RemapOptionIndexKey);
-            remapPercentile = EditorPrefs.GetFloat(HeatmapsInspectorSettingsKeys.k_PercentileKey);
-        }
-
-        public bool heatmapInFront;
-
-        public int heatmapOptionIndex;
-        public List<int> heatmapOptions;
-
-        public int maskFollowType;
-        public float maskRadius;
-        public int maskType;
-
-        public float particleSize;
-        public int particleShape;
-        public int particleDirection;
-        public int particleProjection;
-
-        public bool remapDensity;
-        public string remapColorField;
-        public int remapOptionIndex;
-        public float remapPercentile;
     }
 }
 

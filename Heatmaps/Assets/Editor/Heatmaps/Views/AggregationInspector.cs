@@ -50,11 +50,6 @@ namespace UnityAnalyticsHeatmap
         float m_Time;
         float m_Rotation;
 
-        int m_SmoothSpaceToggle = HeatmapDataProcessor.SMOOTH_VALUE;
-        int m_SmoothTimeToggle = HeatmapDataProcessor.SMOOTH_UNION;
-        int m_SmoothRotationToggle = HeatmapDataProcessor.SMOOTH_UNION;
-
-        bool m_SeparateUsers = false;
         bool m_SeparateSessions = false;
         bool m_SeparatePlatform = false;
         bool m_SeparateDebug = false;
@@ -104,14 +99,7 @@ namespace UnityAnalyticsHeatmap
             m_DataPath = m_Processor.m_RawDataPath;
             m_EndDate = m_Processor.m_EndDate;
             m_StartDate = m_Processor.m_StartDate;
-            m_Space = m_Processor.m_Space;
-            m_Time = m_Processor.m_Time;
-            m_Rotation = m_Processor.m_Rotation;
-            m_SmoothSpaceToggle = m_Processor.m_SmoothSpaceToggle;
-            m_SmoothTimeToggle = m_Processor.m_SmoothTimeToggle;
-            m_SmoothRotationToggle = m_Processor.m_SmoothRotationToggle;
 
-            m_SeparateUsers = m_Processor.m_SeparateUsers;
             m_SeparatePlatform = m_Processor.m_SeparatePlatform;
             m_SeparateDebug = m_Processor.m_SeparateDebug;
             m_SeparateSessions = m_Processor.m_SeparateSessions;
@@ -170,13 +158,14 @@ namespace UnityAnalyticsHeatmap
                 using (new GUILayout.HorizontalScope())
                 {
                     // SPACE
-                    AnalyticsSmootherControl.SmootherControl(ref m_SmoothSpaceToggle,
-                        ref m_Space, "Space", "Divider to smooth out x/y/z data", SpaceChange, 2);
+                    AnalyticsSmootherControl.SmootherControl(m_ViewModel.smoothSpaceOption,
+                        m_ViewModel.smoothSpace, "Space", "Divider to smooth out x/y/z data", SpaceChange, 2);
                     // ROTATION
-                    AnalyticsSmootherControl.SmootherControl(ref m_SmoothRotationToggle,
-                        ref m_Rotation, "Rotation", "Divider to smooth out angular data", RotationChange);
+                    AnalyticsSmootherControl.SmootherControl(m_ViewModel.smoothRotationOption,
+                        m_ViewModel.smoothRotation, "Rotation", "Divider to smooth out angular data", RotationChange);
                     // TIME
-                    AnalyticsSmootherControl.SmootherControl(ref m_SmoothTimeToggle, ref m_Time,
+                    AnalyticsSmootherControl.SmootherControl(m_ViewModel.smoothTimeOption,
+                        m_ViewModel.smoothTime,
                         "Time", "Divider to smooth out passage of game time", TimeChange);
                 }
             }
@@ -185,7 +174,7 @@ namespace UnityAnalyticsHeatmap
             GUILayout.Label("Separate", EditorStyles.boldLabel);
             using (new GUILayout.HorizontalScope())
             {
-                m_SeparateUsers = EditorGUIBinding.Toggle(m_SeparateUsersContent, m_SeparateUsers, SeparateUsersChange);
+                m_ViewModel.separateUsers = EditorGUIBinding.Toggle(m_SeparateUsersContent, m_ViewModel.separateUsers, SeparateUsersChange);
                 m_SeparateSessions = EditorGUIBinding.Toggle(m_SeparateSessionsContent, m_SeparateSessions, SeparateSessionsChange);
             }
             using (new GUILayout.HorizontalScope())
@@ -216,6 +205,18 @@ namespace UnityAnalyticsHeatmap
                     }
                 }
             }
+        }
+
+        public void SetProfile(HeatmapSettings profile)
+        {
+            m_ViewModel.separateUsers = profile.separateUsers;
+
+            m_ViewModel.smoothSpaceOption = profile.smoothSpaceOption;
+            m_ViewModel.smoothSpace = profile.smoothSpace;
+            m_ViewModel.smoothRotationOption = profile.smoothRotationOption;
+            m_ViewModel.smoothRotation = profile.smoothRotation;
+            m_ViewModel.smoothTimeOption = profile.smoothTimeOption;
+            m_ViewModel.smoothTime = profile.smoothTime;
         }
 
         void UseCustomDataPathChange(bool value)
@@ -283,28 +284,28 @@ namespace UnityAnalyticsHeatmap
 
         void SpaceChange(int option, float value)
         {
-            m_Processor.m_SmoothSpaceToggle = option;
-            m_Processor.m_Space = value;
+            m_ViewModel.smoothSpaceOption = option;
+            m_ViewModel.smoothSpace = value;
             ScheduleFetch();
         }
 
         void RotationChange(int option, float value)
         {
-            m_Processor.m_Rotation = value;
-            m_Processor.m_SmoothRotationToggle = option;
+            m_ViewModel.smoothRotationOption = option;
+            m_ViewModel.smoothRotation = value;
             ScheduleFetch();
         }
 
         void TimeChange(int option, float value)
         {
-            m_Processor.m_Time = value;
-            m_Processor.m_SmoothTimeToggle = option;
+            m_ViewModel.smoothTimeOption = option;
+            m_ViewModel.smoothTime = value;
             ScheduleFetch();
         }
 
         void SeparateUsersChange(bool value)
         {
-            m_Processor.m_SeparateUsers = value;
+            m_ViewModel.separateUsers = value;
             ScheduleFetch();
         }
 

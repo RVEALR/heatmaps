@@ -36,8 +36,23 @@ public class Heatmapper : EditorWindow
     bool m_ShowAggregate = false;
     bool m_ShowRender = false;
     bool m_IsPlayMode = false;
+    bool m_ShowProfiles = false;
 
     Vector2 m_ScrollPosition;
+
+
+    GUIContent[] m_ProfileOptions = new GUIContent[]{
+        new GUIContent("Static"),
+        new GUIContent("Dynamic"),
+        new GUIContent("Heading"),
+        new GUIContent("Interaction :)"),
+        new GUIContent("Interaction :("),
+        new GUIContent("Orient :)"),
+        new GUIContent("Orient :("),
+        new GUIContent("VR :)"),
+        new GUIContent("VR :(")
+    };
+    HeatmapSettings[] m_Profiles;
 
     void OnEnable()
     {
@@ -48,6 +63,20 @@ public class Heatmapper : EditorWindow
         m_AggregationView = AggregationInspector.Init(m_Processor);
         m_Processor.RestoreSettings();
         m_AggregationView.OnEnable();
+
+
+
+        m_Profiles = new HeatmapSettings[]{
+            new PresentationSettingsStatic(),
+            new PresentationSettingsDynamic(),
+            new PresentationSettingsHeading(),
+            new PresentationSettingsInteractionGood(),
+            new PresentationSettingsInteractionBad(),
+            new PresentationSettingsOrientGood(),
+            new PresentationSettingsOrientBad(),
+            new PresentationSettingsVRGood(),
+            new PresentationSettingsVRBad()
+        };
     }
 
     void OnDisable()
@@ -107,6 +136,23 @@ public class Heatmapper : EditorWindow
                 if (m_ShowRender && m_RenderView != null)
                 {
                     m_RenderView.OnGUI();
+                }
+            }
+
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                m_ShowProfiles = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), m_ShowProfiles, "Profiles", true);
+                if (m_ShowProfiles)
+                {
+                    int profile = -1;
+                    profile = GUILayout.SelectionGrid(profile, m_ProfileOptions, 3);
+                    if (profile > -1)
+                    {
+                        m_Profiles[profile].OnEnable();
+                        m_RenderView.SetProfile(m_Profiles[profile]);
+                        m_AggregationView.SetProfile(m_Profiles[profile]);
+                        SystemReset();
+                    }
                 }
             }
         }

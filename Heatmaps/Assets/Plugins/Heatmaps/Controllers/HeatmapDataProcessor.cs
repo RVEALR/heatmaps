@@ -28,7 +28,7 @@ namespace UnityAnalyticsHeatmap
         const string k_SmoothTimeKey = "UnityAnalyticsHeatmapAggregationAggregateTime";
         const string k_SmoothRotationKey = "UnityAnalyticsHeatmapAggregationAggregateRotation";
 
-        const string k_SeparateUsersKey = "UnityAnalyticsHeatmapAggregationAggregateUserIDs";
+
         const string k_SeparateSessionKey = "UnityAnalyticsHeatmapAggregationAggregateSessionIDs";
         const string k_SeparateDebugKey = "UnityAnalyticsHeatmapAggregationAggregateDebug";
         const string k_SeparatePlatformKey = "UnityAnalyticsHeatmapAggregationAggregatePlatform";
@@ -97,84 +97,6 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        int _smoothSpaceToggle;
-        public int m_SmoothSpaceToggle
-        {
-            get{
-                return _smoothSpaceToggle;
-            }
-            set{
-                _smoothSpaceToggle = value;
-                EditorPrefs.SetInt(k_SmoothSpaceKey, _smoothSpaceToggle);
-            }
-        }
-        float _space;
-        public float m_Space
-        {
-            get{
-                return _space;
-            }
-            set{
-                _space = value;
-                EditorPrefs.SetFloat(k_SpaceKey, _space);
-            }
-        }
-        int _smoothRotationToggle;
-        public int m_SmoothRotationToggle
-        {
-            get {
-                return _smoothRotationToggle;
-            }
-            set {
-                _smoothRotationToggle = value;
-                EditorPrefs.SetInt(k_SmoothRotationKey, _smoothRotationToggle);
-            }
-        }
-        float _rotation;
-        public float m_Rotation
-        {
-            get {
-                return _rotation;
-            }
-            set {
-                _rotation = value;
-                EditorPrefs.SetFloat(k_RotationKey, _rotation);
-            }
-        }
-        int _smoothTimeToggle;
-        public int m_SmoothTimeToggle
-        {
-            get {
-                return _smoothTimeToggle;
-            }
-            set {
-                _smoothTimeToggle = value;
-                EditorPrefs.SetInt(k_SmoothTimeKey, _smoothTimeToggle);
-            }
-        }
-        float _time;
-        public float m_Time
-        {
-            get {
-                return _time;
-            }
-            set {
-                _time = value;
-                EditorPrefs.SetFloat(k_KeyToTime, _time);
-            }
-        }
-
-        bool _separateUsers = false;
-        public bool m_SeparateUsers
-        {
-            get{
-                return _separateUsers;
-            }
-            set{
-                _separateUsers = value;
-                EditorPrefs.SetBool(k_SeparateUsersKey, _separateUsers);
-            }
-        }
         bool _separateSessions = false;
         public bool m_SeparateSessions{
             get{
@@ -270,15 +192,6 @@ namespace UnityAnalyticsHeatmap
             m_EndDate = String.Format("{0:yyyy-MM-dd}", DateTime.UtcNow);
             m_StartDate = String.Format("{0:yyyy-MM-dd}", DateTime.UtcNow.Subtract(new TimeSpan(5, 0, 0, 0)));
 
-            // Restore other options
-            m_Space = EditorPrefs.GetFloat(k_SpaceKey) == 0 ? k_DefaultSpace : EditorPrefs.GetFloat(k_SpaceKey);
-            m_Time = EditorPrefs.GetFloat(k_KeyToTime) == 0 ? k_DefaultTime : EditorPrefs.GetFloat(k_KeyToTime);
-            m_Rotation = EditorPrefs.GetFloat(k_RotationKey) == 0 ? k_DefaultRotation : EditorPrefs.GetFloat(k_RotationKey);
-            m_SmoothSpaceToggle = EditorPrefs.GetInt(k_SmoothSpaceKey);
-            m_SmoothTimeToggle = EditorPrefs.GetInt(k_SmoothTimeKey);
-            m_SmoothRotationToggle = EditorPrefs.GetInt(k_SmoothRotationKey);
-            m_SeparateUsers = EditorPrefs.GetBool(k_SeparateUsersKey);
-
             // Restore list of arbitrary separation fields
             string loadedArbitraryFields = EditorPrefs.GetString(k_ArbitraryFieldsKey);
             string[] arbitraryFieldsList;
@@ -346,7 +259,7 @@ namespace UnityAnalyticsHeatmap
             var groupOn = new List<string>(){ "eventName" };
 
             // userID is optional
-            if (m_SeparateUsers)
+            if (m_InspectorViewModel.separateUsers)
             {
                 aggregateOn.Add("userID");
                 groupOn.Add("userID");
@@ -376,9 +289,9 @@ namespace UnityAnalyticsHeatmap
             // Specify smoothing properties (must be a subset of aggregateOn)
             var smoothOn = new Dictionary<string, float>();
             // Smooth space
-            if (m_SmoothSpaceToggle == SMOOTH_VALUE || m_SmoothSpaceToggle == SMOOTH_NONE)
+            if (m_InspectorViewModel.smoothSpaceOption == SMOOTH_VALUE || m_InspectorViewModel.smoothSpaceOption == SMOOTH_NONE)
             {
-                float spaceSmoothValue = (m_SmoothSpaceToggle == SMOOTH_NONE) ? 0f : m_Space;
+                float spaceSmoothValue = (m_InspectorViewModel.smoothSpaceOption == SMOOTH_NONE) ? 0f : m_InspectorViewModel.smoothSpace;
                 smoothOn.Add("x", spaceSmoothValue);
                 smoothOn.Add("y", spaceSmoothValue);
                 smoothOn.Add("z", spaceSmoothValue);
@@ -387,17 +300,17 @@ namespace UnityAnalyticsHeatmap
                 smoothOn.Add("dz", spaceSmoothValue);
             }
             // Smooth rotation
-            if (m_SmoothRotationToggle == SMOOTH_VALUE || m_SmoothRotationToggle == SMOOTH_NONE)
+            if (m_InspectorViewModel.smoothRotationOption == SMOOTH_VALUE || m_InspectorViewModel.smoothRotationOption == SMOOTH_NONE)
             {
-                float rotationSmoothValue = (m_SmoothRotationToggle == SMOOTH_NONE) ? 0f : m_Rotation;
+                float rotationSmoothValue = (m_InspectorViewModel.smoothRotationOption == SMOOTH_NONE) ? 0f : m_InspectorViewModel.smoothRotation;
                 smoothOn.Add("rx", rotationSmoothValue);
                 smoothOn.Add("ry", rotationSmoothValue);
                 smoothOn.Add("rz", rotationSmoothValue);
             }
             // Smooth time
-            if (m_SmoothTimeToggle == SMOOTH_VALUE || m_SmoothTimeToggle == SMOOTH_NONE)
+            if (m_InspectorViewModel.smoothTimeOption == SMOOTH_VALUE || m_InspectorViewModel.smoothTimeOption == SMOOTH_NONE)
             {
-                float timeSmoothValue = (m_SmoothTimeToggle == SMOOTH_NONE) ? 0f : m_Time;
+                float timeSmoothValue = (m_InspectorViewModel.smoothTimeOption == SMOOTH_NONE) ? 0f : m_InspectorViewModel.smoothTime;
                 smoothOn.Add("t", timeSmoothValue);
             }
 

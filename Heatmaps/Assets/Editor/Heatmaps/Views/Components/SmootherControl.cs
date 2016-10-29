@@ -20,7 +20,7 @@ namespace UnityAnalyticsHeatmap
 
         public delegate void ChangeHandler(int toggler, float value);
 
-        public static void SmootherControl (ref int toggler, ref float value, 
+        public static void SmootherControl (int toggler, float value, 
             string label, string tooltip,  ChangeHandler change,
             int endIndex = -1)
         {

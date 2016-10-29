@@ -22,7 +22,7 @@ namespace UnityAnalyticsHeatmap
                 return value;
             }
             EditorGUI.BeginChangeCheck();
-            for(int a = 0; a < lists.Count; a++)
+            for(int a = 0; a < value.Count; a++)
             {
                 var listArray = lists[a].ToArray();
                 value[a] = EditorGUILayout.Popup(value[a], listArray);

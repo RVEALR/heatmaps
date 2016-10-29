@@ -360,6 +360,19 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
+        public void SetProfile(HeatmapSettings profile)
+        {
+            m_ViewModel.heatmapInFront = profile.heatmapInFront;
+
+            m_ViewModel.maskFollowType = profile.maskFollowType;
+            m_ViewModel.maskRadius = profile.maskRadius;
+            m_ViewModel.maskType = profile.maskType;
+            m_ViewModel.particleSize = profile.particleSize;
+            m_ViewModel.particleShape = profile.particleShape;
+            m_ViewModel.particleProjection = profile.particleProjection;
+            m_ViewModel.particleDirection = profile.particleDirection;
+        }
+
         public void SetLimits(HeatPoint[] points)
         {
             float maxDensity = 0;
