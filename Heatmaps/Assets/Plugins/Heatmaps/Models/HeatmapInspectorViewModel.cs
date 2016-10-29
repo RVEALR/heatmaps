@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using System.Linq;
+using System.Timers;
 
 namespace UnityAnalyticsHeatmap
 {
@@ -359,11 +360,21 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
+        bool m_Changed = false;
         void Dispatch()
         {
-            if (SettingsChanged != null)
+            m_Changed = true;
+        }
+
+        public void Dispatch(bool value)
+        {
+            if (m_Changed)
             {
-                SettingsChanged(this, m_Settings);
+                m_Changed = false;
+                if (SettingsChanged != null)
+                {
+                    SettingsChanged(this, m_Settings);
+                }
             }
         }
     }

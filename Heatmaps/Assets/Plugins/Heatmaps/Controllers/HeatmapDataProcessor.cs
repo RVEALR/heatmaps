@@ -404,7 +404,7 @@ namespace UnityAnalyticsHeatmap
             return retv;
         }
 
-        public void SelectList()
+        void SelectList()
         {
             m_InspectorViewModel.heatmapOptionIndex = IndexFromOptions();
             string key = BuildKey();

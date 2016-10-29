@@ -473,6 +473,7 @@ namespace UnityAnalyticsHeatmap
                     }
                 }
             }
+            m_ViewModel.Dispatch(true);
         }
 
         void UpdateTime()
