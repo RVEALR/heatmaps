@@ -265,8 +265,8 @@ namespace UnityAnalyticsHeatmap
             {
                 return false;
             }
-            var now = DateTime.UtcNow;
-            var today = new DateTime(now.Year, now.Month, now.Day + 1);
+            // Midnight tonight
+            var today = DateTime.Today.AddDays(1).ToUniversalTime();
             return startDate < endDate && endDate <= today;
         }
 
