@@ -102,6 +102,7 @@ namespace UnityAnalyticsHeatmap
         private GUILayoutOption itemWidth;
 
         private static GUIStyle fieldStyle;
+        private static GUIStyle currentButtonStyle;
         private static GUIStyle dateStyle;
         private static RectOffset dateFieldRectOffset;
 
@@ -126,6 +127,12 @@ namespace UnityAnalyticsHeatmap
             {
                 fieldStyle = new GUIStyle();
                 fieldStyle.alignment = TextAnchor.MiddleCenter;
+
+                currentButtonStyle = new GUIStyle("Button");
+                currentButtonStyle.fontStyle = FontStyle.Bold;
+                var normalStyle = new GUIStyleState();
+                normalStyle.textColor = Color.red;
+                currentButtonStyle.normal = normalStyle;
 
                 dateStyle = new GUIStyle();
                 dateStyle.alignment = TextAnchor.MiddleCenter;
@@ -174,11 +181,14 @@ namespace UnityAnalyticsHeatmap
                             }
                             else if (dt == model.m_Date)
                             {
-                                EditorGUILayout.LabelField(dt.ToString(), fieldStyle, itemWidth);
+                                if (GUILayout.Button(dt.ToString(), currentButtonStyle, itemWidth))
+                                {
+                                    model.m_Date = dt;
+                                    doCommit = true;
+                                }
                             }
                             else if (GUILayout.Button(dt.ToString(), itemWidth))
                             {
-                                //TODO: Commit the new date
                                 model.m_Date = dt;
                                 doCommit = true;
                             }
