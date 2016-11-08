@@ -44,13 +44,13 @@ public class Heatmapper : EditorWindow
     GUIContent[] m_ProfileOptions = new GUIContent[]{
         new GUIContent("Static"),
         new GUIContent("Dynamic"),
-        new GUIContent("Heading"),
-        new GUIContent("Interaction :)"),
-        new GUIContent("Interaction :("),
-        new GUIContent("Orient :)"),
-        new GUIContent("Orient :("),
-        new GUIContent("VR :)"),
-        new GUIContent("VR :(")
+        new GUIContent("Aggregate"),
+        new GUIContent("Interaction 1"),
+        new GUIContent("Interaction 2"),
+        new GUIContent("Orient 1"),
+        new GUIContent("Orient 2"),
+        new GUIContent("VR 1"),
+        new GUIContent("VR 2")
     };
     HeatmapSettings[] m_Profiles;
 

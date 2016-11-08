@@ -9,11 +9,11 @@ namespace UnityAnalyticsHeatmap
         {
             base.OnEnable();
 
-            smoothSpaceOption = 0;
+            smoothSpaceOption = 1;
             smoothSpace = 1f;
-            smoothRotationOption  = 0;
-            smoothRotation = 90f;
-            smoothTimeOption = 2;
+            smoothRotationOption  = 1;
+            smoothRotation = 1f;
+            smoothTimeOption = 1;
 
             separateUsers = true;
 
