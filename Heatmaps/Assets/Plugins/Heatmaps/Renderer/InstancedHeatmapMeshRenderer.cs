@@ -351,9 +351,11 @@ public class InstancedHeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             {
                 Matrix4x4[] matrixList = m_Matrices[a];
                 MaterialPropertyBlock prop = m_Properties[a];
+                #if UNITY_5_5
                 Graphics.DrawMeshInstanced(m_Mesh, 0, m_Material,
                     matrixList, matrixList.Length, prop,
                     UnityEngine.Rendering.ShadowCastingMode.Off, false);
+                #endif
             }
         }
     }

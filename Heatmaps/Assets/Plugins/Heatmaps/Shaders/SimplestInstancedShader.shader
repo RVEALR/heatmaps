@@ -1,3 +1,5 @@
+// Upgrade NOTE: replaced 'UNITY_INSTANCE_ID' with 'UNITY_VERTEX_INPUT_INSTANCE_ID'
+
 Shader "Heatmaps/Particles/SimplestInstancedShader" {
 	Properties
     {
@@ -23,13 +25,13 @@ Shader "Heatmaps/Particles/SimplestInstancedShader" {
             struct appdata
             {
                 float4 vertex : POSITION;
-                UNITY_INSTANCE_ID
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct v2f
             {
                 float4 vertex : SV_POSITION;
-                UNITY_INSTANCE_ID
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             UNITY_INSTANCING_CBUFFER_START (MyProperties)
