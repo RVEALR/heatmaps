@@ -320,7 +320,7 @@ namespace UnityAnalyticsHeatmap
                 json += Quotify(kv.Key) + ":" + Quotify(kv.Value.ToString());
                 json += ",";
             }
-            json += Quotify("unity.name") + ":" + Quotify(eventName) + "}\n";
+            json += Quotify("unity.name") + ":" + Quotify(eventName) + "}";
             return json;
         }
 
