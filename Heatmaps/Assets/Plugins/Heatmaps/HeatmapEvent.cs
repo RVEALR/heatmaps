@@ -67,14 +67,19 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        /// <summary>
-        /// Send the event with position and an optional dictionary.
-        /// </summary>
-        /// Note that Vector2 will implicitly convert to Vector3
-        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 v, Dictionary<string, object> options = null)
+       /// <summary>
+       /// Send the event with position and an optional dictionary.
+       /// </summary>
+       /// <param name="eventName">Event name.</param>
+       /// <param name="v">V.</param>
+       /// <param name="options">Options.</param>
+       /// <param name="originID">Origin I.</param>
+        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 v,
+            Dictionary<string, object> options = null, string originID = "")
         {
             AddXY(v.x, v.y);
             AddZ(v.z);
+            AddOriginID(originID);
             AddOptions(options);
             return Commit(eventName);
         }
@@ -83,11 +88,13 @@ namespace UnityAnalyticsHeatmap
         /// Send the event with position, time and an optional dictionary.
         /// </summary>
         /// Note that Vector2 will implicitly convert to Vector3
-        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 v, float time, Dictionary<string, object> options = null)
+        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 v, float time,
+            Dictionary<string, object> options = null, string originID = "")
         {
             AddXY(v.x, v.y);
             AddZ(v.z);
             AddTime(time);
+            AddOriginID(originID);
             AddOptions(options);
             return Commit(eventName);
         }
@@ -97,12 +104,14 @@ namespace UnityAnalyticsHeatmap
         /// </summary>
         /// Note that Vector2 will implicitly convert to Vector3.
         /// Note also that this variation is particularly suited to 2D environments
-        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 v, float time, float rotation, Dictionary<string, object> options = null)
+        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 v, float time, float rotation,
+            Dictionary<string, object> options = null, string originID = "")
         {
             AddXY(v.x, v.y);
             AddZ(v.z);
             s_Dictionary["rx"] = rotation;
             AddTime(time);
+            AddOriginID(originID);
             AddOptions(options);
             return Commit(eventName);
         }
@@ -110,11 +119,13 @@ namespace UnityAnalyticsHeatmap
         /// <summary>
         /// Send the event with position, rotation and an optional dictionary.
         /// </summary>
-        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Transform trans, Dictionary<string, object> options = null)
+        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Transform trans,
+            Dictionary<string, object> options = null, string originID = "")
         {
             AddXY(trans.position.x, trans.position.y);
             AddZ(trans.position.z);
             AddRotation(trans.rotation.eulerAngles);
+            AddOriginID(originID);
             AddOptions(options);
             return Commit(eventName);
         }
@@ -122,12 +133,14 @@ namespace UnityAnalyticsHeatmap
         /// <summary>
         /// Send the event with position, rotation, time and an optional dictionary.
         /// </summary>
-        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Transform trans, float time, Dictionary<string, object> options = null)
+        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Transform trans, float time,
+            Dictionary<string, object> options = null, string originID = "")
         {
             AddXY(trans.position.x, trans.position.y);
             AddZ(trans.position.z);
             AddRotation(trans.rotation.eulerAngles);
             AddTime(time);
+            AddOriginID(originID);
             AddOptions(options);
             return Commit(eventName);
         }
@@ -135,11 +148,13 @@ namespace UnityAnalyticsHeatmap
         /// <summary>
         /// Send the event with position, rotation and an optional dictionary.
         /// </summary>
-        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 position, Quaternion q, Dictionary<string, object> options = null)
+        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 position, Quaternion q,
+            Dictionary<string, object> options = null, string originID = "")
         {
             AddXY(position.x, position.y);
             AddZ(position.z);
             AddRotation(q.eulerAngles);
+            AddOriginID(originID);
             AddOptions(options);
             return Commit(eventName);
         }
@@ -147,12 +162,14 @@ namespace UnityAnalyticsHeatmap
         /// <summary>
         /// Send the event with position, rotation, time and an optional dictionary.
         /// </summary>
-        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 position, Quaternion q, float time, Dictionary<string, object> options = null)
+        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 position, Quaternion q, float time,
+            Dictionary<string, object> options = null, string originID = "")
         {
             AddXY(position.x, position.y);
             AddZ(position.z);
             AddRotation(q.eulerAngles);
             AddTime(time);
+            AddOriginID(originID);
             AddOptions(options);
             return Commit(eventName);
         }
@@ -160,11 +177,13 @@ namespace UnityAnalyticsHeatmap
         /// <summary>
         /// Send the event with position, destination and an optional dictionary.
         /// </summary>
-        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 v, Vector3 v1, Dictionary<string, object> options = null)
+        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 v, Vector3 v1,
+            Dictionary<string, object> options = null, string originID = "")
         {
             AddXY(v.x, v.y);
             AddZ(v.z);
             AddDestination(v1);
+            AddOriginID(originID);
             AddOptions(options);
             return Commit(eventName);
         }
@@ -172,12 +191,14 @@ namespace UnityAnalyticsHeatmap
         /// <summary>
         /// Send the event with position, destination, time and an optional dictionary.
         /// </summary>
-        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 v, Vector3 v1, float time, Dictionary<string, object> options = null)
+        public static analyticsResultNamespace.AnalyticsResult Send(string eventName, Vector3 v, Vector3 v1, float time,
+            Dictionary<string, object> options = null, string originID = "")
         {
             AddXY(v.x, v.y);
             AddZ(v.z);
             AddDestination(v1);
             AddTime(time);
+            AddOriginID(originID);
             AddOptions(options);
             return Commit(eventName);
         }
@@ -195,7 +216,8 @@ namespace UnityAnalyticsHeatmap
                 using (var writer = new StreamWriter(path, true))
                 {
                     s_SessionId = (String.IsNullOrEmpty(s_SessionId)) ? System.Guid.NewGuid().ToString() : s_SessionId;
-                    string evt = WriteEvent("Heatmap." + eventName, s_Dictionary, "TestDevice", s_SessionId, Application.platform.ToString(), Debug.isDebugBuild);
+                    double currentMilliseconds = Math.Floor((DateTime.UtcNow - UnityAnalytics.DateTimeUtils.s_Epoch).TotalMilliseconds);
+                    string evt = EventWriter.WriteEvent("Heatmap." + eventName, s_Dictionary, "TestDevice", s_SessionId, Application.platform.ToString(), currentMilliseconds, Debug.isDebugBuild);
                     writer.WriteLine(evt);
                 }
             }
@@ -212,8 +234,10 @@ namespace UnityAnalyticsHeatmap
         /// </summary>
         protected static void AddXY(float x, float y)
         {
-            s_Dictionary["x"] = x;
-            s_Dictionary["y"] = y;
+            if (x != 0)
+                s_Dictionary["x"] = x;
+            if (y != 0)
+                s_Dictionary["y"] = y;
         }
 
         /// <summary>
@@ -221,7 +245,8 @@ namespace UnityAnalyticsHeatmap
         /// </summary>
         protected static void AddZ(float z)
         {
-            s_Dictionary["z"] = z;
+            if (z != 0)
+                s_Dictionary["z"] = z;
         }
 
         /// <summary>
@@ -249,6 +274,12 @@ namespace UnityAnalyticsHeatmap
             s_Dictionary["dz"] = v.z;
         }
 
+        protected static void AddOriginID(string originID)
+        {
+            if (!string.IsNullOrEmpty(originID))
+                s_Dictionary["originID"] = originID;
+        }
+
         /// <summary>
         /// Convenience method for adding options to dict
         /// </summary>
@@ -261,72 +292,6 @@ namespace UnityAnalyticsHeatmap
                     s_Dictionary[entry.Key] = entry.Value;
                 }
             }
-        }
-
-        public static string WriteEvent(string eventName, Dictionary<string, object> parameters, string deviceId, string sessionId, string platform, bool isDebug = false)
-        {
-            double currentMilliseconds = Math.Floor((DateTime.UtcNow - UnityAnalytics.DateTimeUtils.s_Epoch).TotalMilliseconds);
-
-            string evt = "";
-            evt += currentMilliseconds + "\t";
-
-            // AppID
-            #if UNITY_5
-            evt += (string.IsNullOrEmpty(Application.cloudProjectId)) ? "1234-abcd-5678-efgh" : Application.cloudProjectId;
-            #else
-            evt += "1234-abcd-5678-efgh";
-            #endif
-            evt += "\t";
-
-            // Event Type
-            evt += "custom\t";
-
-            // User ID, Session ID
-            evt += deviceId + "\t";
-            evt += sessionId + "\t";
-
-            // Remote IP
-            evt += "1.1.1.1\t";
-
-            // Platform
-            evt += platform + "\t";
-
-            // SDK Version
-            evt += "5.3.4\t";
-
-            // IsDebug
-            evt += isDebug + "\t";
-
-            // User agent
-            evt += "Corridor%20Z/3 CFNetwork/758.2.8 Darwin/15.0.0\t";
-
-            // Submit time
-            evt += currentMilliseconds + "\t";
-
-            // Event Name
-            evt += eventName + "\t";
-
-            evt += WriteParams(eventName, parameters);
-
-            return evt;
-        }
-
-        static string WriteParams(string eventName, Dictionary<string, object> parameters)
-        {
-            string json = "{";
-
-            foreach(KeyValuePair<string, object> kv in parameters)
-            {
-                json += Quotify(kv.Key) + ":" + Quotify(kv.Value.ToString());
-                json += ",";
-            }
-            json += Quotify("unity.name") + ":" + Quotify(eventName) + "}";
-            return json;
-        }
-
-        static string Quotify(string value)
-        {
-            return "\"" + value + "\"";
         }
 
     }
