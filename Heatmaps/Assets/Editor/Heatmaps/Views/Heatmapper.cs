@@ -27,6 +27,7 @@ public class Heatmapper : EditorWindow
     // Views
     AggregationInspector m_AggregationView;
     HeatmapRendererInspector m_RenderView;
+    HeatmapProfilesInspector m_ProfileView;
 
     // Data handler
     HeatmapDataProcessor m_Processor;
@@ -41,18 +42,7 @@ public class Heatmapper : EditorWindow
     Vector2 m_ScrollPosition;
 
 
-    GUIContent[] m_ProfileOptions = new GUIContent[]{
-        new GUIContent("Static"),
-        new GUIContent("Dynamic"),
-        new GUIContent("Aggregate"),
-        new GUIContent("Interaction 1"),
-        new GUIContent("Interaction 2"),
-        new GUIContent("Orient 1"),
-        new GUIContent("Orient 2"),
-        new GUIContent("VR 1"),
-        new GUIContent("VR 2")
-    };
-    HeatmapSettings[] m_Profiles;
+
 
     void OnEnable()
     {
@@ -61,22 +51,10 @@ public class Heatmapper : EditorWindow
         m_RenderView = HeatmapRendererInspector.Init(this, m_Processor);
         m_RenderView.OnEnable();
         m_AggregationView = AggregationInspector.Init(m_Processor);
+        m_ProfileView = HeatmapProfilesInspector.Init(this);
+        m_ProfileView.OnEnable();
         m_Processor.RestoreSettings();
         m_AggregationView.OnEnable();
-
-
-
-        m_Profiles = new HeatmapSettings[]{
-            new PresentationSettingsStatic(),
-            new PresentationSettingsDynamic(),
-            new PresentationSettingsHeading(),
-            new PresentationSettingsInteractionGood(),
-            new PresentationSettingsInteractionBad(),
-            new PresentationSettingsOrientGood(),
-            new PresentationSettingsOrientBad(),
-            new PresentationSettingsVRGood(),
-            new PresentationSettingsVRBad()
-        };
     }
 
     void OnDisable()
@@ -142,16 +120,9 @@ public class Heatmapper : EditorWindow
             using (new EditorGUILayout.VerticalScope("box"))
             {
                 m_ShowProfiles = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), m_ShowProfiles, "Profiles", true);
-                if (m_ShowProfiles)
+                if (m_ShowProfiles && m_ProfileView != null)
                 {
-                    int profile = -1;
-                    profile = GUILayout.SelectionGrid(profile, m_ProfileOptions, 3);
-                    if (profile > -1)
-                    {
-                        m_Profiles[profile].OnEnable();
-                        HeatmapInspectorViewModel.GetInstance().UpdateSettings(m_Profiles[profile]);
-                        SystemReset();
-                    }
+                    m_ProfileView.OnGUI();
                 }
             }
         }
@@ -189,7 +160,7 @@ public class Heatmapper : EditorWindow
         m_Processor.Fetch();
     }
 
-    void SystemReset()
+    public void SystemReset()
     {
         if (m_AggregationView != null) {
             m_AggregationView.SystemReset();

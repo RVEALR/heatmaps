@@ -2,8 +2,9 @@
 using UnityEditor;
 using System.Collections.Generic;
 using UnityAnalyticsHeatmap;
+using UnityEngine;
 
-public class HeatmapSettings : EventArgs
+public class HeatmapSettings : ScriptableObject
 {
     public virtual void OnEnable()
     {

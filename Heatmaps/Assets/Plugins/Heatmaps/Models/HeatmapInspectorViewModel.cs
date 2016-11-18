@@ -53,14 +53,14 @@ namespace UnityAnalyticsHeatmap
             {
                 if (_settings == null)
                 {
-                    _settings = new HeatmapSettings();
+                    _settings = ScriptableObject.CreateInstance<HeatmapSettings>();
                 }
                 return _settings;
             }
         }
 
-        public delegate void HeatmapSettingsChangeHandler(object sender, EventArgs e);
-        public event EventHandler<HeatmapSettings> SettingsChanged;
+        public delegate void HeatmapSettingsChangeHandler(object sender, HeatmapSettings e);
+        public HeatmapSettingsChangeHandler SettingsChanged;
 
         public static HeatmapInspectorViewModel GetInstance()
         {
@@ -387,8 +387,6 @@ namespace UnityAnalyticsHeatmap
 
         public bool OptionListIsNew{ get; set; }
 
-
-
         bool m_Changed = false;
         void Dispatch()
         {
@@ -409,6 +407,34 @@ namespace UnityAnalyticsHeatmap
                     SettingsChanged(this, m_Settings);
                 }
             }
+        }
+
+        public HeatmapSettings RecordSettings()
+        {
+            HeatmapSettings settings = ScriptableObject.CreateInstance<HeatmapSettings>();
+
+            settings.heatmapInFront = heatmapInFront;
+            settings.heatmapOptionIndex = heatmapOptionIndex;
+            settings.heatmapOptions = heatmapOptions;
+            settings.maskFollowType = maskFollowType;
+            settings.maskRadius = maskRadius;
+            settings.maskType = maskType;
+            settings.particleSize = particleSize;
+            settings.particleShape = particleShape;
+            settings.particleDirection = particleDirection;
+            settings.particleProjection = particleProjection;
+            settings.remapDensity = remapDensity;
+            settings.remapColorField = remapColorField;
+            settings.remapOptionIndex = remapOptionIndex;
+            settings.remapPercentile = remapPercentile;
+            settings.separateUsers = separateUsers;
+            settings.smoothSpaceOption = smoothSpaceOption;
+            settings.smoothSpace = smoothSpace;
+            settings.smoothRotationOption = smoothRotationOption;
+            settings.smoothRotation = smoothRotation;
+            settings.smoothTimeOption = smoothTimeOption;
+            settings.smoothTime = smoothTime;
+            return settings;
         }
     }
 }
