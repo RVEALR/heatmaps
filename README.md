@@ -1,5 +1,7 @@
 # Sign up
-http://response.unity3d.com/analytics-early-access-sign-up
+As of May 2017, users can activate heatmaps via the Configure page on the Analytics dashboard.
+
+DURING THE MONTH OF MAY ONLY, any user, regardless of license , can sign up!!! Go turn on heatmaps, people!
 
 # Introduction
 Heatmaps are an incredibly useful (and rather beautiful) visualization of spatial events. Where do players die? Where do they score kills? 
