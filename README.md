@@ -1,7 +1,7 @@
 # Sign up
 As of May 2017, users can activate heatmaps via the Configure page on the Analytics dashboard.
 
-DURING THE MONTH OF MAY ONLY, any user, regardless of license , can sign up!!! Go turn on heatmaps, people!
+DURING THE MONTHS OF MAY & JUNE ONLY, any user, regardless of license , can sign up!!! Go turn on heatmaps, people!
 
 # Introduction
 Heatmaps are an incredibly useful (and rather beautiful) visualization of spatial events. Where do players die? Where do they score kills? 
@@ -22,7 +22,7 @@ The Unity Analytics heatmap system is built on top of the Analytics Raw Data Exp
 2. Create a new, blank project.
 3. Double-click the installer and follow instructions to install this plug-in.
 4. Open Window > Unity Analytics > Raw Data.
-5. In the Raw Data Inspector, select 'Generate Test Data'. Click the 'Process' button.
+5. In the Raw Data Inspector, select 'Generate Test Data'. Click the 'Generate' button.
 6. Open Window > Unity Analytics > Heatmapper.
 7. Open both the 'Data' and 'Render' subpanels.
 8. Click 'Process' to see a test heatmap.
