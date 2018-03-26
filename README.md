@@ -17,7 +17,7 @@ The heatmap visualization and data generation system allow the recording, readin
 3. Render the heatmap with the Heatmapper Inspector. 
 
 ## Note
-Originally developed by ![Unity](https://bitbucket.org/Unity-Technologies/heatmaps), this package is intended to be used with any analytics software as long as the the data can be exported in the format that the heatmap renderer can visualize. Since the code is open source, we encourage other developers write the wrappers for data transformation.
+Originally developed by [Unity](https://bitbucket.org/Unity-Technologies/heatmaps), this package is intended to be used with any analytics software as long as the the data can be exported in the format that the heatmap renderer can visualize. Since the code is open source, we encourage other developers write the wrappers for data transformation.
 
 ### Quick start, local test data generation
 1. Download the installer.
