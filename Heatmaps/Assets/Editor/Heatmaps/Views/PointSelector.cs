@@ -10,7 +10,6 @@ public class PointSelector : Editor
 {
 
     Vector3 m_LabelPosition;
-    HeatmapSubmap m_Target;
     HeatPoint m_Point = new HeatPoint();
     int m_DisplayTime = 0;
     int m_MaxDisplayTime = 10;
@@ -23,19 +22,20 @@ public class PointSelector : Editor
 
     void OnEnable()
     {
-        m_Target = (HeatmapSubmap)target;
         m_BgStyle.normal.background = MakeTex((int)m_TooltipWidth, (int)m_TooltipHeight, new Color(0f, 0f, 0f, 0.5f));
         m_TextStyle.normal.textColor = Color.white;
         m_TextStyle.contentOffset = new Vector2(2f,2f);
+
+        SceneView.onSceneGUIDelegate += OnScene;
     }
 
-    void OnSceneGUI()
+    void OnDisable()
     {
-        if (m_Target.GetComponent<MeshCollider>() == null || m_Target.m_PointData == null)
-        {
-            return;
-        }
+        SceneView.onSceneGUIDelegate -= OnScene;
+    }
 
+    void OnScene(SceneView view)
+    {
         if (m_DisplayTime > 0)
         {
             m_DisplayTime --;
@@ -46,10 +46,8 @@ public class PointSelector : Editor
 
             Vector2 size = m_TextStyle.CalcSize(content) * 1.05f;
 
-
             float xPos = m_LabelPosition.x > Screen.width * .5f ? m_LabelPosition.x - size.x - 10f : m_LabelPosition.x + 10f;
             float yPos = m_LabelPosition.y > Screen.height * .5f ? m_LabelPosition.y - size.y - 10f : m_LabelPosition.y + 10f;
-
 
             GUILayout.BeginArea(new Rect(xPos, yPos, size.x, size.y), m_BgStyle);
             GUILayout.Label(content, m_TextStyle);
@@ -60,12 +58,17 @@ public class PointSelector : Editor
         {
             RaycastHit hit;
             Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
-            if (m_Target.GetComponent<MeshCollider>().Raycast(ray, out hit, float.MaxValue))
+            if (Physics.Raycast(ray, out hit, float.MaxValue))
             {
-                int idx = hit.triangleIndex / m_Target.m_TrianglesPerShape;
-                m_Point = m_Target.m_PointData[idx];
-                m_LabelPosition = Event.current.mousePosition;
-                m_DisplayTime = m_MaxDisplayTime;
+                var t = hit.collider.gameObject;
+                var s = t.GetComponent<HeatmapSubmap>();
+                if (s != null && s.m_PointData != null)
+                {
+                    int idx = hit.triangleIndex / s.m_TrianglesPerShape;
+                    m_Point = s.m_PointData[idx];
+                    m_LabelPosition = Event.current.mousePosition;
+                    m_DisplayTime = m_MaxDisplayTime;
+                }
             }
         }
     }
@@ -82,7 +85,8 @@ public class PointSelector : Editor
         text +=  " y: " + pt.destination.y;
         text +=  " z: " + pt.destination.z + "\n";
         text += "Time: " + pt.time + "\n";
-        text += "Density: " + pt.density;
+        string label = (String.IsNullOrEmpty(pt.densityLabel)) ? "Density" : pt.densityLabel;
+        text += label + ": " + pt.density;
         return text;
     }
 

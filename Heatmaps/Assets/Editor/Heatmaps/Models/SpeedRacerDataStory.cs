@@ -85,6 +85,7 @@ namespace UnityAnalyticsHeatmap
             double startSeconds = endSeconds - totalSeconds;
             double currentSeconds = startSeconds;
             double firstDate = currentSeconds;
+            int currentPoint = 0;
 
             Vector3 position = Vector3.zero, destination = Vector3.zero;
 
@@ -97,7 +98,9 @@ namespace UnityAnalyticsHeatmap
                     UpdateOval(ref position, theta);
                     for (int c = 0; c < eventCount; c++)
                     {
-                        
+                        Progress(currentPoint, totalSeconds);
+                        currentPoint ++;
+
                         speed = (Mathf.Abs(m_Radius - position.x)/m_Radius) * baseSpeed + UnityEngine.Random.Range(0.1f,5f);
                         theta += speed;
 
@@ -126,6 +129,7 @@ namespace UnityAnalyticsHeatmap
                     }
                 }
             }
+            EndProgress();
             retv.Add(firstDate, data);
             fileCount++;
             return retv;

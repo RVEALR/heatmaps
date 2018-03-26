@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System;
+using UnityEngine;
 
 public class TestCustomEvent : List<TestEventParam> {
     public string name = "Enter an event name";
@@ -54,84 +55,51 @@ public class TestCustomEvent : List<TestEventParam> {
 
     public string WriteEvent(int deviceId, int sessionId, double currentSeconds, string platform, bool isDebug = false)
     {
-        return WriteEvent("device" + deviceId + "-DDDD-DDDD", "session" + sessionId + "-SSSS-SSSS", currentSeconds, platform, isDebug);
+        Dictionary<string, object> dict = GenerateDict();
+        return EventWriter.WriteEvent(name, dict, "device" + deviceId + "-DDDD-DDDD", "session" + sessionId + "-SSSS-SSSS", platform, currentSeconds * 1000, isDebug) + "\n";
     }
 
-    public string WriteEvent(string deviceId, string sessionId, double currentSeconds, string platform, bool isDebug = false)
+    float m_ForceX = Mathf.Infinity;
+    float m_ForceY = Mathf.Infinity;
+    public string WriteEvent(int deviceId, int sessionId, double currentSeconds, string platform, float forceX, float forceY)
     {
-        double currentMilliseconds = currentSeconds * 1000;
-
-        string evt = "";
-        evt += currentMilliseconds + "\t";
-
-        // AppID
-        evt += "1234-abcd-5678-efgh\t";
-
-        // Event Type
-        evt += "custom\t";
-
-        // User ID, Session ID
-        evt += deviceId + "\t";
-        evt += sessionId + "\t";
-
-        // Remote IP
-        evt += "1.1.1.1\t";
-
-        // Platform
-        evt += platform + "\t";
-
-        // SDK Version
-        evt += "5.3.4\t";
-
-        // IsDebug
-        evt += isDebug + "\t";
-
-        // User agent
-        evt += "Corridor%20Z/3 CFNetwork/758.2.8 Darwin/15.0.0\t";
-
-        // Submit time
-        evt += currentMilliseconds + "\t";
-
-        // Event Name
-        evt += this.name + "\t";
-
-        evt += WriteParams();
-
-        return evt;
+        m_ForceX = forceX;
+        m_ForceY = forceY;
+        Dictionary<string, object> dict = GenerateDict();
+        return EventWriter.WriteEvent(name, dict, "device" + deviceId + "-DDDD-DDDD", "session" + sessionId + "-SSSS-SSSS", platform, currentSeconds * 1000, false) + "\n";
     }
 
-    string WriteParams()
+    Dictionary<string, object> GenerateDict()
     {
-        // Build the JSON
-        string evt = "{";
-
+        Dictionary<string, object> dict = new Dictionary<string, object>();
         for (int b = 0; b < this.Count; b++)
         {
             TestEventParam param = this[b];
-            evt += Quotify(param.name) + ":";
             switch (param.type)
             {
                 case TestEventParam.Str:
-                    evt += Quotify(param.strValue);
+                    dict[param.name] = param.strValue;
                     break;
                 case TestEventParam.Num:
                     float num = UnityEngine.Random.Range(param.min, param.max);
-                    evt += Quotify(num.ToString());
+                    if (param.name == "x" && m_ForceX != Mathf.Infinity)
+                    {
+                        num = m_ForceX;
+                    }
+                    else if (param.name == "y" && m_ForceY != Mathf.Infinity)
+                    {
+                        num = m_ForceY;
+                    }
+                    dict[param.name] = num;
                     break;
                 case TestEventParam.Bool:
                     bool boolean = UnityEngine.Random.Range(0f, 1f) > .5f;
-                    evt += Quotify(boolean.ToString());
+                    dict[param.name] = boolean;
                     break;
             }
-            evt += ",";
         }
-        evt += Quotify("unity.name") + ":" + Quotify(this.name) + "}\n";
-        return evt;
-    }
-
-    string Quotify(string value)
-    {
-        return "\"" + value +         "\"";
+        dict["unity.name"] = this.name;
+        return dict;
     }
 
     public void SetParam(string key, object value, object value2 = null)

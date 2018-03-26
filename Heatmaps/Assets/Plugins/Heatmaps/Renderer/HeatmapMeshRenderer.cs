@@ -13,6 +13,7 @@ using System.Linq;
 using UnityAnalyticsHeatmap;
 using UnityEngine;
 
+[ExecuteInEditMode]
 [RequireComponent(typeof(GradientContainer))]
 public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 {
@@ -21,6 +22,9 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     const int k_BeginRenderer = 1;
     const int k_RenderInProgress = 2;
     const int k_UpdateMaterials = 4;
+
+    const int k_SliceMasking = 0;
+    const int k_RadiusMasking = 1;
 
     // Unity limit of vectors per mesh
     const int k_VerticesPerMesh = 65000;
@@ -48,8 +52,14 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
     float m_HighY = 1f;
     float m_HighZ = 1f;
 
+    int m_MaskOption = k_SliceMasking;
+    float m_MaskRadius = 1.0f;
+    Vector3 m_MaskSource = Vector3.zero;
+
+    RenderProjection m_Projection = RenderProjection.FirstPerson;
+
     RenderShape m_RenderStyle = RenderShape.Cube;
-    RenderDirection m_RenderDirection = RenderDirection.YZ;
+    RenderDirection m_RenderDirection = RenderDirection.Billboard;
 
     Shader m_Shader;
     public Material[] m_Materials;
@@ -57,11 +67,24 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     int m_RenderState = k_NotRendering;
 
+    bool m_HeatmapInFront;
+
     List<GameObject> m_GameObjects = new List<GameObject>();
 
     void Start()
     {
-        m_Shader = Shader.Find("Heatmaps/Particles/AlphaBlend");
+        if (m_Materials == null || m_Materials.Length == 0)
+        {
+            CreateMaterials();
+        }
+        allowRender = true;
+    }
+
+    void CreateMaterials()
+    {
+        m_Shader = Shader.Find(m_HeatmapInFront ? "Heatmaps/Particles/AlwaysInFront" : "Heatmaps/Particles/AlphaBlend");
+        m_Materials = new Material[1];
+        m_Materials[0] = new Material(m_Shader);
     }
 
     public void UpdatePointData(HeatPoint[] newData, float newMaxDensity)
@@ -83,13 +106,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
 
     public void UpdateGradient(Gradient gradient)
     {
-        if (m_Materials == null || m_Materials.Length == 0)
-        {
-            m_Shader = Shader.Find("Heatmaps/Particles/AlphaBlend");
-            m_Materials = new Material[1];
-            m_Materials[0] = new Material(m_Shader);
-        }
-        if (gradient == null || !CompareGradients(gradient, m_Gradient))
+        if (gradient == null || !GradientUtils.CompareGradients(gradient, m_Gradient))
         {
             m_Gradient = gradient;
             m_RenderState = k_UpdateMaterials;
@@ -126,6 +143,39 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         if (highZ != m_HighZ)
         {
             m_HighZ = highZ;
+            m_RenderState = k_BeginRenderer;
+        }
+        if (m_MaskOption != k_SliceMasking)
+        {
+            m_MaskOption = k_SliceMasking;
+            m_RenderState = k_BeginRenderer;
+        }
+    }
+
+    public void UpdateRenderMask(float radius)
+    {
+        if (m_MaskOption != k_RadiusMasking || radius != m_MaskRadius)
+        {
+            m_MaskRadius = radius;
+            m_MaskOption = k_RadiusMasking;
+            m_RenderState = k_BeginRenderer;
+        }
+    }
+
+    public void UpdateCameraPosition(Vector3 pos)
+    {
+        if (Vector3.Equals(pos, m_MaskSource) == false)
+        {
+            m_MaskSource = pos;
+            m_RenderState = k_BeginRenderer;
+        }
+    }
+
+    public void UpdateProjection(RenderProjection projection)
+    {
+        if (projection != m_Projection)
+        {
+            m_Projection = projection;
             m_RenderState = k_BeginRenderer;
         }
     }
@@ -174,6 +224,24 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
+    public bool heatmapInFront {
+        get
+        {
+            return m_HeatmapInFront;
+        }
+
+        set {
+            if (value != m_HeatmapInFront)
+            {
+                m_HeatmapInFront = value;
+                CreateMaterials();
+                m_RenderState = k_UpdateMaterials;
+            }
+        }
+    }
+
+    public string remapLabel{ get; set; }
+
     public bool allowRender{ get; set; }
 
     public int currentPoints { get; set; }
@@ -200,6 +268,11 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
+    void Update()
+    {
+        RenderHeatmap();
+    }
+
     public void RenderHeatmap()
     {
         if (allowRender)
@@ -220,38 +293,7 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
                 case k_UpdateMaterials:
                     if (hasData())
                     {
-                        int pt = 0;         // cursor that increments each time we find a point in the time range
-                        int currentSubmap = 0;
-                        int oldSubmap = -1;
-                        int verticesPerShape = GetVecticesForShape();
-                        GameObject go = null;
-                        Material[] materials = null;
-                        for (int a = 0; a < m_Data.Length; a++)
-                        {
-                            if (m_Data[a].time >= m_StartTime && m_Data[a].time <= m_EndTime)
-                            {
-
-                                currentSubmap = (pt * verticesPerShape) / k_VerticesPerMesh;
-
-                                if (currentSubmap != oldSubmap)
-                                {
-                                    if (go != null && materials != null)
-                                    {
-                                        go.GetComponent<Renderer>().materials = materials;
-                                    }
-                                    go = m_GameObjects[currentSubmap];
-                                    materials = go.GetComponent<Renderer>().sharedMaterials;
-                                }
-                                materials = m_Materials;
-                                oldSubmap = currentSubmap;
-                                pt++;
-                            }
-                        }
-                        if (go != null && materials != null)
-                        {
-                            go.GetComponent<Renderer>().materials = materials;
-                        }
-
+                        UpdateMaterials();
                         CreatePoints();
                     }
                     break;
@@ -259,40 +301,109 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
+    void UpdateMaterials()
+    {
+        int pt = 0;         // cursor that increments each time we find a point in the time range
+        int currentSubmap = 0;
+        int oldSubmap = -1;
+        int verticesPerShape = RenderShapeMeshUtils.GetVecticesForShape(m_RenderStyle, m_Projection);
+        GameObject go = null;
+        Material[] materials = null;
+
+        for (int a = 0; a < m_Data.Length; a++)
+        {
+            if (m_Data[a].time >= m_StartTime && m_Data[a].time <= m_EndTime)
+            {
+                currentSubmap = (pt * verticesPerShape) / k_VerticesPerMesh;
+                if (currentSubmap != oldSubmap)
+                {
+                    if (go != null && materials != null)
+                    {
+                        go.GetComponent<Renderer>().materials = materials;
+                    }
+                    go = m_GameObjects[currentSubmap];
+                    materials = go.GetComponent<Renderer>().sharedMaterials;
+                }
+                materials = m_Materials;
+                oldSubmap = currentSubmap;
+                pt++;
+            }
+        }
+        if (go != null && materials != null)
+        {
+            go.GetComponent<Renderer>().materials = materials;
+        }
+    }
+
+    bool FilterPoint(HeatPoint pt)
+    {
+        if (pt.time < m_StartTime || pt.time > m_EndTime)
+        {
+            return false;
+        }
+
+        if (m_MaskOption == k_RadiusMasking)
+        {
+            return true;
+        }
+
+        return 
+            pt.position.x >= m_LowX && pt.position.x <= m_HighX &&
+            pt.position.y >= m_LowY && pt.position.y <= m_HighY &&
+            pt.position.z >= m_LowZ && pt.position.z <= m_HighZ;
+    }
+
     void CreatePoints()
     {
         if (hasData())
         {
+//            m_CollapseDensity = 0f;
+
             totalPoints = m_Data.Length;
             currentPoints = 0;
 
             var submaps = new List<List<HeatPoint>>();
             int currentSubmap = 0;
-            int verticesPerShape = GetVecticesForShape();
+            int verticesPerShape = RenderShapeMeshUtils.GetVecticesForShape(m_RenderStyle, m_Projection);
+
+            // Filter & Aggregate
+            Dictionary<Vector3, HeatPoint> collapsePoints = new Dictionary<Vector3, HeatPoint>();
+            List<HeatPoint> otherPoints = new List<HeatPoint>();
 
             for (int a = 0; a < m_Data.Length; a++)
             {
                 // FILTER FOR TIME & POSITION
                 var pt = m_Data[a];
-                if (pt.time >= m_StartTime && pt.time <= m_EndTime &&
-                    pt.position.x >= m_LowX && pt.position.x <= m_HighX &&
-                    pt.position.y >= m_LowY && pt.position.y <= m_HighY &&
-                    pt.position.z >= m_LowZ && pt.position.z <= m_HighZ)
+                if (FilterPoint(pt))
                 {
-                    currentPoints++;
-                    if (submaps.Count <= currentSubmap)
+                    if (m_MaskOption == k_RadiusMasking && m_Projection == RenderProjection.FirstPerson && IsOutsideRadius(pt))
                     {
-                        submaps.Add(new List<HeatPoint>());
+                        Aggregate(pt, collapsePoints);
                     }
-                    submaps[currentSubmap].Add(pt);
-                    currentSubmap = (currentPoints * verticesPerShape) / k_VerticesPerMesh;
+                    else
+                    {
+                        otherPoints.Add(pt);
+                    }
                 }
             }
+            HeatPoint[] dictData = collapsePoints.Values.ToArray();
+            HeatPoint[] filteredData = new HeatPoint[dictData.Length + otherPoints.Count];
 
-            if (currentPoints == 0)
+            dictData.CopyTo(filteredData, 0);
+            otherPoints.CopyTo(filteredData, dictData.Length);
+
+
+            // Arrange into submaps
+            for (int a = 0; a < filteredData.Length; a++)
             {
-                m_RenderState = k_NotRendering;
-                return;
+                var pt = filteredData[a];
+                currentPoints++;
+                if (submaps.Count <= currentSubmap)
+                {
+                    submaps.Add(new List<HeatPoint>());
+                }
+                submaps[currentSubmap].Add(pt);
+                currentSubmap = (currentPoints * verticesPerShape) / k_VerticesPerMesh;
             }
 
             int neededSubmaps = submaps.Count;
@@ -357,29 +468,39 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
             switch (m_RenderStyle)
             {
                 case RenderShape.Cube:
-                    vector3 = AddCubeVectorsToMesh(position.x, position.y, position.z);
+                    vector3 = RenderShapeMeshUtils.AddCubeVectorsToMesh(m_ParticleSize, position.x, position.y, position.z);
                     allVectors.Add(vector3);
-                    allTris.Add(AddCubeTrisToMesh(a * vector3.Length));
+                    allTris.Add(RenderShapeMeshUtils.AddCubeTrisToMesh(a * vector3.Length));
                     break;
                 case RenderShape.Arrow:
-                    vector3 = AddArrowVectorsToMesh(position, rotation);
-                    allVectors.Add(vector3);
-                    allTris.Add(AddArrowTrisToMesh(a * vector3.Length));
+                    if (m_MaskOption == k_RadiusMasking && m_Projection == RenderProjection.FirstPerson && IsOutsideRadius(submap[a]))
+                    {
+                        vector3 = RenderShapeMeshUtils.AddDiamondVectorsToMesh(m_ParticleSize, RenderDirection.Billboard, position, m_MaskSource);
+                        allVectors.Add(vector3);
+                        allTris.Add(RenderShapeMeshUtils.AddArrowTrisToMesh(a * vector3.Length, m_Projection));
+                    }
+                    else
+                    {
+                        vector3 = RenderShapeMeshUtils.AddArrowVectorsToMesh(m_ParticleSize, position, rotation, m_Projection);
+                        allVectors.Add(vector3);
+                        allTris.Add(RenderShapeMeshUtils.AddArrowTrisToMesh(a * vector3.Length, m_Projection));
+                    }
                     break;
                 case RenderShape.Square:
-                    vector3 = AddSquareVectorsToMesh(position.x, position.y, position.z);
+                    vector3 = RenderShapeMeshUtils.AddSquareVectorsToMesh(m_ParticleSize, m_RenderDirection, position, m_MaskSource);
                     allVectors.Add(vector3);
-                    allTris.Add(AddSquareTrisToMesh(a * vector3.Length));
+                    allTris.Add(RenderShapeMeshUtils.AddSquareTrisToMesh(a * vector3.Length));
                     break;
                 case RenderShape.Triangle:
-                    vector3 = AddTriVectorsToMesh(position.x, position.y, position.z);
+                    vector3 = RenderShapeMeshUtils.AddTriVectorsToMesh(m_ParticleSize, m_RenderDirection, position, m_MaskSource);
                     allVectors.Add(vector3);
-                    allTris.Add(AddTriTrisToMesh(a * vector3.Length));
+                    allTris.Add(RenderShapeMeshUtils.AddTriTrisToMesh(a * vector3.Length));
                     break;
                 case RenderShape.PointToPoint:
-                    vector3 = AddP2PVectorsToMesh(position, destination);
+                    var collapsed = m_MaskOption == k_RadiusMasking && m_Projection == RenderProjection.FirstPerson && IsOutsideRadius(submap[a]);
+                    vector3 = RenderShapeMeshUtils.AddP2PVectorsToMesh(m_ParticleSize, position, destination, collapsed);
                     allVectors.Add(vector3);
-                    allTris.Add(AddP2PTrisToMesh(a * vector3.Length));
+                    allTris.Add(RenderShapeMeshUtils.AddP2PTrisToMesh(a * vector3.Length, collapsed));
                     break;
             }
             allColors.Add(AddColorsToMesh(vector3.Length, submap[a]));
@@ -396,8 +517,8 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
         go.GetComponent<Renderer>().materials = materials;
         go.GetComponent<HeatmapSubmap>().m_PointData = submap;
-        go.GetComponent<HeatmapSubmap>().m_TrianglesPerShape = GetTrianglesForShape();
-        mesh.Optimize();
+        go.GetComponent<HeatmapSubmap>().m_TrianglesPerShape = RenderShapeMeshUtils.GetTrianglesForShape(m_RenderStyle, m_Projection);
+        //mesh.Optimize();
 
         if (m_Tips)
         {
@@ -410,341 +531,54 @@ public class HeatmapMeshRenderer : MonoBehaviour, IHeatmapRenderer
         }
     }
 
-    Color32[] AddColorsToMesh(int count, HeatPoint pt)
-    {
-        Color32[] colors = new Color32[count];
-        float pct = (pt.density/m_MaxDensity);
-        if (float.IsInfinity(pct)) {
-            pct = 0f;
-        }
-        Color color = PickGradientColor(pct);
-        for (int b = 0 ; b < count ; b++)
-        {
-            colors[b] = new Color (color.r, color.g, color.b, color.a) ; 
-        }
-        return colors;
-    }
-
-    Vector3[] AddCubeVectorsToMesh(float x, float y, float z)
-    {
-        float halfP = m_ParticleSize / 2;
-
-        var p0 = new Vector3(x - halfP, y - halfP, z - halfP);
-        var p1 = new Vector3(x + halfP, y - halfP, z - halfP);
-        var p2 = new Vector3(x + halfP, y + halfP, z - halfP);
-        var p3 = new Vector3(x - halfP, y + halfP, z - halfP);
-
-        var p4 = new Vector3(x - halfP, y - halfP, z + halfP);
-        var p5 = new Vector3(x + halfP, y - halfP, z + halfP);
-        var p6 = new Vector3(x + halfP, y + halfP, z + halfP);
-        var p7 = new Vector3(x - halfP, y + halfP, z + halfP);
-
-        return new Vector3[] { p0, p1, p2, p3, p4, p5, p6, p7 };
-    }
-
-    // Generate a cube mesh procedurally
-    int[] AddCubeTrisToMesh(int offset)
-    {
-        var tris = new int[]
-        {
-            0, 1, 2,    // bottom
-            0, 2, 3,
-            4, 6, 5,    // top
-            4, 7, 6,
-            1, 6, 2,    // right
-            1, 5, 6,
-
-            3, 4, 0,    // left
-            3, 7, 4,
-            2, 7, 3,    // back
-            2, 6, 7,
-            0, 4, 5,    // front
-            0, 5, 1
-        };
-        for (int a = 0; a < tris.Length; a++)
-        {
-            tris[a] += offset;
-        }
-        return tris;
-    }
-
-    Vector3[] AddArrowVectorsToMesh(Vector3 position, Vector3 rotation)
-    {
-        float thirdP = m_ParticleSize / 3f;
-
-        var p0 = new Vector3(-thirdP, 0f, 0f);
-        var p1 = new Vector3(-thirdP, 0f, -m_ParticleSize * 2f);
-        var p2 = new Vector3(-m_ParticleSize, 0f, -m_ParticleSize * 2f);
-        var p3 = new Vector3(0f, 0f, -m_ParticleSize * 3f);
-        var p4 = new Vector3(m_ParticleSize, 0f, -m_ParticleSize * 2f);
-        var p5 = new Vector3(thirdP, 0f, -m_ParticleSize * 2f);
-        var p6 = new Vector3(thirdP, 0f, 0f);
-
-        var v = new Vector3[] { p0, p1, p2, p3, p4, p5, p6 };
-
-        Quaternion q = Quaternion.Euler(rotation);
-
-        for (int a = 0; a < v.Length; a++)
-        {
-            Matrix4x4 m = Matrix4x4.TRS(position, q, Vector3.one);
-            v[a] = m.MultiplyPoint3x4(v[a]);
-        }
-        return v;
-    }
-
-    //Generate a pyramid mesh procedurally
-    int[] AddArrowTrisToMesh(int offset)
-    {
-        var tris = new int[]
-        {
-            0, 1, 5,    // left
-            6, 0, 5,    //right
-            3, 4, 2	    // head
-        };
-        for (int a = 0; a < tris.Length; a++)
-        {
-            tris[a] += offset;
-        }
-        return tris;
-    }
-
-    Vector3[] AddSquareVectorsToMesh(float x, float y, float z)
-    {
-        float halfP = m_ParticleSize / 2;
-
-        Vector3 p0, p1, p2, p3;
-
-        switch (m_RenderDirection)
-        {
-            case RenderDirection.YZ:
-                p0 = new Vector3(x, y - halfP, z - halfP);
-                p1 = new Vector3(x, y + halfP, z - halfP);
-                p2 = new Vector3(x, y + halfP, z + halfP);
-                p3 = new Vector3(x, y - halfP, z + halfP);
-                break;
-
-            case RenderDirection.XZ:
-                p0 = new Vector3(x - halfP, y, z - halfP);
-                p1 = new Vector3(x + halfP, y, z - halfP);
-                p2 = new Vector3(x + halfP, y, z + halfP);
-                p3 = new Vector3(x - halfP, y, z + halfP);
-                break;
-
-            default:
-                p0 = new Vector3(x - halfP, y - halfP, z);
-                p1 = new Vector3(x + halfP, y - halfP, z);
-                p2 = new Vector3(x + halfP, y + halfP, z);
-                p3 = new Vector3(x - halfP, y + halfP, z);
-                break;
-        }
-
-        return new Vector3[] { p0, p1, p2, p3 };
-    }
-
-    //Generate a procedural square
-    int[] AddSquareTrisToMesh(int offset)
-    {
-        var tris = new int[]
-        {
-            offset, offset + 2, offset + 1, // top
-            offset, offset + 3, offset + 2
-        };
-        return tris;
-    }
-
-    Vector3[] AddTriVectorsToMesh(float x, float y, float z)
-    {
-        float halfP = m_ParticleSize / 2;
-
-        Vector3 p0, p1, p2;
-
-        switch (m_RenderDirection)
-        {
-            case RenderDirection.YZ:
-                p0 = new Vector3(x, y - halfP, z - halfP);
-                p1 = new Vector3(x, y, z + halfP);
-                p2 = new Vector3(x, y + halfP, z - halfP);
-                break;
-
-            case RenderDirection.XZ:
-                p0 = new Vector3(x - halfP, y, z - halfP);
-                p1 = new Vector3(x, y, z + halfP);
-                p2 = new Vector3(x + halfP, y, z - halfP);
-                break;
-
-            default:
-                p0 = new Vector3(x - halfP, y - halfP, z);
-                p1 = new Vector3(x, y + halfP, z);
-                p2 = new Vector3(x + halfP, y - halfP, z);
-                break;
-        }
-        return new Vector3[] { p0, p1, p2 };
-    }
-
-    //Generate a procedural tri
-    int[] AddTriTrisToMesh(int offset)
-    {
-        var tris = new int[]
-        {
-            offset, offset + 2, offset + 1  // top
-        };
-        return tris;
-    }
-
-    Vector3[] AddP2PVectorsToMesh(Vector3 fromVector, Vector3 toVector)
-    {
-        Vector3 relativePos = toVector - fromVector;
-        Quaternion q = (relativePos == Vector3.zero) ? Quaternion.identity : Quaternion.LookRotation(relativePos);
-        float distance = Vector3.Distance(fromVector, toVector);
-
-        float arrowBaseZ = distance - (m_ParticleSize * 1.5f);
-        float halfP = m_ParticleSize * .5f;
-
-        // base
-        var p0 = new Vector3(-m_ParticleSize, 0f, -halfP);
-        var p1 = new Vector3(-m_ParticleSize, 0f, halfP);
-        var p2 = new Vector3(m_ParticleSize, 0f, halfP);
-        var p3 = new Vector3(m_ParticleSize, 0f, -halfP);
-        // stem
-        var p4 = new Vector3(-.5f * m_ParticleSize, 0f, -halfP);
-        var p5 = new Vector3(-.5f * m_ParticleSize, 0f, arrowBaseZ);
-        var p6 = new Vector3(.5f * m_ParticleSize, 0f, arrowBaseZ);
-        var p7 = new Vector3(.5f * m_ParticleSize, 0f, -halfP);
-        // arrow
-        var p8 = new Vector3(-m_ParticleSize, 0f, arrowBaseZ);
-        var p9 = new Vector3(0f, 0f, distance);
-        var p10 = new Vector3(m_ParticleSize, 0f, arrowBaseZ);
-        // head
-        var p11 = new Vector3(-m_ParticleSize, 0f, distance);
-        var p12 = new Vector3(-m_ParticleSize, 0f, distance + halfP);
-        var p13 = new Vector3(m_ParticleSize, 0f, distance + halfP);
-        var p14 = new Vector3(m_ParticleSize, 0f, distance);
-
-        var v = new Vector3[] { p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14 };
-        for (int a = 0; a < v.Length; a++)
-        {
-            Matrix4x4 m = Matrix4x4.TRS(fromVector, q, Vector3.one);
-            v[a] = m.MultiplyPoint3x4(v[a]);
-        }
-        return v;
-    }
-
-    //Generate a procedural P2P
-    int[] AddP2PTrisToMesh(int offset)
-    {
-        var tris = new int[]
-        {
-            // base
-            offset, offset + 1, offset + 2,
-            offset, offset + 2, offset + 3,
-            // stem
-            offset + 4, offset + 5, offset + 6,
-            offset + 4, offset + 6, offset + 7,
-            // arrow
-            offset + 8, offset + 9, offset + 10,
-            // head
-            offset + 11, offset + 12, offset + 13,
-            offset + 11, offset + 13, offset + 14
-        };
-        return tris;
-    }
-
     bool hasData()
     {
         return m_Data != null && m_Data.Length > 0;
     }
 
-    int GetVecticesForShape()
+//    float m_CollapseDensity = 0f;
+
+    HeatPoint Aggregate(HeatPoint pt, Dictionary<Vector3, HeatPoint> collapsePoints)
     {
-        // Verts is the number of UNIQUE vertices in each shape
-        int verts = 0;
-        switch (m_RenderStyle)
+        HeatPoint retv = pt;
+        if (collapsePoints.ContainsKey(pt.position))
         {
-            case RenderShape.Cube:
-                verts = 8;
-                break;
-            case RenderShape.Arrow:
-                verts = 7;
-                break;
-            case RenderShape.Square:
-                verts = 4;
-                break;
-            case RenderShape.Triangle:
-                verts = 3;
-                break;
-            case RenderShape.PointToPoint:
-                verts = 15;
-                break;
+            retv = collapsePoints[pt.position];
+            retv.density += pt.density;
         }
-        return verts;
+//        m_CollapseDensity = Mathf.Max(retv.density, m_MaxDensity);
+        collapsePoints[pt.position] = retv;
+        return retv;
     }
 
-    int GetTrianglesForShape()
-    {
-        // Verts is the number of UNIQUE vertices in each shape
-        int verts = 0;
-        switch (m_RenderStyle)
-        {
-            case RenderShape.Cube:
-                verts = 12;
-                break;
-            case RenderShape.Arrow:
-                verts = 3;
-                break;
-            case RenderShape.Square:
-                verts = 2;
-                break;
-            case RenderShape.Triangle:
-                verts = 1;
-                break;
-            case RenderShape.PointToPoint:
-                verts = 7;
-                break;
-        }
-        return verts;
-    }
 
-    Color PickGradientColor(float percent)
+    static Color s_GhostColor = new Color(0,0,0,.5f);
+    Color32[] AddColorsToMesh(int count, HeatPoint pt)
     {
-        return m_Gradient.Evaluate(percent);
-    }
+        Color32[] colors = new Color32[count];
 
-    public static bool CompareGradients(Gradient gradient, Gradient otherGradient)
-    {
-        if (gradient == null || otherGradient == null)
+        Color color;
+        if (m_MaskOption == k_RadiusMasking && IsOutsideRadius(pt))
         {
-            return false;
+            color = s_GhostColor;
         }
-
-        // Compare the lengths before checking actual colors and alpha components
-        if (gradient.colorKeys.Length != otherGradient.colorKeys.Length || gradient.alphaKeys.Length != otherGradient.alphaKeys.Length) {
-            return false;
-        }
-        
-        // Compare all the colors
-        for (int a = 0; a < gradient.colorKeys.Length; a++)
+        else
         {
-            // Test if the color and alpha is the same
-            GradientColorKey key = gradient.colorKeys[a];
-            GradientColorKey otherKey = otherGradient.colorKeys[a];
-            if (key.color != otherKey.color || key.time != otherKey.time) {
-                return false;
+            float pct = pt.density/m_MaxDensity;
+            if (float.IsInfinity(pct)) {
+                pct = 0f;
             }
+            color = GradientUtils.PickGradientColor(m_Gradient, pct);
         }
-        
-        // Compare all the alphas
-        for (int a = 0; a < gradient.alphaKeys.Length; a++)
+        for (int b = 0 ; b < count ; b++)
         {
-            // Test if the color and alpha is the same
-            GradientAlphaKey key = gradient.alphaKeys[a];
-            GradientAlphaKey otherKey = otherGradient.alphaKeys[a];
-            if (key.alpha != otherKey.alpha || key.time != otherKey.time)
-            {
-                return false;
-            }
+            colors[b] = new Color (color.r, color.g, color.b, color.a) ;
         }
-        
-        // They're the same
-        return true;
+        return colors;
+    }
+
+    bool IsOutsideRadius(HeatPoint pt)
+    {
+        return  Vector3.Distance(m_MaskSource, pt.position) > m_MaskRadius;
     }
 }

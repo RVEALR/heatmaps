@@ -34,6 +34,7 @@ using UnityEngine;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
+using UnityEditor;
 
 namespace UnityAnalytics
 {
@@ -48,6 +49,7 @@ namespace UnityAnalytics
         public const string GetJobsPath = APIPath + "{0}/rawdataexports";
 
         private static RawDataClient _instance;
+        public bool m_ManifestInvalidated = true;
 
         public static RawDataClient GetInstance()
         {
@@ -195,6 +197,7 @@ namespace UnityAnalytics
                     {
                         m_GetJobsCompletionHandler(true, list);
                     }
+                    m_ManifestInvalidated = false;
                 }
             }
             return list;
@@ -277,6 +280,7 @@ namespace UnityAnalytics
                 {
                     string responsebody =  client.DownloadString(url);
                     SaveFile(k_ManifestFileName, responsebody);
+                    m_ManifestInvalidated = true;
                     var list = GenerateList(responsebody);
                     TestFilesAreLocal(list);
                     if (m_GetJobsCompletionHandler != null)
@@ -305,6 +309,7 @@ namespace UnityAnalytics
                     str += ",";
             }
             str += "]";
+            m_ManifestInvalidated = true;
             return str;
         }
 

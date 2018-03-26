@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 
 
 namespace UnityAnalyticsHeatmap
@@ -56,6 +57,16 @@ namespace UnityAnalyticsHeatmap
             position.z = zr;
 
             return position;
+        }
+
+        protected void Progress(int currentPoint, int totalPoints)
+        {
+            EditorUtility.DisplayProgressBar("Generating points", "Please wait while we generate " + totalPoints + " points", (float)currentPoint/totalPoints);
+        }
+
+        protected void EndProgress()
+        {
+            EditorUtility.ClearProgressBar();
         }
     }
 }

@@ -9,18 +9,18 @@ using System.Collections;
 using UnityEditor;
 using UnityEngine;
 using System.Reflection;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace UnityAnalyticsHeatmap
 {
     public class HeatmapRendererInspector
     {
+        const string k_Renderer = "UnityAnalyticsHeatmapRenderer";
+
         const string k_StartTimeKey = "UnityAnalyticsHeatmapStartTime";
         const string k_EndTimeKey = "UnityAnalyticsHeatmapEndTime";
         const string k_PlaySpeedKey = "UnityAnalyticsHeatmapPlaySpeed";
-
-        const string k_ParticleSizeKey = "UnityAnalyticsHeatmapParticleSize";
-        const string k_ParticleShapeKey = "UnityAnalyticsHeatmapParticleShape";
-        const string k_ParticleDirectionKey = "UnityAnalyticsHeatmapParticleDirection";
 
         const string k_LowXKey = "UnityAnalyticsHeatmapLowX";
         const string k_HighXKey = "UnityAnalyticsHeatmapHighX";
@@ -32,15 +32,31 @@ namespace UnityAnalyticsHeatmap
         const string k_ShowTipsKey = "UnityAnalyticsHeatmapShowRendererTooltips";
 
         Heatmapper m_Heatmapper;
+        HeatmapInspectorViewModel m_ViewModel;
+
+        Type[] m_Renderers = new Type[]{ typeof(HeatmapMeshRenderer), typeof(InstancedHeatmapMeshRenderer) };
+        // Commenting out until we revisit the alternate renderer(s) - MAT (10/17/16)
+//        GUIContent[] m_RendererOptions = new GUIContent[]{ new GUIContent("Mesh Renderer"), new GUIContent("GPU Instanced Renderer (Requires 5.5+)") };
+        int m_RendererIndex = 0;
 
         float m_StartTime = 0f;
         float m_EndTime = 1f;
         float m_MaxTime = 1f;
 
-        float m_ParticleSize = 1f;
-        int m_ParticleShapeIndex = 0;
+
         GUIContent[] m_ParticleShapeOptions = new GUIContent[]{ new GUIContent("Cube"), new GUIContent("Arrow"), new GUIContent("Point To Point"), new GUIContent("Square"), new GUIContent("Triangle") };
         RenderShape[] m_ParticleShapeIds = new RenderShape[]{ RenderShape.Cube, RenderShape.Arrow, RenderShape.PointToPoint, RenderShape.Square, RenderShape.Triangle };
+
+
+        Vector3 m_MaskRadiusSource = Vector3.zero;
+        const int k_NoFollow = 0;
+        const int k_SceneFollow = 1;
+        const int k_MainCameraFollow = 2;
+        GUIContent[] m_FollowOptions = new GUIContent[]{
+            new GUIContent("None", "Follow Scene Camera"),
+            new GUIContent("Scene Cam", "Follow Scene Camera"),
+            new GUIContent("Main Cam", "Follow Main Camera")
+        };
 
         float m_LowX = 0f;
         float m_HighX = 1f;
@@ -51,9 +67,20 @@ namespace UnityAnalyticsHeatmap
         Vector3 m_LowSpace = Vector3.zero;
         Vector3 m_HighSpace = Vector3.one;
 
-        int m_ParticleDirectionIndex = 0;
-        GUIContent[] m_ParticleDirectionOptions = new GUIContent[]{ new GUIContent("YZ"), new GUIContent("XZ"), new GUIContent("XY") };
-        RenderDirection[] m_ParticleDirectionIds = new RenderDirection[]{ RenderDirection.YZ, RenderDirection.XZ, RenderDirection.XY };
+
+        GUIContent[] m_ParticleDirectionOptions = new GUIContent[]{
+            new GUIContent("Billboard"),
+            new GUIContent("YZ"),
+            new GUIContent("XZ"),
+            new GUIContent("XY")
+        };
+        RenderDirection[] m_ParticleDirectionIds = new RenderDirection[]{ RenderDirection.Billboard, RenderDirection.YZ, RenderDirection.XZ, RenderDirection.XY };
+
+        GUIContent[] m_ParticleProjectionOptions = new GUIContent[]{
+            new GUIContent("First Person"),
+            new GUIContent("Third Person")
+        };
+        RenderProjection[] m_ParticleProjectionIds = new RenderProjection[]{ RenderProjection.FirstPerson, RenderProjection.ThirdPerson };
 
         bool m_IsPlaying = false;
         float m_PlaySpeed = 1f;
@@ -72,27 +99,36 @@ namespace UnityAnalyticsHeatmap
         Texture2D lightSkinPauseIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/pause_light.png") as Texture2D;
         Texture2D lightSkinRewindIcon = EditorGUIUtility.Load("Assets/Editor/Heatmaps/Textures/rwd_light.png") as Texture2D;
 
-        private GUIContent m_ParticleSizeContent = new GUIContent("Size", "The display size of an individual data point");
-        private GUIContent m_ParticleShapeContent = new GUIContent("Shape", "The display shape of an individual data point");
-        private GUIContent m_ParticleDirectionContent = new GUIContent("Billboard plane", "For 2D shapes, the facing direction of an individual data point");
-        private GUIContent m_PlaySpeedContent = new GUIContent("Play Speed", "Speed at which playback occurs");
-        private GUIContent m_TipsContent = new GUIContent("Hot tips", "When enabled, see individual point information on rollover. Caution: can be costly! Also note, submap must be selected to see hot tips.");
-        private GUIContent m_TipsTextContent = new GUIContent("Points (displayed/total): 0 / 0");
-        private GUIContent m_RestartContent;
-        private GUIContent m_PlayContent;
-        private GUIContent m_PauseContent;
+        GUIContent m_ParticleSizeContent = new GUIContent("Size", "The display size of an individual data point");
+        GUIContent m_ParticleShapeContent = new GUIContent("Shape", "The display shape of an individual data point");
+        GUIContent m_ParticleDirectionContent = new GUIContent("Direction", "For 2D shapes, the facing direction of an individual data point");
+        GUIContent m_ParticleProjectionContent = new GUIContent("Projection", "For directional/2-point rendering, project in 1st or 3rd person");
+        GUIContent m_PlaySpeedContent = new GUIContent("Play speed", "Speed at which playback occurs");
+        GUIContent m_TipsContent = new GUIContent("Hot tips", "When enabled, see individual point information on rollover. Caution: can be costly! Also note, submap must be selected to see hot tips.");
+        GUIContent m_TipsTextContent = new GUIContent("Points (displayed/total): 0 / 0");
+        GUIContent m_RestartContent;
+        GUIContent m_PlayContent;
+        GUIContent m_PauseContent;
+        GUIContent m_MaskOptionContentRadius = new GUIContent("Radius", "Check this to filter data by position and radius");
+        GUIContent m_MaskOptionContentSlice = new GUIContent("Slice", "Check this to filter data by global x/y/x positions");
+        GUIContent m_MaskRadiusContent = new GUIContent("Radius", "Radius to draw");
 
+        void OnSettingsUpdate(object sender, HeatmapSettings settings)
+        {
+            m_Heatmapper.Repaint();
+        }
 
         public HeatmapRendererInspector()
         {
+            m_ViewModel = HeatmapInspectorViewModel.GetInstance();
+            m_ViewModel.SettingsChanged += OnSettingsUpdate;
+
+
+            m_RendererIndex = EditorPrefs.GetInt(k_Renderer, m_RendererIndex);
+
             m_StartTime = EditorPrefs.GetFloat(k_StartTimeKey, m_StartTime);
             m_EndTime = EditorPrefs.GetFloat(k_EndTimeKey, m_EndTime);
             m_PlaySpeed = EditorPrefs.GetFloat(k_PlaySpeedKey, m_PlaySpeed);
-
-            m_ParticleSize = EditorPrefs.GetFloat(k_ParticleSizeKey, m_ParticleSize);
-
-            m_ParticleShapeIndex = EditorPrefs.GetInt(k_ParticleShapeKey, m_ParticleShapeIndex);
-            m_ParticleDirectionIndex = EditorPrefs.GetInt(k_ParticleDirectionKey, m_ParticleDirectionIndex);
 
             m_LowX = EditorPrefs.GetFloat(k_LowXKey, m_LowX);
             m_LowY = EditorPrefs.GetFloat(k_LowYKey, m_LowY);
@@ -106,7 +142,7 @@ namespace UnityAnalyticsHeatmap
             var playIcon = lightSkinPlayIcon;
             var pauseIcon = lightSkinPauseIcon;
             var rwdIcon = lightSkinRewindIcon;
-            if (EditorPrefs.GetInt("UserSkin") == 1)
+            if (EditorGUIUtility.isProSkin)
             {
                 playIcon = darkSkinPlayIcon;
                 pauseIcon = darkSkinPauseIcon;
@@ -118,17 +154,54 @@ namespace UnityAnalyticsHeatmap
             m_PauseContent = new GUIContent(pauseIcon, "Pause");
         }
 
-        public static HeatmapRendererInspector Init(Heatmapper heatmapper)
+        public static HeatmapRendererInspector Init(Heatmapper heatmapper, HeatmapDataProcessor processor)
         {
             var inspector = new HeatmapRendererInspector();
             inspector.m_Heatmapper = heatmapper;
             return inspector;
         }
 
+        public void OnEnable()
+        {
+            SceneView.onSceneGUIDelegate += OnSceneGUI;
+        }
+
+        public void OnDisable()
+        {
+            SceneView.onSceneGUIDelegate -= OnSceneGUI;
+        }
+
+        void OnSceneGUI(SceneView view)
+        {
+            if (m_ViewModel.maskFollowType != k_NoFollow)
+            {
+                var originalSource = m_MaskRadiusSource;
+                m_MaskRadiusSource = (m_ViewModel.maskFollowType == k_MainCameraFollow) ? 
+                    Camera.main.transform.position : 
+                    view.camera.transform.position;
+                if (Vector3.Equals(originalSource, m_MaskRadiusSource) == false)
+                {
+                    m_Heatmapper.Repaint();
+                }
+            }
+        }
+
         public void OnGUI()
         {
-            using(new EditorGUILayout.VerticalScope("box"))
+            // Commenting out until we revisit the alternate renderer(s) - MAT (10/17/16)
+//            m_RendererIndex = EditorGUIBinding.Popup(m_RendererIndex, m_RendererOptions, RendererChange);
+            using (new EditorGUILayout.VerticalScope())
             {
+                EditorGUILayout.LabelField("Data set options", EditorStyles.boldLabel);
+                AnalyticsListGroup.ListGroup(m_ViewModel.heatmapOptions,
+                    m_ViewModel.heatmapOptionLabels, OptionsChange);
+            }
+
+            // PARTICLE SIZE/SHAPE
+            using(new EditorGUILayout.VerticalScope())
+            {
+                EditorGUILayout.LabelField("Render options", EditorStyles.boldLabel);
+
                 if (m_GameObject == null)
                 {
                     EditorGUILayout.LabelField("No heatmap. Can't show gradient.", EditorStyles.boldLabel);
@@ -136,47 +209,71 @@ namespace UnityAnalyticsHeatmap
                 else if (m_ColorGradient != null)
                 {
                     EditorGUI.BeginChangeCheck();
-                    EditorGUILayout.PropertyField(m_ColorGradient, false);
+                    using(new EditorGUILayout.HorizontalScope())
+                    {
+                        EditorGUILayout.PropertyField(m_ColorGradient, false);
+                        m_ViewModel.heatmapInFront = EditorGUILayout.Toggle("Always in front", m_ViewModel.heatmapInFront);
+                    }
                     if(EditorGUI.EndChangeCheck())
                     {
                         m_SerializedGradient.ApplyModifiedProperties();
                     }
                 }
+
+                m_ViewModel.particleSize = EditorGUILayout.FloatField(m_ParticleSizeContent, m_ViewModel.particleSize);
+
+                using(new EditorGUILayout.HorizontalScope())
+                {
+                    float lw = EditorGUIUtility.labelWidth;
+                    EditorGUIUtility.labelWidth = 40f;
+                    m_ViewModel.particleShape = EditorGUILayout.Popup(m_ParticleShapeContent, m_ViewModel.particleShape, m_ParticleShapeOptions);
+
+
+                    EditorGUIUtility.labelWidth = 60f;
+                    if (m_ViewModel.particleShape > 2)
+                    {
+                        m_ViewModel.particleDirection = EditorGUILayout.Popup(m_ParticleDirectionContent, m_ViewModel.particleDirection, m_ParticleDirectionOptions);
+                    }
+
+                    if (m_ViewModel.particleShape == 1 || m_ViewModel.particleShape == 2)
+                    {
+                        m_ViewModel.particleProjection = EditorGUILayout.Popup(m_ParticleProjectionContent, m_ViewModel.particleProjection, m_ParticleProjectionOptions);
+                    }
+                    EditorGUIUtility.labelWidth = lw;
+                }
             }
 
-            // PARTICLE SIZE/SHAPE
-            using (new EditorGUILayout.VerticalScope("box"))
+            // POSITION MASKING
+            using(new EditorGUILayout.VerticalScope("box"))
             {
-                EditorGUILayout.LabelField("Particle", EditorStyles.boldLabel);
-                var oldParticleSize = m_ParticleSize;
-                m_ParticleSize = EditorGUILayout.FloatField(m_ParticleSizeContent, m_ParticleSize);
-                m_ParticleSize = Mathf.Max(0.05f, m_ParticleSize);
-                if (oldParticleSize != m_ParticleSize)
+                EditorGUILayout.LabelField("Filtering", EditorStyles.boldLabel);
+                using(new EditorGUILayout.HorizontalScope())
                 {
-                    EditorPrefs.SetFloat(k_ParticleSizeKey, m_ParticleSize);
+                    float lw = EditorGUIUtility.labelWidth;
+                    EditorGUIUtility.labelWidth = 10f;
+                    EditorGUILayout.LabelField("Follow");
+                    m_ViewModel.maskFollowType = GUILayout.Toolbar(m_ViewModel.maskFollowType, m_FollowOptions);
+                    EditorGUIUtility.labelWidth = lw;
                 }
+                EditorGUILayout.Space();
+                EditorGUI.BeginDisabledGroup(m_ViewModel.maskFollowType != k_NoFollow);
+                m_MaskRadiusSource = EditorGUILayout.Vector3Field("", m_MaskRadiusSource);
+                EditorGUI.EndDisabledGroup();
+                EditorGUILayout.Space();
 
-                var oldParticleShapeIndex = m_ParticleShapeIndex;
-                m_ParticleShapeIndex = EditorGUILayout.Popup(m_ParticleShapeContent, m_ParticleShapeIndex, m_ParticleShapeOptions);
-                if (oldParticleShapeIndex != m_ParticleShapeIndex)
-                {
-                    EditorPrefs.SetInt(k_ParticleShapeKey, m_ParticleShapeIndex);
-                }
+                GUIContent[] maskOptionContent = new GUIContent[]{m_MaskOptionContentSlice, m_MaskOptionContentRadius};
+                m_ViewModel.maskType = GUILayout.Toolbar(m_ViewModel.maskType, maskOptionContent);
 
-                if (m_ParticleShapeIndex > 2)
+                if (m_ViewModel.maskType == 1)
                 {
-                    var oldParticleDirectionIndex = m_ParticleDirectionIndex;
-                    m_ParticleDirectionIndex = EditorGUILayout.Popup(m_ParticleDirectionContent, m_ParticleDirectionIndex, m_ParticleDirectionOptions);
-                    if (oldParticleDirectionIndex != m_ParticleDirectionIndex)
-                    {
-                        EditorPrefs.SetInt(k_ParticleDirectionKey, m_ParticleDirectionIndex);
-                    }
+                    m_ViewModel.maskRadius = EditorGUILayout.FloatField(m_MaskRadiusContent, m_ViewModel.maskRadius);
                 }
-                // POSITION MASKING
-                EditorGUILayout.LabelField("Masking (x/y/z)");
-                RenderMinMaxSlider(ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey, m_LowSpace.x, m_HighSpace.x);
-                RenderMinMaxSlider(ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey, m_LowSpace.y, m_HighSpace.y);
-                RenderMinMaxSlider(ref m_LowZ, ref m_HighZ, k_LowZKey, k_HighZKey, m_LowSpace.z, m_HighSpace.z);
+                else
+                {
+                    RenderMinMaxSlider("x", ref m_LowX, ref m_HighX, k_LowXKey, k_HighXKey, m_LowSpace.x, m_HighSpace.x);
+                    RenderMinMaxSlider("y", ref m_LowY, ref m_HighY, k_LowYKey, k_HighYKey, m_LowSpace.y, m_HighSpace.y);
+                    RenderMinMaxSlider("z", ref m_LowZ, ref m_HighZ, k_LowZKey, k_HighZKey, m_LowSpace.z, m_HighSpace.z);
+                }
             }
 
             // TIME WINDOW
@@ -185,7 +282,7 @@ namespace UnityAnalyticsHeatmap
             using (new EditorGUILayout.VerticalScope("box"))
             {
                 EditorGUILayout.LabelField("Time", EditorStyles.boldLabel);
-                RenderMinMaxSlider(ref m_StartTime, ref m_EndTime, k_StartTimeKey, k_EndTimeKey, 0f, m_MaxTime);
+                RenderMinMaxSlider("t", ref m_StartTime, ref m_EndTime, k_StartTimeKey, k_EndTimeKey, 0f, m_MaxTime);
                 var oldPlaySpeed = m_PlaySpeed;
                 m_PlaySpeed = EditorGUILayout.FloatField(m_PlaySpeedContent, m_PlaySpeed);
                 if (oldPlaySpeed != m_PlaySpeed)
@@ -244,11 +341,21 @@ namespace UnityAnalyticsHeatmap
                 if (m_GameObject != null)
                 {
                     IHeatmapRenderer r = m_GameObject.GetComponent<IHeatmapRenderer>() as IHeatmapRenderer;
-                    r.UpdateGradient(SafeGradientValue(m_ColorGradient ));
-                    r.pointSize = m_ParticleSize;
+                    r.UpdateGradient(SafeGradientValue(m_ColorGradient));
+                    r.pointSize = m_ViewModel.particleSize;
                     r.activateTips = m_Tips;
-                    r.UpdateRenderMask(m_LowX, m_HighX, m_LowY, m_HighY, m_LowZ, m_HighZ);
-                    r.UpdateRenderStyle(m_ParticleShapeIds[m_ParticleShapeIndex], m_ParticleDirectionIds[m_ParticleDirectionIndex]);
+                    r.UpdateCameraPosition(m_MaskRadiusSource);
+                    r.heatmapInFront = m_ViewModel.heatmapInFront;
+                    if (m_ViewModel.maskType == 1)
+                    {
+                        r.UpdateRenderMask(m_ViewModel.maskRadius);
+                    }
+                    else
+                    {
+                        r.UpdateRenderMask(m_LowX, m_HighX, m_LowY, m_HighY, m_LowZ, m_HighZ);
+                    }
+                    r.UpdateProjection(m_ParticleProjectionIds[m_ViewModel.particleProjection]);
+                    r.UpdateRenderStyle(m_ParticleShapeIds[m_ViewModel.particleShape], m_ParticleDirectionIds[m_ViewModel.particleDirection]);
                 }
             }
         }
@@ -296,17 +403,19 @@ namespace UnityAnalyticsHeatmap
             return gradientValue;
         }
 
-        protected void RenderMinMaxSlider(ref float lowValue, ref float highValue, string lowKey, string highKey, float minValue, float maxValue)
+        protected void RenderMinMaxSlider(string label, ref float lowValue, ref float highValue, string lowKey, string highKey, float minValue, float maxValue)
         {
             using (new EditorGUILayout.HorizontalScope())
             {
+                EditorGUILayout.LabelField(label, GUILayout.Width(10f));
+
                 float oldLow = lowValue;
                 float oldHigh = highValue;
 
                 lowValue = EditorGUILayout.FloatField(lowValue, GUILayout.MaxWidth(50f));
                 highValue = EditorGUILayout.FloatField(highValue, GUILayout.Width(50f));
-                EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, minValue, maxValue);
 
+                EditorGUILayout.MinMaxSlider(ref lowValue, ref highValue, minValue, maxValue);
 
                 highValue = Mathf.Max(lowValue, highValue);
                 lowValue = Mathf.Min(lowValue, highValue);
@@ -351,6 +460,7 @@ namespace UnityAnalyticsHeatmap
                     }
                 }
             }
+            m_ViewModel.Dispatch(true);
         }
 
         void UpdateTime()
@@ -369,20 +479,29 @@ namespace UnityAnalyticsHeatmap
             }
         }
 
-        public void SetMaxTime(float maxTime)
+        void SetMaxTime(float maxTime)
         {
-            m_EndTime = m_MaxTime = maxTime;
-            m_StartTime = 0f;
+            m_MaxTime = maxTime;
+            if (m_StartTime == 0 && m_EndTime == 0)
+            {
+                m_EndTime = m_MaxTime;
+                m_StartTime = 0f;
+            }
+            else
+            {
+                m_EndTime = Mathf.Clamp(m_EndTime, 0f, m_MaxTime);
+                m_StartTime = Mathf.Clamp(m_StartTime, 0f, m_MaxTime);
+            }
         }
 
         public void SetSpaceLimits(Vector3 lowSpace, Vector3 highSpace)
         {
-            m_LowX = lowSpace.x;
-            m_LowY = lowSpace.y;
-            m_LowZ = lowSpace.z;
-            m_HighX = highSpace.x;
-            m_HighY = highSpace.y;
-            m_HighZ = highSpace.z;
+            m_LowX = Mathf.Clamp(m_LowX, lowSpace.x, highSpace.x);
+            m_LowY = Mathf.Clamp(m_LowY, lowSpace.y, highSpace.y);
+            m_LowZ = Mathf.Clamp(m_LowZ, lowSpace.z, highSpace.z);
+            m_HighX = Mathf.Clamp(m_HighX, lowSpace.x, highSpace.x);
+            m_HighY = Mathf.Clamp(m_HighY, lowSpace.y, highSpace.y);
+            m_HighZ = Mathf.Clamp(m_HighZ, lowSpace.z, highSpace.z);
 
             m_LowSpace = lowSpace;
             m_HighSpace = highSpace;
@@ -404,5 +523,18 @@ namespace UnityAnalyticsHeatmap
                 m_ColorGradient = m_SerializedGradient.FindProperty("ColorGradient");
             }
         }
+
+        #region change handlers
+        void RendererChange(int value)
+        {
+            EditorPrefs.SetInt(k_Renderer, value);
+            m_Heatmapper.SwapRenderer(m_Renderers[value]);
+        }
+
+        void OptionsChange(List<int> value)
+        {
+            m_ViewModel.heatmapOptions = value;
+        }
+        #endregion
     }
 }

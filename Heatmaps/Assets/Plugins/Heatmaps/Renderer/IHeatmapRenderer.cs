@@ -40,7 +40,7 @@ namespace UnityAnalyticsHeatmap
         void UpdateThresholds(float[] thresholds);
 
         /// <summary>
-        /// Updates a mask which trims the rendered points.
+        /// Updates a mask which filters the rendered points using a cubic slicing strategy.
         /// </summary>
         /// <param name="lowX">The lowest X position to render as a percent from 0-1.</param>
         /// <param name="highX">The greatest X position to render as a percent from 0-1.</param>
@@ -49,6 +49,18 @@ namespace UnityAnalyticsHeatmap
         /// <param name="lowZ">The lowest Z position to render as a percent from 0-1.</param>
         /// <param name="highZ">The highest Z position to render as a percent from 0-1.</param>
         void UpdateRenderMask(float lowX, float highX, float lowY, float highY, float lowZ, float highZ);
+
+        /// <summary>
+        /// Updates a mask which filters the rendered points using a position-and-radius strategy.
+        /// </summary>
+        /// <param name="radius">A spherical area around pos to include in the filter.</param>
+        void UpdateRenderMask(float radius);
+
+        /// <summary>
+        /// Updates the camera source.
+        /// </summary>
+        /// <param name="radius">A spherical area around pos to include in the filter.</param>
+        void UpdateCameraPosition(Vector3 pos);
 
         /// <summary>
         /// Updates the time limits.
@@ -71,6 +83,12 @@ namespace UnityAnalyticsHeatmap
         /// <param name="style">A RenderShape Enum.</param>
         /// <param name="style">A RenderDirection Enum.</param>
         void UpdateRenderStyle(RenderShape style, RenderDirection direction);
+
+        /// <summary>
+        /// Updates the type of projection (currently only supported by point-to-point and arrow shapes).
+        /// </summary>
+        /// <param name="projection">A RenderProjection enum.</param>
+        void UpdateProjection(RenderProjection projection);
 
         /// <summary>
         /// Gets or sets the size of each point.
@@ -101,5 +119,17 @@ namespace UnityAnalyticsHeatmap
         /// </summary>
         /// <value>Count of all points in the current set</value>
         int totalPoints{ get; }
+
+        /// <summary>
+        /// A tooltip label which overrides the default "Density".
+        /// </summary>
+        /// <value>The remap label.</value>
+        string remapLabel { get; set; }
+
+        /// <summary>
+        /// Flag to ensure heatmap is in front of everything else.
+        /// </summary>
+        /// <value>If true, heatmap will always occlude.</value>
+        bool heatmapInFront { get; set; }
     }
 }

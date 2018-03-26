@@ -47,11 +47,11 @@ namespace UnityAnalyticsHeatmap
                 customEvent.Add(z);
                 var t = new TestEventParam("t", TestEventParam.Str, "");
                 customEvent.Add(t);
-                var dx = new TestEventParam("dx", TestEventParam.Str, "");
+                var dx = new TestEventParam("rx", TestEventParam.Str, "");
                 customEvent.Add(dx);
-                var dy = new TestEventParam("dy", TestEventParam.Str, "");
+                var dy = new TestEventParam("ry", TestEventParam.Str, "");
                 customEvent.Add(dy);
-                var dz = new TestEventParam("dz", TestEventParam.Str, "");
+                var dz = new TestEventParam("rz", TestEventParam.Str, "");
                 customEvent.Add(dz);
                 events.Add(customEvent);
             }
@@ -60,70 +60,78 @@ namespace UnityAnalyticsHeatmap
 
             string data = "";
             int fileCount = 0;
-            int eventCount = 30;
+            int waypointsPerPlay = 25;
             int deviceCount = 5;
             int sessionCount = 1;
+            string platform = "ios";
 
             // Custom to this lesson
-            int lookThisManyPlaces = 3;
-            int lookThisManyTimesMin = 5;
-            int lookThisManyTimesMax = 20;
-            float randomRange = .25f;
-            float radius = 1000f;
+            int lookThisManyPlaces = 15;
+            int lookThisManyTimesMin = 1;
+            int lookThisManyTimesMax = 5;
+            float radius = 50f;
 
             DateTime now = DateTime.UtcNow;
-            int totalSeconds = deviceCount * eventCount * sessionCount;
+            int totalSeconds = deviceCount * waypointsPerPlay * sessionCount;
             double endSeconds = Math.Round((now - UnityAnalytics.DateTimeUtils.s_Epoch).TotalSeconds);
             double startSeconds = endSeconds - totalSeconds;
             double currentSeconds = startSeconds;
             double firstDate = currentSeconds;
 
-            Vector3 position = Vector3.zero, destination = Vector3.zero, pointOnCircle = Vector3.zero;
+            int currentPoint = 0;
+            int currentPlace = 0;
+            int totalPoints = 0;
+
+            float shortestUser = 1.5f;
+            float tallestUser = 2.5f;
+
+            int totalPlaces = deviceCount * sessionCount * waypointsPerPlay * lookThisManyPlaces;
+            int[] numTimesToLookList = new int[totalPlaces];
+            for (int d = 0; d < totalPlaces; d++)
+            {
+                numTimesToLookList[d] = UnityEngine.Random.Range(lookThisManyTimesMin, lookThisManyTimesMax);
+                totalPoints += numTimesToLookList[d];
+            }
+
+            Vector3 position = Vector3.zero, destination = Vector3.zero;
 
             for (int a = 0; a < deviceCount; a++)
             {
-                string platform = "ios";
                 for (int b = 0; b < sessionCount; b++)
                 {
-                    for (int c = 0; c < eventCount; c++)
+                    for (int c = 0; c < waypointsPerPlay; c++)
                     {
-                        pointOnCircle = new Vector3(UnityEngine.Random.Range(-radius, radius),
-                            0f,
-                            UnityEngine.Random.Range(-radius, radius));
-                        position = UpdatePosition(ref position, ref pointOnCircle, radius, randomRange);
-                        position.y = 0f;
-
+                        position = new Vector3(UnityEngine.Random.Range(-radius, radius), UnityEngine.Random.Range(shortestUser, tallestUser), UnityEngine.Random.Range(-radius, radius));
                         for (int e = 0; e < lookThisManyPlaces; e++)
                         {
-                            int numTimesToLook = UnityEngine.Random.Range(lookThisManyTimesMin, lookThisManyTimesMax);
-                            float xAddition = UnityEngine.Random.Range(-radius, radius);
-                            float yAddition = UnityEngine.Random.Range(0, radius/2f);
-                            float zAddition = UnityEngine.Random.Range(-radius, radius);
+                            Vector3 rotation = new Vector3(UnityEngine.Random.Range(0, -180f), UnityEngine.Random.Range(0f,360f), 0f);
 
-                            while (numTimesToLook > 0)
+                            while (numTimesToLookList[currentPlace] > 0)
                             {
-                                numTimesToLook --;
+                                Progress(currentPoint, totalPoints);
+                                currentPoint ++;
+                                numTimesToLookList[currentPlace] --;
                                 currentSeconds ++;
                                 TestCustomEvent customEvent = events[0];
                                 customEvent.SetParam("t", c.ToString());
 
-                                destination = new Vector3(position.x + xAddition, position.y + yAddition, position.z + zAddition);
-
                                 customEvent.SetParam("x", position.x.ToString());
                                 customEvent.SetParam("y", position.y.ToString());
                                 customEvent.SetParam("z", position.z.ToString());
-                                customEvent.SetParam("dx", destination.x.ToString());
-                                customEvent.SetParam("dy", destination.y.ToString());
-                                customEvent.SetParam("dz", destination.z.ToString());
+                                customEvent.SetParam("rx", rotation.x.ToString());
+                                customEvent.SetParam("ry", rotation.y.ToString());
+                                customEvent.SetParam("rz", rotation.z.ToString());
 
                                 string evt = customEvent.WriteEvent(a, b, currentSeconds, platform);
                                 data += evt;
                             }
+                            currentPlace ++;
                         }
 
                     }
                 }
             }
+            EndProgress();
             retv.Add(firstDate, data);
             fileCount++;
             return retv;

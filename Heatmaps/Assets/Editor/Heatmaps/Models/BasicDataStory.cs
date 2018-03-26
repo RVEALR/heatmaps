@@ -62,6 +62,7 @@ namespace UnityAnalyticsHeatmap
             double startSeconds = endSeconds - totalSeconds;
             double currentSeconds = startSeconds;
             double firstDate = currentSeconds;
+            int currentPoint = 0;
 
             for (int a = 0; a < deviceCount; a++)
             {
@@ -70,6 +71,8 @@ namespace UnityAnalyticsHeatmap
                 {
                     for (int c = 0; c < eventCount; c++)
                     {
+                        Progress(currentPoint, totalSeconds);
+                        currentPoint ++;
                         currentSeconds ++;
                         TestCustomEvent customEvent = events[UnityEngine.Random.Range(0, events.Count)];
                         customEvent.SetParam("t", currentSeconds - startSeconds);
@@ -92,6 +95,7 @@ namespace UnityAnalyticsHeatmap
                     }
                 }
             }
+            EndProgress();
             return retv;
         }
         #endregion
