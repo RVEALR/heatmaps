@@ -21,6 +21,7 @@ namespace UnityAnalyticsHeatmap
         const string k_StartTimeKey = "UnityAnalyticsHeatmapStartTime";
         const string k_EndTimeKey = "UnityAnalyticsHeatmapEndTime";
         const string k_PlaySpeedKey = "UnityAnalyticsHeatmapPlaySpeed";
+		const string k_LoopKey = "UnityAnalyticsHeatmapLoopPlayback";
 
         const string k_LowXKey = "UnityAnalyticsHeatmapLowX";
         const string k_HighXKey = "UnityAnalyticsHeatmapHighX";
@@ -86,6 +87,7 @@ namespace UnityAnalyticsHeatmap
         float m_PlaySpeed = 1f;
 
         bool m_Tips = false;
+		bool m_Loop = false;
 
         GameObject m_GameObject;
         SerializedObject m_SerializedGradient = null;
@@ -104,6 +106,7 @@ namespace UnityAnalyticsHeatmap
         GUIContent m_ParticleDirectionContent = new GUIContent("Direction", "For 2D shapes, the facing direction of an individual data point");
         GUIContent m_ParticleProjectionContent = new GUIContent("Projection", "For directional/2-point rendering, project in 1st or 3rd person");
         GUIContent m_PlaySpeedContent = new GUIContent("Play speed", "Speed at which playback occurs");
+		GUIContent m_LoopTextContent = new GUIContent("Loop playback", "When enabled the playback continuously loops");
         GUIContent m_TipsContent = new GUIContent("Hot tips", "When enabled, see individual point information on rollover. Caution: can be costly! Also note, submap must be selected to see hot tips.");
         GUIContent m_TipsTextContent = new GUIContent("Points (displayed/total): 0 / 0");
         GUIContent m_RestartContent;
@@ -317,6 +320,15 @@ namespace UnityAnalyticsHeatmap
             {
                 forceTime = true;
             }
+
+			// Loop Playback
+			bool oldLoop = m_Loop;
+			m_Loop = EditorGUILayout.Toggle(m_LoopTextContent, m_Loop);
+			if (oldLoop != m_Loop)
+			{
+				EditorPrefs.SetBool(k_LoopKey, m_Loop);
+			} 
+
             Update(forceTime);
 
             // REPORTING AND TIPS
@@ -472,10 +484,17 @@ namespace UnityAnalyticsHeatmap
             }
             if (m_EndTime >= m_MaxTime)
             {
-                float diff = m_EndTime - m_StartTime;
-                m_EndTime = m_MaxTime;
-                m_StartTime = Mathf.Max(m_EndTime - diff, 0);
-                m_IsPlaying = false;
+				if (m_Loop) 
+				{
+					Restart ();
+				} 
+				else 
+				{
+					float diff = m_EndTime - m_StartTime;
+					m_EndTime = m_MaxTime;
+					m_StartTime = Mathf.Max (m_EndTime - diff, 0);
+					m_IsPlaying = false;
+				}
             }
         }
 
