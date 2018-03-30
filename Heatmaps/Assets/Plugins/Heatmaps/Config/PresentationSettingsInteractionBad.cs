@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public class PresentationSettingsInteractionBad : HeatmapSettings
     {

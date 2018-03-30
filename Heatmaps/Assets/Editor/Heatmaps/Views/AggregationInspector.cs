@@ -11,22 +11,27 @@ using UnityEngine;
 using UnityAnalytics;
 using System.Linq;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public class AggregationInspector
     {
-        const string k_UseCustomDataPathKey = "UnityAnalyticsHeatmapUsePersistentDataPathKey";
+        const string k_UseCustomDataPathKey = "AnalyticsHeatmapUsePersistentDataPathKey";
+		const string k_UseCustomDataOutPathKey = "AnalyticsHeatmapUsePersistentDataOutPathKey";
 
+		string m_InputDataPath = "";
+		bool m_UseCustomInDataPath = true;
 
-        string m_DataPath = "";
-        bool m_UseCustomDataPath = true;
+		string m_OutDataPath = "";
+		bool m_UseCustomOutDataPath = true;
 
         HeatmapDataProcessor m_Processor;
         HeatmapInspectorViewModel m_ViewModel;
 
         private GUIContent m_UseCustomDataPathContent = new GUIContent("Use custom data path", "By default, will use Application.persistentDataPath");
-        private GUIContent m_DataPathContent = new GUIContent("Input path", "Where to retrieve data (defaults to Application.persistentDataPath");
-        private GUIContent m_DatesContent = new GUIContent("Dates", "ISO-8601 datetimes (YYYY-MM-DD)");
+		private GUIContent m_UseCustomDataPathOutContent = new GUIContent("Use custom data out path", "By default, will use Application.persistentDataPath");
+		private GUIContent m_DataPathContent = new GUIContent("Input path", "Where to retrieve data (defaults to Application.persistentDataPath");
+		private GUIContent m_DataPathOutContent = new GUIContent("Output path", "Where processed data is stored.");
+		private GUIContent m_DatesContent = new GUIContent("Dates", "ISO-8601 datetimes (YYYY-MM-DD)");
         private GUIContent m_SeparateUsersContent = new GUIContent("Users", "Separate each user into their own list. NOTE: Separating user IDs can be quite slow!");
         private GUIContent m_SeparateSessionsContent = new GUIContent("Sessions", "Separate each session into its own list. NOTE: Separating unique sessions can be astonishingly slow!");
         private GUIContent m_SeparateDebugContent = new GUIContent("Is debug", "Separate debug devices from non-debug devices");
@@ -94,9 +99,9 @@ namespace UnityAnalyticsHeatmap
         public void OnEnable()
         {
             // Restore cached paths
-            m_UseCustomDataPath = EditorPrefs.GetBool(k_UseCustomDataPathKey);
+            m_UseCustomInDataPath = EditorPrefs.GetBool(k_UseCustomDataPathKey);
 
-            m_DataPath = m_Processor.m_RawDataPath;
+            m_InputDataPath = m_Processor.m_RawDataPath;
             m_EndDate = m_Processor.m_EndDate;
             m_StartDate = m_Processor.m_StartDate;
 
@@ -130,16 +135,29 @@ namespace UnityAnalyticsHeatmap
             {
                 using (new GUILayout.HorizontalScope())
                 {
-                    m_UseCustomDataPath = EditorGUIBinding.Toggle(m_UseCustomDataPathContent, m_UseCustomDataPath, UseCustomDataPathChange);
-                    if (GUILayout.Button("Open Folder"))
+                    m_UseCustomInDataPath = EditorGUIBinding.Toggle(m_UseCustomDataPathContent, m_UseCustomInDataPath, UseCustomDataPathChange);
+                    if (GUILayout.Button("Open Input Folder"))
                     {
-                        EditorUtility.RevealInFinder(m_DataPath);
+                        EditorUtility.RevealInFinder(m_InputDataPath);
                     }
                 }
-                if (m_UseCustomDataPath)
-                {
-                    m_DataPath = EditorGUIBinding.TextField(m_DataPathContent, m_DataPath, DataPathChange);
-                }
+				if (m_UseCustomInDataPath)
+				{
+					m_InputDataPath = EditorGUIBinding.TextField(m_DataPathContent, m_InputDataPath, DataPathChange);
+				}
+
+				using (new GUILayout.HorizontalScope())
+				{
+					m_UseCustomOutDataPath = EditorGUIBinding.Toggle(m_UseCustomDataPathOutContent, m_UseCustomOutDataPath, UseCustomOutDataPathChange);
+					if (GUILayout.Button("Open Output Folder"))
+					{
+						EditorUtility.RevealInFinder(m_OutDataPath);
+					}
+				}
+				if (m_UseCustomOutDataPath)
+				{
+					m_OutDataPath = EditorGUIBinding.TextField(m_DataPathOutContent, m_OutDataPath, DataPathOutChange);
+				}
 
                 EditorGUILayout.LabelField(m_DatesContent, EditorStyles.boldLabel, GUILayout.Width(35));
                 using (new EditorGUILayout.HorizontalScope())
@@ -210,18 +228,33 @@ namespace UnityAnalyticsHeatmap
         void UseCustomDataPathChange(bool value)
         {
             EditorPrefs.SetBool(k_UseCustomDataPathKey, value);
-            DataPathChange(m_DataPath);
+            DataPathChange(m_InputDataPath);
         }
 
         void DataPathChange(string value)
         {
             if (string.IsNullOrEmpty(value))
             {
-                m_DataPath = Application.persistentDataPath;
+                m_InputDataPath = Application.persistentDataPath;
             }
             m_Processor.m_RawDataPath = value;
             ScheduleFetch();
         }
+
+		void UseCustomOutDataPathChange(bool value)
+		{
+			EditorPrefs.SetBool(k_UseCustomDataOutPathKey, value);
+			DataPathOutChange(m_OutDataPath);
+		}
+
+		void DataPathOutChange(string value)
+		{
+			if (string.IsNullOrEmpty(value))
+			{
+				m_OutDataPath = Application.persistentDataPath;
+			}
+			m_Processor.m_DataOutPath = value;
+		}
 
         void StartDateChange(string value)
         {
@@ -350,8 +383,7 @@ namespace UnityAnalyticsHeatmap
             m_ViewModel.remapPercentile = m_Percentile;
             ScheduleFetch();
         }
-
-
+			
         void ScheduleFetch()
         {
             m_FetchCount = k_FetchInitValue;

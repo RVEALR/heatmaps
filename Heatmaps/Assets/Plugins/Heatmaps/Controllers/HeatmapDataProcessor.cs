@@ -17,25 +17,26 @@ using UnityEditor;
 using System.Collections;
 using System.Linq;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public class HeatmapDataProcessor
     {
-        const string k_DataPathKey = "UnityAnalyticsHeatmapDataPathKey";
-        const string k_SpaceKey = "UnityAnalyticsHeatmapAggregationSpace";
-        const string k_KeyToTime = "UnityAnalyticsHeatmapAggregationTime";
-        const string k_RotationKey = "UnityAnalyticsHeatmapAggregationRotation";
-        const string k_SmoothSpaceKey = "UnityAnalyticsHeatmapAggregationAggregateSpace";
-        const string k_SmoothTimeKey = "UnityAnalyticsHeatmapAggregationAggregateTime";
-        const string k_SmoothRotationKey = "UnityAnalyticsHeatmapAggregationAggregateRotation";
+        const string k_DataPathKey = "HeatmapDataPathKey";
+		const string k_DataOutPathKey = "HeatmapDataOutPathKey";
+        const string k_SpaceKey = "HeatmapAggregationSpace";
+        const string k_KeyToTime = "HeatmapAggregationTime";
+        const string k_RotationKey = "HeatmapAggregationRotation";
+        const string k_SmoothSpaceKey = "HeatmapAggregationAggregateSpace";
+        const string k_SmoothTimeKey = "HeatmapAggregationAggregateTime";
+        const string k_SmoothRotationKey = "HeatmapAggregationAggregateRotation";
 
 
-        const string k_SeparateSessionKey = "UnityAnalyticsHeatmapAggregationAggregateSessionIDs";
-        const string k_SeparateDebugKey = "UnityAnalyticsHeatmapAggregationAggregateDebug";
-        const string k_SeparatePlatformKey = "UnityAnalyticsHeatmapAggregationAggregatePlatform";
-        const string k_SeparateCustomKey = "UnityAnalyticsHeatmapAggregationAggregateCustom";
+        const string k_SeparateSessionKey = "HeatmapAggregationAggregateSessionIDs";
+        const string k_SeparateDebugKey = "HeatmapAggregationAggregateDebug";
+        const string k_SeparatePlatformKey = "HeatmapAggregationAggregatePlatform";
+        const string k_SeparateCustomKey = "HeatmapAggregationAggregateCustom";
 
-        const string k_ArbitraryFieldsKey = "UnityAnalyticsHeatmapAggregationArbitraryFields";
+        const string k_ArbitraryFieldsKey = "HeatmapAggregationArbitraryFields";
 
         const float k_DefaultSpace = 10f;
         const float k_DefaultTime = 10f;
@@ -51,7 +52,6 @@ namespace UnityAnalyticsHeatmap
         public HeatmapAggregator m_Aggregator;
         public HeatmapDataParser m_DataParser;
 
-
         bool m_DateChangeHasOccurred = true;
 
         private string _rawDataPath = "";
@@ -62,10 +62,24 @@ namespace UnityAnalyticsHeatmap
             }
             set{
                 _rawDataPath = value;
-                m_Aggregator.SetDataPath(_rawDataPath);
+                m_Aggregator.SetDataInPath(_rawDataPath);
                 EditorPrefs.SetString(k_DataPathKey, value);
             }
         }
+
+		private string _dataOutPath = "";
+		public string m_DataOutPath
+		{
+			get{
+				return _dataOutPath;
+			}
+			set{
+				_dataOutPath = value;
+				m_Aggregator.SetDataOutPath(_dataOutPath);
+				EditorPrefs.SetString(k_DataOutPathKey, value);
+			}
+		}
+
         string _startDate = "";
         public string m_StartDate
         {

@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public class HeatmapDataParserInspector
     {

@@ -2,9 +2,8 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
-
     public static class AnalyticsDatePicker {
 
         private static GUIStyle fieldStyle;

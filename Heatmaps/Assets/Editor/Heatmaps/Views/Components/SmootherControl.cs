@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using System.Linq;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public class AnalyticsSmootherControl
     {

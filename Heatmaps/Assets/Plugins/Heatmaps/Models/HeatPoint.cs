@@ -7,7 +7,7 @@
 using System;
 using UnityEngine;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public struct HeatPoint
     {

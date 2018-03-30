@@ -20,7 +20,7 @@ using System.IO;
 using MiniJSON;
 using UnityEngine;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public class HeatmapDataParser
     {

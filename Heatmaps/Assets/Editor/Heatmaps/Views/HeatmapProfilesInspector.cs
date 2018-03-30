@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using System.Linq;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public class HeatmapProfilesInspector
     {

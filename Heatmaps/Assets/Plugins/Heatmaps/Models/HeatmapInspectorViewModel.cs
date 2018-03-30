@@ -9,7 +9,7 @@ using UnityEngine;
 using System.Linq;
 using System.Timers;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     internal class HeatmapsInspectorSettingsKeys
     {

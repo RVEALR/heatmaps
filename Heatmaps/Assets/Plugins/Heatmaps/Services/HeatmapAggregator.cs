@@ -29,7 +29,7 @@ using System.Linq;
 using UnityEngine;
 using UnityAnalytics;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public class HeatmapAggregator
     {
@@ -51,7 +51,8 @@ namespace UnityAnalyticsHeatmap
         int m_ReportLegalPoints = 0;
 
         Dictionary<Tuplish, HistogramHeatPoint> m_PointDict;
-        string m_DataPath = "";
+		string m_DataInPath = "";
+		string m_DataOutPath = "";
 
         public delegate void CompletionHandler(string jsonPath);
 
@@ -60,17 +61,27 @@ namespace UnityAnalyticsHeatmap
 
         public HeatmapAggregator(string dataPath)
         {
-            SetDataPath(dataPath);
+            SetDataInPath(dataPath);
+			SetDataOutPath(dataPath);
         }
 
         /// <summary>
         /// Sets the data path.
         /// </summary>
         /// <param name="dataPath">The location on the host machine from which to retrieve data.</param>
-        public void SetDataPath(string dataPath)
+        public void SetDataInPath(string dataPath)
         {
-            m_DataPath = dataPath;
+            m_DataInPath = dataPath;
         }
+
+		/// <summary>
+		/// Sets the data path for output file.
+		/// </summary>
+		/// <param name="dataPath">The location on the host machine from which to output processed data.</param>
+		public void SetDataOutPath(string dataPath)
+		{
+			m_DataOutPath = dataPath;
+		}
 
         /// <summary>
         /// Process the specified inputFiles, using the other specified parameters.
@@ -187,7 +198,7 @@ namespace UnityAnalyticsHeatmap
         internal Dictionary<string, int> GetHeaders()
         {
             var retv = new Dictionary<string, int>();
-            string path = System.IO.Path.Combine(m_DataPath, "RawData");
+            string path = System.IO.Path.Combine(m_DataInPath, "RawData");
             path = System.IO.Path.Combine(path, "custom_headers.gz");
             string tsv = IonicGZip.DecompressFile(path);
             tsv = tsv.Replace("\n", "");
@@ -438,15 +449,15 @@ namespace UnityAnalyticsHeatmap
         internal void SaveFile(string outputFileName, 
             Dictionary<Tuplish, List<Dictionary<string, float>>> outputData)
         {
-            string savePath = System.IO.Path.Combine(m_DataPath, "RawData");
+			string savePath = System.IO.Path.Combine(m_DataOutPath, "OutputData");
             if (!System.IO.Directory.Exists(savePath))
             {
                 System.IO.Directory.CreateDirectory(savePath);
             }
 
             var json = MiniJSON.Json.Serialize(outputData);
-//            string jsonPath = savePath + Path.DirectorySeparatorChar + outputFileName;
-//            System.IO.File.WriteAllText(jsonPath, json);
+            string jsonPath = savePath + Path.DirectorySeparatorChar + outputFileName;
+            System.IO.File.WriteAllText(jsonPath, json);
 
             m_CompletionHandler(json);
         }

@@ -12,7 +12,7 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public class HeatmapRendererInspector
     {
@@ -32,7 +32,7 @@ namespace UnityAnalyticsHeatmap
 
         const string k_ShowTipsKey = "UnityAnalyticsHeatmapShowRendererTooltips";
 
-        Heatmapper m_Heatmapper;
+		HeatmapView m_HeatmapView;
         HeatmapInspectorViewModel m_ViewModel;
 
         Type[] m_Renderers = new Type[]{ typeof(HeatmapMeshRenderer), typeof(InstancedHeatmapMeshRenderer) };
@@ -118,7 +118,7 @@ namespace UnityAnalyticsHeatmap
 
         void OnSettingsUpdate(object sender, HeatmapSettings settings)
         {
-            m_Heatmapper.Repaint();
+            //m_Heatmapper.Repaint();
         }
 
         public HeatmapRendererInspector()
@@ -157,10 +157,10 @@ namespace UnityAnalyticsHeatmap
             m_PauseContent = new GUIContent(pauseIcon, "Pause");
         }
 
-        public static HeatmapRendererInspector Init(Heatmapper heatmapper, HeatmapDataProcessor processor)
+        public static HeatmapRendererInspector Init(HeatmapView heatmapView, HeatmapDataProcessor processor)
         {
             var inspector = new HeatmapRendererInspector();
-            inspector.m_Heatmapper = heatmapper;
+			inspector.m_HeatmapView = heatmapView;
             return inspector;
         }
 
@@ -184,7 +184,7 @@ namespace UnityAnalyticsHeatmap
                     view.camera.transform.position;
                 if (Vector3.Equals(originalSource, m_MaskRadiusSource) == false)
                 {
-                    m_Heatmapper.Repaint();
+                    //m_Heatmapper.Repaint();
                 }
             }
         }
@@ -468,7 +468,7 @@ namespace UnityAnalyticsHeatmap
                     if (r != null)
                     {
                         r.UpdateTimeLimits(m_StartTime, m_EndTime);
-                        m_Heatmapper.Repaint();
+                        //m_Heatmapper.Repaint();
                     }
                 }
             }
@@ -547,7 +547,7 @@ namespace UnityAnalyticsHeatmap
         void RendererChange(int value)
         {
             EditorPrefs.SetInt(k_Renderer, value);
-            m_Heatmapper.SwapRenderer(m_Renderers[value]);
+			m_HeatmapView.SwapRenderer(m_Renderers[value]);
         }
 
         void OptionsChange(List<int> value)

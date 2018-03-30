@@ -13,7 +13,7 @@ using System;
 using UnityEngine;
 using UnityEditor;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public class EditorGUIBinding
     {

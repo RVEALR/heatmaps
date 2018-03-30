@@ -17,133 +17,135 @@
 
 using System;
 using System.Collections.Generic;
-using UnityAnalyticsHeatmap;
 using UnityEngine;
 
-
-[RequireComponent(typeof(HeatmapMeshRenderer))]
-public class HeatmapController : MonoBehaviour
+namespace RVEALR.Heatmaps
 {
-    public string dataPath = "";
-    public string[] options;
-    public int optionIndex;
-    private int oldOptionIndex = -1;
 
-    public float pointSize = 10;
-    private float oldPointSize = -99;
+	[RequireComponent(typeof(HeatmapMeshRenderer))]
+	public class HeatmapController : MonoBehaviour
+	{
+	    public string dataPath = "";
+	    public string[] options;
+	    public int optionIndex;
+	    private int oldOptionIndex = -1;
 
-    HeatmapDataParser m_DataParser = new HeatmapDataParser();
-    Dictionary<string, HeatPoint[]> m_Data;
+	    public float pointSize = 10;
+	    private float oldPointSize = -99;
 
-    private  Gradient gradient;
+	    HeatmapDataParser m_DataParser = new HeatmapDataParser();
+	    Dictionary<string, HeatPoint[]> m_Data;
 
-    float m_MaxDensity = 0;
-    float m_MaxTime = 0;
-    Vector3 m_LowSpace = Vector3.zero;
-    Vector3 m_HighSpace = Vector3.zero;
+	    private  Gradient gradient;
 
-    void Start()
-    {
-        gradient = GetComponent<GradientContainer>().ColorGradient;
+	    float m_MaxDensity = 0;
+	    float m_MaxTime = 0;
+	    Vector3 m_LowSpace = Vector3.zero;
+	    Vector3 m_HighSpace = Vector3.zero;
 
-        // If there's a path, load data
-        if (!String.IsNullOrEmpty(dataPath))
-        {
-            LoadData();
-        }
-    }
+	    void Start()
+	    {
+	        gradient = GetComponent<GradientContainer>().ColorGradient;
 
-    /// <summary>
-    /// Load data from a resource in the Resources folder
-    /// </summary>
-    void LoadData()
-    {
-        // Use the parser to load data
-        m_DataParser.LoadData(dataPath, parseHandler, HeatmapDataParser.k_AsResource);
-    }
+	        // If there's a path, load data
+	        if (!String.IsNullOrEmpty(dataPath))
+	        {
+	            LoadData();
+	        }
+	    }
 
-    /// <summary>
-    /// Once loaded, returns all the important info.
-    /// </summary>
-    /// <param name="heatData">A dictionary of all the heat data.</param>
-    /// <param name="maxDensity">The maximum data density.</param>
-    /// <param name="maxTime">The maximum time from the data.</param>
-    /// <param name="options">The list of possible options (usually event names).</param>
-    void parseHandler(Dictionary<string, HeatPoint[]> heatData, string[] options)
-    {
-        m_Data = heatData;
-        this.options = options;
-        Render();
-    }
+	    /// <summary>
+	    /// Load data from a resource in the Resources folder
+	    /// </summary>
+	    void LoadData()
+	    {
+	        // Use the parser to load data
+	        m_DataParser.LoadData(dataPath, parseHandler, HeatmapDataParser.k_AsResource);
+	    }
 
-    /// <summary>
-    /// Renders the heatmap
-    /// </summary>
-    void Render()
-    {
-        if (m_Data == null)
-            return;
+	    /// <summary>
+	    /// Once loaded, returns all the important info.
+	    /// </summary>
+	    /// <param name="heatData">A dictionary of all the heat data.</param>
+	    /// <param name="maxDensity">The maximum data density.</param>
+	    /// <param name="maxTime">The maximum time from the data.</param>
+	    /// <param name="options">The list of possible options (usually event names).</param>
+	    void parseHandler(Dictionary<string, HeatPoint[]> heatData, string[] options)
+	    {
+	        m_Data = heatData;
+	        this.options = options;
+	        Render();
+	    }
 
-        SetLimits(m_Data[options[optionIndex]]);
+	    /// <summary>
+	    /// Renders the heatmap
+	    /// </summary>
+	    void Render()
+	    {
+	        if (m_Data == null)
+	            return;
 
-        var r = gameObject.GetComponent<IHeatmapRenderer>();
-        r.allowRender = true;
-        r.pointSize = pointSize;
-        r.UpdateGradient(gradient);
-        r.UpdateTimeLimits(0, m_MaxTime);
-        r.UpdateRenderMask(m_LowSpace.x, m_HighSpace.x, m_LowSpace.y, m_HighSpace.y, m_LowSpace.z, m_HighSpace.z);
-        r.UpdateRenderStyle(RenderShape.Triangle, RenderDirection.YZ);
-        r.UpdatePointData(m_Data[options[optionIndex]], m_MaxDensity);
+	        SetLimits(m_Data[options[optionIndex]]);
 
-        r.RenderHeatmap();
-    }
+	        var r = gameObject.GetComponent<IHeatmapRenderer>();
+	        r.allowRender = true;
+	        r.pointSize = pointSize;
+	        r.UpdateGradient(gradient);
+	        r.UpdateTimeLimits(0, m_MaxTime);
+	        r.UpdateRenderMask(m_LowSpace.x, m_HighSpace.x, m_LowSpace.y, m_HighSpace.y, m_LowSpace.z, m_HighSpace.z);
+	        r.UpdateRenderStyle(RenderShape.Triangle, RenderDirection.YZ);
+	        r.UpdatePointData(m_Data[options[optionIndex]], m_MaxDensity);
 
-    /// <summary>
-    /// We can adjust the optionIndex or pointSize at runtime
-    /// </summary>
-    void Update()
-    {
-        if (optionIndex != oldOptionIndex || pointSize != oldPointSize)
-        {
-            if (options == null)
-            {
-                optionIndex = 0;
-            }
-            else
-            {
-                optionIndex = Math.Max(0, optionIndex);
-                optionIndex = Math.Min(optionIndex, options.Length-1);
-                Render();
-                oldOptionIndex = optionIndex;
-            }
-            oldPointSize = pointSize;
-        }
+	        r.RenderHeatmap();
+	    }
 
-        // Uncomment this if you want to see output of current/total points
-        //        if (m_Data != null)
-        //        {
-        //            var r = gameObject.GetComponent<IHeatmapRenderer>();
-        //            Debug.Log(r.currentPoints + "/" + r.totalPoints);
-        //        }
-    }
+	    /// <summary>
+	    /// We can adjust the optionIndex or pointSize at runtime
+	    /// </summary>
+	    void Update()
+	    {
+	        if (optionIndex != oldOptionIndex || pointSize != oldPointSize)
+	        {
+	            if (options == null)
+	            {
+	                optionIndex = 0;
+	            }
+	            else
+	            {
+	                optionIndex = Math.Max(0, optionIndex);
+	                optionIndex = Math.Min(optionIndex, options.Length-1);
+	                Render();
+	                oldOptionIndex = optionIndex;
+	            }
+	            oldPointSize = pointSize;
+	        }
 
-    /// <summary>
-    /// Sets time and space variables for the renderer based on the data
-    /// </summary>
-    /// <param name="points">The heatmap data that will be fed to the renderer.</param>
-    void SetLimits(HeatPoint[] points)
-    {
-        float maxDensity = 0;
-        m_MaxTime = 0;
-        m_LowSpace = new Vector3();
-        m_HighSpace = new Vector3();
+	        // Uncomment this if you want to see output of current/total points
+	        //        if (m_Data != null)
+	        //        {
+	        //            var r = gameObject.GetComponent<IHeatmapRenderer>();
+	        //            Debug.Log(r.currentPoints + "/" + r.totalPoints);
+	        //        }
+	    }
 
-        for (int a = 0; a < points.Length; a++)
-        {
-            maxDensity = Mathf.Max(maxDensity, points[a].density);
-            m_MaxTime = Mathf.Max(m_MaxTime, points[a].time);
-            m_LowSpace = Vector3.Min(m_LowSpace, points[a].position);
-            m_HighSpace = Vector3.Max(m_HighSpace, points[a].position);
-        }
-    }
+	    /// <summary>
+	    /// Sets time and space variables for the renderer based on the data
+	    /// </summary>
+	    /// <param name="points">The heatmap data that will be fed to the renderer.</param>
+	    void SetLimits(HeatPoint[] points)
+	    {
+	        float maxDensity = 0;
+	        m_MaxTime = 0;
+	        m_LowSpace = new Vector3();
+	        m_HighSpace = new Vector3();
+
+	        for (int a = 0; a < points.Length; a++)
+	        {
+	            maxDensity = Mathf.Max(maxDensity, points[a].density);
+	            m_MaxTime = Mathf.Max(m_MaxTime, points[a].time);
+	            m_LowSpace = Vector3.Min(m_LowSpace, points[a].position);
+	            m_HighSpace = Vector3.Max(m_HighSpace, points[a].position);
+	        }
+	    }
+	}
 }

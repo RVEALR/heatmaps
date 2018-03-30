@@ -1,12 +1,10 @@
 ﻿using System;
 using UnityEngine;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public class GradientUtils
     {
-
-
         public static Color PickGradientColor(Gradient gradient, float percent)
         {
             return (gradient == null) ? Color.magenta : gradient.Evaluate(percent);

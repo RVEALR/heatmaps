@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace UnityAnalyticsHeatmap
+namespace RVEALR.Heatmaps
 {
     public enum RenderDirection
     {
