@@ -10,23 +10,23 @@ namespace RVEALR.Heatmaps
     {
         static HeatmapProfilesInspector s_Instance;
         List<HeatmapSettings> m_Profiles = new List<HeatmapSettings>();
-        Heatmapper m_Heatmapper;
+		Heatmapper m_Heatmapper;
         bool m_Adding = false;
         bool m_NameNotUnique = false;
         string m_Name = "";
 
         GUIContent m_SaveCurrrentContent = new GUIContent("Save Current", "Store the Heatmapper's current settings");
 
-        public HeatmapProfilesInspector(Heatmapper heatmapper)
+		public HeatmapProfilesInspector()
         {
-            m_Heatmapper = heatmapper;
+
         }
 
-        public static HeatmapProfilesInspector Init(Heatmapper heatmapper)
+		public static HeatmapProfilesInspector Init()
         {
             if (s_Instance == null)
             {
-                s_Instance = new HeatmapProfilesInspector(heatmapper);
+                s_Instance = new HeatmapProfilesInspector();
             }
             return s_Instance;
         }
@@ -85,10 +85,9 @@ namespace RVEALR.Heatmaps
             }
         }
 
-        void Apply(int id)
+        public void Apply(int id)
         {
             HeatmapInspectorViewModel.GetInstance().UpdateSettings(m_Profiles[id]);
-            m_Heatmapper.SystemReset();
         }
 
         void RemoveAt(int id)
@@ -111,22 +110,28 @@ namespace RVEALR.Heatmaps
             m_Name = "";
         }
 
-        void Create(string name)
+		public HeatmapSettings Create(string name)
         {
-            if (AssetNameUnique(name) && !string.IsNullOrEmpty(name))
+			if (string.IsNullOrEmpty(name))
+				return null;
+			
+			int i = AssetNameIndex(name);
+			HeatmapSettings profile = HeatmapInspectorViewModel.GetInstance().RecordSettings();
+			profile.name = name;
+            if (i < 0 && !string.IsNullOrEmpty(name))
             {
-                HeatmapSettings profile = HeatmapInspectorViewModel.GetInstance().RecordSettings();
-                profile.name = name;
                 var savePath = GetAssetPath(profile.name);
                 AssetDatabase.CreateAsset(profile, savePath);
-                EditorUtility.SetDirty(profile);
-                GenerateList();
-                CloseCreation();
             }
-            else
+			else
             {
-                m_NameNotUnique = true;
+				m_Profiles[i] = profile;
             }
+
+			EditorUtility.SetDirty(profile);
+			GenerateList();
+			CloseCreation();
+			return profile;
         }
 
         void GenerateList()
@@ -165,16 +170,16 @@ namespace RVEALR.Heatmaps
             return System.IO.Path.Combine(path, name + ".asset");
         }
 
-        bool AssetNameUnique(string name)
+        int AssetNameIndex(string name)
         {
             for (var a = 0; a < m_Profiles.Count; a++)
             {
                 if (m_Profiles[a].name == name)
                 {
-                    return false;
+                    return a;
                 }
             }
-            return true;
+            return -1;
         }
     }
 }

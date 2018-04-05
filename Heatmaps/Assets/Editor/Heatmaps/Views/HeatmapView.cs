@@ -75,6 +75,7 @@ namespace RVEALR.Heatmaps
 		{
 			EnsureHeatmapInstance();
 			m_Processor.Fetch();
+			SaveHeatmapDetails();
 		}
 
 		public void OnEnable()
@@ -83,6 +84,7 @@ namespace RVEALR.Heatmaps
 			m_RenderView.OnEnable();
 			m_Processor.RestoreSettings();
 			m_AggregationView.OnEnable();
+			Update();
 		}
 
 		public void SwapRenderer(Type renderer)
@@ -132,6 +134,18 @@ namespace RVEALR.Heatmaps
 	            m_RenderView.SetGameObject(m_HeatMapInstance);
 	        } 
 		}
+
+		void SaveHeatmapDetails()
+		{
+			HeatmapViewController viewController = m_HeatMapInstance.GetComponent<HeatmapViewController>();
+			if (viewController == null)
+			{
+				viewController = m_HeatMapInstance.AddComponent<HeatmapViewController>();
+			}
+				
+			viewController.settings = HeatmapProfilesInspector.Init().Create(m_Identifier);
+		}
+
 
 		/// <summary>
 		/// Attempts to reconnect with a heatmap instance.

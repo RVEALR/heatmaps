@@ -39,12 +39,17 @@ namespace RVEALR.Heatmaps
 
 	        smoothTimeOption = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_SmoothTimeOptionKey);
 	        smoothTime = EditorPrefs.GetInt(HeatmapsInspectorSettingsKeys.k_SmoothTimeKey);
+
+			inputPath = EditorPrefs.GetString(HeatmapsInspectorSettingsKeys.k_InputPath);
+			outputPath = EditorPrefs.GetString(HeatmapsInspectorSettingsKeys.k_OutputPath);
 	    }
 
 	    public virtual void PostProcess()
 	    {
 	    }
 
+		public string inputPath;
+		public string outputPath;
 	    public bool heatmapInFront;
 
 	    public int heatmapOptionIndex;

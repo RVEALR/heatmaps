@@ -146,6 +146,8 @@ namespace RVEALR.Heatmaps
 					m_InputDataPath = EditorGUIBinding.TextField(m_DataPathContent, m_InputDataPath, DataPathChange);
 				}
 
+				m_ViewModel.inputPath = m_InputDataPath;
+
 				using (new GUILayout.HorizontalScope())
 				{
 					m_UseCustomOutDataPath = EditorGUIBinding.Toggle(m_UseCustomDataPathOutContent, m_UseCustomOutDataPath, UseCustomOutDataPathChange);
@@ -158,6 +160,8 @@ namespace RVEALR.Heatmaps
 				{
 					m_OutDataPath = EditorGUIBinding.TextField(m_DataPathOutContent, m_OutDataPath, DataPathOutChange);
 				}
+
+				m_ViewModel.inputPath = m_OutDataPath;
 
                 EditorGUILayout.LabelField(m_DatesContent, EditorStyles.boldLabel, GUILayout.Width(35));
                 using (new EditorGUILayout.HorizontalScope())
@@ -233,11 +237,16 @@ namespace RVEALR.Heatmaps
 
         void DataPathChange(string value)
         {
-            if (string.IsNullOrEmpty(value))
-            {
-                m_InputDataPath = Application.persistentDataPath;
-            }
-            m_Processor.m_RawDataPath = value;
+			if (string.IsNullOrEmpty(value))
+			{
+				m_InputDataPath = Application.persistentDataPath;
+			} 
+			else
+			{
+				m_InputDataPath = value;
+			}
+			m_Processor.m_RawDataPath = m_InputDataPath;
+			m_ViewModel.inputPath = m_InputDataPath;
             ScheduleFetch();
         }
 
@@ -253,6 +262,11 @@ namespace RVEALR.Heatmaps
 			{
 				m_OutDataPath = Application.persistentDataPath;
 			}
+			else
+			{
+				m_OutDataPath = value;
+			}
+			m_ViewModel.outputPath = m_OutDataPath;
 			m_Processor.m_DataOutPath = value;
 		}
 

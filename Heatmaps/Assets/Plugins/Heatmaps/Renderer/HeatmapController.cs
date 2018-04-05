@@ -21,7 +21,6 @@ using UnityEngine;
 
 namespace RVEALR.Heatmaps
 {
-
 	[RequireComponent(typeof(HeatmapMeshRenderer))]
 	public class HeatmapController : MonoBehaviour
 	{

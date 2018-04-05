@@ -39,6 +39,9 @@ namespace RVEALR.Heatmaps
 
         internal static string k_SmoothTimeOptionKey = "UnityAnalyticsHeatmapSmoothTimeOptionKey";
         internal static string k_SmoothTimeKey = "UnityAnalyticsHeatmapSmoothTimeKey";
+
+		internal static string k_InputPath = "HeatmapInputPath";
+		internal static string k_OutputPath = "HeatmapOuputPath";
     }
 
 
@@ -360,6 +363,28 @@ namespace RVEALR.Heatmaps
             }
         }
 
+		public string inputPath
+		{
+			get {
+				return m_Settings.inputPath;
+			}
+			set {
+				m_Settings.inputPath = value;
+				EditorPrefs.SetString(HeatmapsInspectorSettingsKeys.k_InputPath, m_Settings.inputPath);
+			}
+		}
+
+		public string outputPath
+		{
+			get {
+				return m_Settings.outputPath;
+			}
+			set {
+				m_Settings.outputPath = value;
+				EditorPrefs.SetString(HeatmapsInspectorSettingsKeys.k_OutputPath, m_Settings.outputPath);
+			}
+		}
+
         public void UpdateSettings(HeatmapSettings settings)
         {
             separateUsers = settings.separateUsers;
@@ -380,6 +405,8 @@ namespace RVEALR.Heatmaps
             particleShape = settings.particleShape;
             particleProjection = settings.particleProjection;
             particleDirection = settings.particleDirection;
+			inputPath = settings.inputPath;
+			outputPath = settings.outputPath;
 
             OptionListIsNew = true;
             heatmapOptions = settings.heatmapOptions;
@@ -434,6 +461,8 @@ namespace RVEALR.Heatmaps
             settings.smoothRotation = smoothRotation;
             settings.smoothTimeOption = smoothTimeOption;
             settings.smoothTime = smoothTime;
+			settings.inputPath = inputPath;
+			settings.outputPath = outputPath;
             return settings;
         }
     }

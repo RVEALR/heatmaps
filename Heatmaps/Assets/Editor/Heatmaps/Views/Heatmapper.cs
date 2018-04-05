@@ -15,24 +15,36 @@ namespace RVEALR.Heatmaps
 {
 	public class Heatmapper : EditorWindow
 	{
+		static Heatmapper s_Instance;
+
 	    [MenuItem("Window/Analytics/Heatmapper #%h")]
 	    static void HeatmapperMenuOption()
 	    {
-	        EditorWindow.GetWindow(typeof(Heatmapper));
+			s_Instance = EditorWindow.GetWindow(typeof(Heatmapper)) as Heatmapper;
 	    }
 
 	    public Heatmapper()
 	    {
+			s_Instance = this;
 	    }
 
 	    // Views
 		//DataInputOutputInspector m_DataInputOutputView;
 		List<HeatmapView> m_HeatmapViews;
-	    HeatmapProfilesInspector m_ProfileView;
+	    public HeatmapProfilesInspector m_ProfileView;
 
 	    bool m_ShowProfiles = false;
 
 	    Vector2 m_ScrollPosition;
+
+		public static Heatmapper Instance()
+		{
+			if (s_Instance == null)
+			{
+				s_Instance = new Heatmapper();
+			}
+			return s_Instance;
+		}
 
 	    void OnEnable()
 	    {
@@ -47,7 +59,7 @@ namespace RVEALR.Heatmaps
 				heatmapView.OnEnable();
 			}
 
-			m_ProfileView = HeatmapProfilesInspector.Init(this);
+			m_ProfileView = HeatmapProfilesInspector.Init();
 			m_ProfileView.OnEnable();
 	    }
 
@@ -101,27 +113,29 @@ namespace RVEALR.Heatmaps
 					}
 				} */
 
-				foreach (HeatmapView heatmapView in m_HeatmapViews)
+				if (m_HeatmapViews != null && m_HeatmapViews.Count > 0)
 				{
-					using(new EditorGUILayout.VerticalScope("box"))
+					foreach (HeatmapView heatmapView in m_HeatmapViews)
 					{
-						heatmapView.m_ShowView = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), heatmapView.m_ShowView, heatmapView.m_Identifier, true);
-						if(heatmapView.m_ShowView)
+						using (new EditorGUILayout.VerticalScope("box"))
 						{
-							heatmapView.OnGUI();
+							heatmapView.m_ShowView = EditorGUI.Foldout(EditorGUILayout.GetControlRect(), heatmapView.m_ShowView, heatmapView.m_Identifier, true);
+							if (heatmapView.m_ShowView)
+							{
+								heatmapView.OnGUI();
+							}
+						}
+
+						if (GUILayout.Button("(A) Apply Heatmap Changes"))
+						{
+							ApplyHeatmap(heatmapView);
+						}
+
+						if (m_HeatmapViews.Count > 1 && GUILayout.Button("(-) Remove Heatmap"))
+						{
+							RemoveHeatmap(heatmapView);
 						}
 					}
-
-					if (GUILayout.Button("(A) Apply Heatmap Changes"))
-					{
-						ApplyHeatmap(heatmapView);
-					}
-
-					if (GUILayout.Button("(-) Remove Heatmap"))
-					{
-						RemoveHeatmap(heatmapView);
-					}
-						
 				}
 
 	            using (new EditorGUILayout.VerticalScope("box"))
@@ -145,7 +159,10 @@ namespace RVEALR.Heatmaps
 
 		private void AddHeatmap()
 		{
-			m_HeatmapViews.Add(new HeatmapView("Heatmap_#" + (m_HeatmapViews.Count + 1).ToString()));
+			HeatmapView view = new HeatmapView("Heatmap_#" + (m_HeatmapViews.Count + 1).ToString());
+			m_HeatmapViews.Add(view);
+			view.OnEnable();
+			ApplyHeatmap(view);
 		}
 
 		private void ApplyHeatmap(HeatmapView heatmapView)
